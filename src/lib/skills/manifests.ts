@@ -1,0 +1,244 @@
+import type { DoblySkillManifest } from "@/lib/skills/types";
+
+export const DOBLY_SKILL_MANIFESTS: DoblySkillManifest[] = [
+  {
+    key: "send_whatsapp_confirmation",
+    title: "Send WhatsApp Confirmation",
+    summary: "Prepare a structured confirmation message for WhatsApp delivery.",
+    executionType: "standard",
+    riskLevel: "low",
+    requiredConnectors: ["whatsapp"],
+    inputSchema: [
+      { key: "recipient", type: "string", required: true, description: "WhatsApp destination." },
+      { key: "subject", type: "string", required: false, description: "Short context label." },
+      { key: "details", type: "object", required: false, description: "Payment or booking details." },
+    ],
+    outputSchema: [
+      { key: "message", type: "string", required: true, description: "Prepared WhatsApp text." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "log_payment_to_sheet",
+    title: "Log Payment To Sheet",
+    summary: "Normalize payment details for spreadsheet logging.",
+    executionType: "standard",
+    riskLevel: "low",
+    requiredConnectors: ["google"],
+    inputSchema: [
+      { key: "payment", type: "object", required: true, description: "Incoming payment payload." },
+    ],
+    outputSchema: [
+      { key: "row", type: "array", required: true, description: "Normalized row values." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "compose_daily_summary",
+    title: "Compose Daily Summary",
+    summary: "Summarize structured activity into a concise daily update.",
+    executionType: "intelligence",
+    riskLevel: "low",
+    requiredConnectors: [],
+    inputSchema: [
+      { key: "records", type: "array", required: true, description: "Structured records to summarize." },
+    ],
+    outputSchema: [
+      { key: "summary", type: "string", required: true, description: "Generated summary text." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "classify_customer_message",
+    title: "Classify Customer Message",
+    summary: "Classify inbound customer messages for routing or branching.",
+    executionType: "intelligence",
+    riskLevel: "medium",
+    requiredConnectors: [],
+    inputSchema: [
+      { key: "message", type: "string", required: true, description: "Inbound customer text." },
+    ],
+    outputSchema: [
+      { key: "category", type: "string", required: true, description: "Classification label." },
+      { key: "confidence", type: "number", required: true, description: "Confidence score from 0 to 1." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "detect_payment_anomaly",
+    title: "Detect Payment Anomaly",
+    summary: "Judge whether a payment looks unusual enough to alert the owner.",
+    executionType: "intelligence",
+    riskLevel: "medium",
+    requiredConnectors: [],
+    inputSchema: [
+      { key: "payment", type: "object", required: true, description: "Current payment details." },
+      { key: "history", type: "array", required: false, description: "Recent historical payments." },
+    ],
+    outputSchema: [
+      { key: "anomaly", type: "boolean", required: true, description: "Whether payment is anomalous." },
+      { key: "reason", type: "string", required: true, description: "Why the payment was flagged." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "draft_followup_email",
+    title: "Draft Follow-Up Email",
+    summary: "Generate a personalized but bounded follow-up email draft.",
+    executionType: "intelligence",
+    riskLevel: "medium",
+    requiredConnectors: ["google", "microsoft"],
+    inputSchema: [
+      { key: "recipient_name", type: "string", required: true, description: "Customer or lead name." },
+      { key: "context", type: "string", required: true, description: "Reason for follow-up." },
+    ],
+    outputSchema: [
+      { key: "subject", type: "string", required: true, description: "Draft subject line." },
+      { key: "body", type: "string", required: true, description: "Draft email body." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "route_support_ticket",
+    title: "Route Support Ticket",
+    summary: "Route a support ticket based on urgency and topic.",
+    executionType: "intelligence",
+    riskLevel: "medium",
+    requiredConnectors: ["slack"],
+    inputSchema: [
+      { key: "ticket_text", type: "string", required: true, description: "Support issue description." },
+    ],
+    outputSchema: [
+      { key: "queue", type: "string", required: true, description: "Recommended queue." },
+      { key: "urgent", type: "boolean", required: true, description: "Whether issue is urgent." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "prepare_approval_request",
+    title: "Prepare Approval Request",
+    summary: "Generate a clear approval prompt for in-app or WhatsApp review.",
+    executionType: "standard",
+    riskLevel: "high",
+    requiredConnectors: ["whatsapp"],
+    inputSchema: [
+      { key: "action", type: "string", required: true, description: "Action awaiting approval." },
+      { key: "amount", type: "number", required: false, description: "Optional monetary amount." },
+    ],
+    outputSchema: [
+      { key: "title", type: "string", required: true, description: "Approval title." },
+      { key: "message", type: "string", required: true, description: "Approval message." },
+    ],
+    approvalRequired: true,
+  },
+  {
+    key: "explain_connection_failure",
+    title: "Explain Connection Failure",
+    summary: "Turn technical connector errors into plain-English explanations.",
+    executionType: "intelligence",
+    riskLevel: "low",
+    requiredConnectors: [],
+    inputSchema: [
+      { key: "error", type: "string", required: true, description: "Technical error message." },
+      { key: "provider", type: "string", required: true, description: "Provider that failed." },
+    ],
+    outputSchema: [
+      { key: "explanation", type: "string", required: true, description: "Plain-English explanation." },
+      { key: "next_step", type: "string", required: true, description: "Recommended next step." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "sync_shopify_order_to_sheet",
+    title: "Sync Shopify Order To Sheet",
+    summary: "Normalize a Shopify order for Google Sheets or Airtable logging.",
+    executionType: "standard",
+    riskLevel: "low",
+    requiredConnectors: ["shopify", "google"],
+    inputSchema: [
+      { key: "order", type: "object", required: true, description: "Shopify order payload." },
+    ],
+    outputSchema: [
+      { key: "row", type: "array", required: true, description: "Row payload for logging." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "schedule_booking_reminder",
+    title: "Schedule Booking Reminder",
+    summary: "Prepare reminder timing and content for bookings or appointments.",
+    executionType: "standard",
+    riskLevel: "low",
+    requiredConnectors: ["whatsapp", "google"],
+    inputSchema: [
+      { key: "booking", type: "object", required: true, description: "Booking details." },
+    ],
+    outputSchema: [
+      { key: "send_at", type: "string", required: true, description: "Reminder timestamp." },
+      { key: "message", type: "string", required: true, description: "Reminder text." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "reconcile_inventory_update",
+    title: "Reconcile Inventory Update",
+    summary: "Apply a stock change safely using existing inventory data.",
+    executionType: "standard",
+    riskLevel: "medium",
+    requiredConnectors: ["shopify", "airtable", "google"],
+    inputSchema: [
+      { key: "inventory_record", type: "object", required: true, description: "Current inventory state." },
+      { key: "change", type: "number", required: true, description: "Units to decrement or increment." },
+    ],
+    outputSchema: [
+      { key: "new_quantity", type: "number", required: true, description: "Reconciled inventory quantity." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "generate_weekly_report",
+    title: "Generate Weekly Report",
+    summary: "Create a concise operator-facing weekly report from structured metrics.",
+    executionType: "intelligence",
+    riskLevel: "low",
+    requiredConnectors: [],
+    inputSchema: [
+      { key: "metrics", type: "array", required: true, description: "Structured performance metrics." },
+    ],
+    outputSchema: [
+      { key: "report", type: "string", required: true, description: "Generated report body." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "extract_structured_lead",
+    title: "Extract Structured Lead",
+    summary: "Turn an unstructured lead submission into structured CRM-ready data.",
+    executionType: "intelligence",
+    riskLevel: "low",
+    requiredConnectors: ["hubspot", "notion"],
+    inputSchema: [
+      { key: "raw_text", type: "string", required: true, description: "Lead submission text." },
+    ],
+    outputSchema: [
+      { key: "name", type: "string", required: false, description: "Lead name." },
+      { key: "email", type: "string", required: false, description: "Lead email." },
+      { key: "intent", type: "string", required: false, description: "Lead intent." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "prepare_whatsapp_approval_reply",
+    title: "Prepare WhatsApp Approval Reply",
+    summary: "Interpret YES or NO style approval replies from WhatsApp.",
+    executionType: "standard",
+    riskLevel: "medium",
+    requiredConnectors: ["whatsapp"],
+    inputSchema: [
+      { key: "reply", type: "string", required: true, description: "Inbound WhatsApp reply." },
+    ],
+    outputSchema: [
+      { key: "approved", type: "boolean", required: true, description: "Whether the reply is an approval." },
+    ],
+  },
+];

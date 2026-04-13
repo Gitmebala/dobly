@@ -1,0 +1,6 @@
+Contact: mailto:security@dobly.io
+Contact: mailto:hello@dobly.io
+Expires: 2027-04-04T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://dobly.io/.well-known/security.txt
+Policy: https://dobly.io/security

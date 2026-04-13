@@ -1,0 +1,897 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dobly | Your automations run. You don't.</title>
+  <meta name="description" content="Describe any task in plain English. Dobly's AI designs the workflow in 30 seconds. It runs forever." />
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.0.42/dist/lenis.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/SplitText.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/CustomEase.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #040706;
+      --bg-1: #080F0C;
+      --bg-2: #0C1610;
+      --bg-3: #111E15;
+      --accent: #00DFA0;
+      --accent-2: #00FFB3;
+      --dim-1: rgba(0,223,160,0.06);
+      --dim-2: rgba(0,223,160,0.12);
+      --dim-3: rgba(0,223,160,0.25);
+      --dim-4: rgba(0,223,160,0.45);
+      --border: rgba(0,223,160,0.1);
+      --border-hi: rgba(0,223,160,0.3);
+      --text: #E2F0EA;
+      --muted: #4E7A65;
+      --dim: #213D2C;
+      --ff-display: 'Syne', sans-serif;
+      --ff-body: 'DM Sans', sans-serif;
+      --ff-mono: 'DM Mono', monospace;
+    }
+    * { box-sizing: border-box; cursor: none !important; }
+    html { scroll-behavior: auto; }
+    body {
+      margin: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(0,223,160,0.07), transparent 22%),
+        radial-gradient(circle at 80% 10%, rgba(0,223,160,0.04), transparent 24%),
+        linear-gradient(180deg, var(--bg-1), var(--bg));
+      color: var(--text);
+      font-family: var(--ff-body);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.025;
+    }
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+    #cursor-dot, #cursor-ring {
+      position: fixed;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 2000;
+      opacity: 0;
+    }
+    #cursor-dot {
+      width: 6px;
+      height: 6px;
+      margin-left: -3px;
+      margin-top: -3px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 14px rgba(0,223,160,0.55);
+    }
+    #cursor-ring {
+      width: 40px;
+      height: 40px;
+      margin-left: -20px;
+      margin-top: -20px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,223,160,0.55);
+      transition: width .25s ease, height .25s ease, margin .25s ease, background .25s ease, border-color .25s ease;
+    }
+    .cursor-hover #cursor-dot { transform: scale(.5); }
+    .cursor-hover #cursor-ring {
+      width: 64px;
+      height: 64px;
+      margin-left: -32px;
+      margin-top: -32px;
+      background: var(--dim-1);
+      border-color: var(--dim-4);
+    }
+    .cursor-pulse {
+      position: fixed;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      margin-left: -9px;
+      margin-top: -9px;
+      border: 1px solid rgba(0,223,160,0.35);
+      pointer-events: none;
+      z-index: 1999;
+    }
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+    }
+    .loader-inner { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+    .loader-word { font-family: var(--ff-display); font-size: 28px; font-weight: 800; letter-spacing: -0.04em; }
+    .loader-word span { display: inline-block; opacity: 0; transform: translateY(8px); }
+    .loader-line-wrap { width: 160px; height: 1px; background: rgba(0,223,160,0.12); overflow: hidden; }
+    .loader-line { width: 0; height: 100%; background: var(--accent); }
+    #loader-logo path, #loader-logo line { filter: drop-shadow(0 0 8px rgba(0,223,160,0.6)); }
+    #page { opacity: 0; transform: translateY(20px); }
+    .page-wrap { position: relative; min-height: 100vh; }
+    .nav {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      transition: background .3s ease, backdrop-filter .3s ease, border-color .3s ease;
+      border-bottom: 1px solid transparent;
+    }
+    .nav.scrolled { background: rgba(4,7,6,0.85); backdrop-filter: blur(20px); border-color: var(--border); }
+    .nav-inner {
+      width: min(1280px, calc(100vw - 40px));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 0;
+    }
+    .brand { display: inline-flex; align-items: center; gap: 12px; }
+    .brand-word { font-family: var(--ff-display); font-weight: 700; font-size: 18px; }
+    .brand-logo line, .brand-logo path { stroke-dasharray: 160; stroke-dashoffset: 0; }
+    .nav-links { display: flex; align-items: center; gap: 28px; font-size: 13px; color: var(--muted); }
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 120px 40px 80px;
+      overflow: hidden;
+    }
+    #hero-canvas, #cta-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+    .hero-content {
+      position: relative;
+      z-index: 10;
+      width: min(1240px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 60px;
+      align-items: center;
+      transform-origin: center;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      margin-bottom: 28px;
+    }
+    .hero-badge .spark { animation: spark 2.4s ease-in-out infinite; }
+    .hero-headline {
+      margin: 0;
+      font-family: var(--ff-display);
+      font-size: clamp(52px, 9vw, 108px);
+      line-height: 0.92;
+      letter-spacing: -0.04em;
+      max-width: 10ch;
+      transform-style: preserve-3d;
+      perspective: 800px;
+    }
+    .hero-headline .accent {
+      color: var(--accent);
+      text-decoration: underline;
+      text-decoration-color: rgba(0,223,160,0.3);
+      text-underline-offset: 6px;
+    }
+    .hero-sub { max-width: 500px; margin-top: 28px; font-size: clamp(16px, 2.2vw, 22px); line-height: 1.65; color: var(--muted); font-weight: 300; }
+    .hero-ctas { display: flex; gap: 14px; margin-top: 34px; flex-wrap: wrap; }
+    .btn, .btn-secondary, .btn-primary {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 32px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      will-change: transform;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+      font-family: var(--ff-display);
+      font-size: 15px;
+      font-weight: 700;
+      box-shadow: 0 0 0 1px rgba(0,223,160,0.16);
+    }
+    .btn-primary:hover { box-shadow: 0 0 0 1px var(--accent), 0 0 32px rgba(0,223,160,0.3); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border-hi);
+      font-family: var(--ff-display);
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .btn-secondary:hover { background: var(--dim-1); border-color: var(--accent); }
+    .sonar::after {
+      content: "";
+      position: absolute;
+      inset: -12px;
+      border: 1px solid rgba(0,223,160,0.22);
+      border-radius: inherit;
+      opacity: 0;
+      transform: scale(1);
+    }
+    .hero-stats { display: flex; gap: 28px; align-items: center; margin-top: 42px; flex-wrap: wrap; }
+    .hero-stat { display: flex; align-items: center; gap: 28px; }
+    .hero-stat + .hero-stat::before { content: ""; width: 1px; height: 38px; background: var(--dim); }
+    .hero-stat strong { display: block; font-family: var(--ff-display); color: var(--accent); font-size: 24px; font-weight: 800; }
+    .hero-stat span { display: block; font-size: 12px; color: var(--muted); }
+    .hero-side { display: grid; gap: 16px; justify-items: end; }
+    .glass, .step-card, .tile, .feature-card, .terminal {
+      position: relative;
+      overflow: hidden;
+      background: rgba(12, 22, 16, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0,223,160,0.08);
+      border-radius: 18px;
+      will-change: transform;
+      transform-style: preserve-3d;
+      --glow-x: 50%;
+      --glow-y: 50%;
+      --glow-opacity: 0;
+    }
+    .glass::before, .step-card::before, .tile::before, .feature-card::before, .terminal::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
+    }
+    .glass::after, .step-card::after, .tile::after, .feature-card::after, .terminal::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at var(--glow-x) var(--glow-y), rgba(255,255,255,0.04) 0%, transparent 60%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      background-size: auto, 200px 200px;
+      opacity: var(--glow-opacity);
+      pointer-events: none;
+      transition: opacity .3s;
+    }
+    .hero-card { min-height: 180px; padding: 26px; display: flex; flex-direction: column; justify-content: space-between; }
+    .hero-card:first-child { width: min(420px, 100%); justify-self: end; }
+    .hero-card:last-child { width: min(360px, 100%); }
+    .scroll-indicator {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: grid;
+      gap: 2px;
+      z-index: 20;
+      opacity: .8;
+    }
+    .scroll-indicator span {
+      width: 16px;
+      height: 16px;
+      border-right: 1px solid var(--dim-4);
+      border-bottom: 1px solid var(--dim-4);
+      transform: rotate(45deg);
+      animation: chevron 1.8s infinite;
+    }
+    .scroll-indicator span:nth-child(2) { animation-delay: .3s; }
+    .h-section { position: relative; min-height: 100vh; padding: 0; background: linear-gradient(180deg, rgba(8,15,12,0.4), transparent); }
+    .h-track { display: flex; width: 400vw; height: 100vh; }
+    .h-panel { width: 100vw; height: 100vh; padding: 120px 7vw 80px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 40px; }
+    .h-panel h3, .statement h2, .section-title, .feature-copy h3, .pricing-title, .comparison-title, .cta-title { margin: 0; font-family: var(--ff-display); letter-spacing: -0.04em; }
+    .h-panel h3 { font-size: clamp(34px, 5vw, 72px); line-height: .94; max-width: 10ch; }
+    .mono-line { font-family: var(--ff-mono); color: var(--muted); }
+    .typing-stage { font-family: var(--ff-mono); font-size: 18px; color: var(--text); display: inline-flex; gap: 2px; align-items: center; }
+    .typing-stage .caret { width: 10px; height: 24px; background: var(--accent); animation: blink 1s step-end infinite; }
+    .panel-visual { height: min(55vh, 480px); display: grid; place-items: center; position: relative; border-left: 1px solid rgba(0,223,160,0.06); padding-left: 4vw; }
+    .thinking-wrap, .blueprint-wrap, .forever-wrap { width: min(520px, 100%); }
+    .thinking-canvas { width: 100%; height: 320px; border-radius: 20px; background: rgba(8,15,12,0.65); border: 1px solid var(--border); overflow: hidden; }
+    .thinking-note { margin-top: 16px; font-family: var(--ff-mono); font-size: 13px; color: var(--muted); }
+    .blueprint-wrap .bp-card { background: var(--bg-2); border-left: 2px solid var(--accent); border-radius: 0 8px 8px 0; padding: 12px 16px; margin-bottom: 14px; opacity: 0; transform: translateX(-40px); }
+    .forever-counter { font-family: var(--ff-display); font-size: clamp(80px, 12vw, 140px); color: var(--accent); line-height: .86; }
+    .forever-wrap .forever-word { font-family: var(--ff-display); font-size: clamp(32px, 5vw, 64px); margin-top: 16px; }
+    .statement { min-height: 100vh; display: grid; place-items: center; padding: 120px 40px; text-align: center; }
+    .statement h2 { font-size: clamp(40px, 7vw, 88px); line-height: .9; max-width: 13ch; }
+    .statement-line { width: min(920px, 80vw); height: 1px; margin: 28px auto 0; background: var(--dim-2); transform: scaleX(0); transform-origin: center; }
+    .section { padding: 120px 40px; position: relative; }
+    .container { width: min(1280px, 100%); margin: 0 auto; }
+    .terminal { max-width: 860px; margin: 0 auto; padding: 22px 22px 24px; background: var(--bg-1); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 0 80px rgba(0,223,160,0.05), 0 0 0 1px rgba(0,223,160,0.08); backdrop-filter: blur(12px); opacity: 0; transform: scale(.94); }
+    .terminal-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); font-family: var(--ff-mono); font-size: 12px; color: var(--dim); }
+    .term-dots { display: flex; align-items: center; gap: 10px; }
+    .term-dots span { width: 12px; height: 12px; border-radius: 999px; }
+    .term-red { background: #FF5F57; box-shadow: 0 0 8px rgba(255,95,87,.4); }
+    .term-amber { background: #FFBD2E; box-shadow: 0 0 8px rgba(255,189,46,.4); }
+    .term-green { background: #28C840; box-shadow: 0 0 8px rgba(40,200,64,.4); }
+    .live-status { display: flex; align-items: flex-start; gap: 14px; text-align: right; font-family: var(--ff-mono); font-size: 11px; color: var(--accent); }
+    .live-ping { width: 7px; height: 7px; border-radius: 999px; background: var(--accent); margin-top: 5px; animation: pulse 1.4s infinite; }
+    .prompt-counter { position: relative; overflow: hidden; height: 12px; min-width: 48px; color: var(--muted); }
+    .prompt-counter span { position: absolute; left: 0; right: 0; }
+    .terminal-body { position: relative; padding-top: 24px; font-family: var(--ff-mono); font-size: 13px; }
+    .terminal-prompt { min-height: 58px; color: var(--text); font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
+    .terminal-processing { margin-top: 18px; display: grid; gap: 8px; color: var(--accent); }
+    .terminal-processing div, .workflow-step { opacity: 0; }
+    .workflow-step { margin-top: 12px; border-left: 2px solid var(--accent); background: var(--dim-1); border-radius: 4px; padding: 10px 14px; transform: translateX(-40px); }
+    .terminal-ready { margin-top: 18px; color: var(--accent); opacity: 0; }
+    .scanline { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: rgba(0,223,160,0.15); opacity: 0; }
+    .section-title { font-size: clamp(32px, 5vw, 58px); text-align: center; margin-bottom: 50px; transform-style: preserve-3d; perspective: 1000px; }
+    .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .step-card { padding: 28px; opacity: 0; transform: translateY(60px); }
+    .step-number { position: absolute; top: 12px; right: 18px; font-family: var(--ff-display); font-size: 80px; line-height: 1; color: rgba(0,223,160,0.05); font-weight: 800; }
+    .step-mark { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: rgba(0,223,160,0.08); border: 1px solid rgba(0,223,160,0.2); color: var(--accent); margin-bottom: 20px; }
+    .step-card h4 { margin: 0 0 12px; font-family: var(--ff-display); font-size: 16px; }
+    .step-card p { margin: 0; color: var(--muted); line-height: 1.7; font-size: 14px; }
+    .features { display: grid; gap: 30px; }
+    .feature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+    .feature-row.reverse .feature-copy { order: 2; }
+    .feature-row.reverse .feature-visual { order: 1; }
+    .feature-card { padding: 32px; min-height: 320px; }
+    .feature-copy h3 { font-size: clamp(32px, 4vw, 52px); margin-bottom: 16px; }
+    .feature-copy p { color: var(--muted); line-height: 1.8; max-width: 56ch; }
+    .feature-logo svg { width: 120px; height: auto; }
+    .feature-logo line, .feature-logo path { stroke-dasharray: 180; stroke-dashoffset: 0; }
+    .feature-note { position: absolute; right: 24px; bottom: 22px; font-family: var(--ff-mono); font-size: 12px; color: var(--muted); }
+    .failure-toast { width: min(400px, 100%); background: rgba(8,15,12,0.85); backdrop-filter: blur(20px); border-left: 3px solid var(--accent); border-radius: 12px; padding: 16px 20px; }
+    .failure-toast p { margin: 0; font-size: 14px; line-height: 1.7; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+    .tile { padding: 26px; opacity: 0; transform: translateY(50px); }
+    .tile-pro { transform: translateY(-16px); border-color: rgba(0,223,160,0.4); box-shadow: 0 0 60px rgba(0,223,160,0.12), 0 0 0 1px rgba(0,223,160,0.2); }
+    .popular-badge { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--bg); font-family: var(--ff-display); font-weight: 700; font-size: 11px; padding: 4px 14px; border-radius: 999px; }
+    .tile-label { color: var(--muted); text-transform: uppercase; letter-spacing: .1em; font-family: var(--ff-display); font-size: 14px; font-weight: 700; }
+    .tile-price { margin-top: 18px; font-family: var(--ff-display); font-size: clamp(32px, 4vw, 48px); font-weight: 800; letter-spacing: -0.04em; }
+    .tile-price span { font-family: var(--ff-body); font-size: 14px; color: var(--muted); font-weight: 400; }
+    .tile-limit { margin-top: 8px; font-family: var(--ff-mono); font-size: 12px; color: var(--muted); }
+    .tile ul { list-style: none; margin: 22px 0; padding: 0; display: grid; gap: 10px; font-size: 13px; color: var(--text); }
+    .tile li::before { content: "✓"; color: var(--accent); margin-right: 8px; }
+    .comparison-section { background: var(--bg-1); overflow: hidden; }
+    .comparison-head { margin-bottom: 30px; }
+    .comparison-title { font-size: clamp(34px, 5vw, 58px); margin-bottom: 10px; }
+    .comparison-sub { color: var(--muted); max-width: 60ch; line-height: 1.7; }
+    .comparison-table { width: min(1240px, calc(100% + 80px)); margin-left: -40px; font-family: var(--ff-mono); font-size: 13px; }
+    .comparison-row { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap: 18px; padding: 16px 40px; border-bottom: 1px solid var(--border); opacity: 0; transform: translateX(-24px); }
+    .comparison-row.header { color: var(--muted); opacity: 1; transform: none; }
+    .comparison-row .bad { color: var(--dim); }
+    .comparison-row .good { color: var(--accent); }
+    .cta-section { position: relative; min-height: 88vh; display: grid; place-items: center; padding: 120px 40px; overflow: hidden; }
+    .cta-copy { position: relative; z-index: 2; width: min(980px, 100%); text-align: center; }
+    .cta-title { font-size: clamp(54px, 8vw, 120px); line-height: .9; }
+    .cta-counter { display: inline-block; color: var(--accent); font-size: clamp(80px, 12vw, 140px); line-height: .85; }
+    .cta-sub { margin: 22px auto 0; font-size: 18px; color: var(--muted); max-width: 48ch; }
+    .footer { padding: 34px 40px 12px; border-top: 1px solid var(--border); }
+    .footer-grid { width: min(1280px, 100%); margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; }
+    .footer small, .footer p { color: var(--dim); }
+    .footer-nav { display: grid; gap: 10px; font-size: 13px; color: var(--muted); }
+    .footer-bottom { width: min(1280px, 100%); margin: 26px auto 0; border-top: 1px solid var(--border); text-align: center; padding-top: 12px; font-family: var(--ff-mono); font-size: 11px; color: var(--dim); }
+    [data-reveal], .feature-copy, .feature-visual, .section-title, .comparison-head { opacity: 0; }
+    @keyframes spark { 0%,100% { opacity: .4; } 50% { opacity: 1; } }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+    @keyframes blink { 50% { opacity: 0; } }
+    @keyframes chevron { 0%,100% { opacity: .2; transform: rotate(45deg) translate(0,0); } 50% { opacity: .9; transform: rotate(45deg) translate(3px,3px); } }
+    @media (max-width: 991px) {
+      .hero-content, .feature-row, .h-panel, .steps-grid, .pricing-grid, .footer-grid { grid-template-columns: 1fr; }
+      .hero-side { justify-items: stretch; }
+      .comparison-table { width: 100%; margin-left: 0; }
+      .comparison-row { grid-template-columns: 1.3fr repeat(3, 1fr); padding-inline: 0; }
+    }
+    @media (max-width: 767px) {
+      #hero-canvas, #cta-canvas, .thinking-canvas { display: none; }
+      .hero { padding-inline: 22px; }
+      .section, .statement, .cta-section, .footer { padding-inline: 22px; }
+      .nav-links { display: none; }
+      .hero-headline { max-width: 12ch; }
+      .hero-stat + .hero-stat::before { display: none; }
+      .hero-stats { gap: 18px; }
+      .h-section { min-height: auto; }
+      .h-track { width: 100%; height: auto; display: grid; }
+      .h-panel { width: 100%; height: auto; padding: 100px 22px 40px; }
+      .panel-visual { border-left: 0; padding-left: 0; }
+      .steps-grid, .pricing-grid { grid-template-columns: 1fr; }
+      #cursor-dot, #cursor-ring { display: none !important; }
+      * { cursor: auto !important; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+      [data-reveal], .step-card, .tile, .feature-copy, .feature-visual, .comparison-row { opacity: 1 !important; transform: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="cursor-dot"></div>
+  <div id="cursor-ring"></div>
+  <div id="loader">
+    <div class="loader-inner">
+      <svg id="loader-logo" width="120" height="92" viewBox="0 0 90 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="4" y1="10" x2="86" y2="10" stroke="#00DFA0" stroke-width="5.5" stroke-linecap="round"/>
+        <line x1="4" y1="26" x2="62" y2="26" stroke="#00DFA0" stroke-width="5.5" stroke-linecap="round"/>
+        <path d="M 4 42 L 38 42 C 54 42 62 50 62 56 C 62 62 54 66 42 66 C 20 66 12 58 16 50 C 19 44 28 42 38 42" stroke="#00DFA0" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <div class="loader-word"><span>D</span><span>o</span><span>b</span><span>l</span><span>y</span></div>
+      <div class="loader-line-wrap"><div class="loader-line"></div></div>
+    </div>
+  </div>
+  <div id="page" class="page-wrap">
+    <nav class="nav" id="nav">
+      <div class="nav-inner">
+        <a href="#hero" class="brand">
+          <span class="brand-logo">
+            <svg id="nav-logo" width="36" height="28" viewBox="0 0 90 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="4" y1="10" x2="86" y2="10" stroke="#00DFA0" stroke-width="5.5" stroke-linecap="round"/>
+              <line x1="4" y1="26" x2="62" y2="26" stroke="#00DFA0" stroke-width="5.5" stroke-linecap="round"/>
+              <path d="M 4 42 L 38 42 C 54 42 62 50 62 56 C 62 62 54 66 42 66 C 20 66 12 58 16 50 C 19 44 28 42 38 42" stroke="#00DFA0" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+          </span>
+          <span class="brand-word">Dobly</span>
+        </a>
+        <div class="nav-links">
+          <a href="#steps">How it works</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#comparison">Why Dobly</a>
+          <a href="#cta">Start free</a>
+        </div>
+      </div>
+    </nav>
+    <section class="hero" id="hero">
+      <canvas id="hero-canvas"></canvas>
+      <div class="hero-content">
+        <div>
+          <div class="hero-badge"><span class="spark">✦</span> AI-powered automation · Built in Mombasa</div>
+          <h1 class="hero-headline">Your automations <br><span class="accent">run.</span> You don't.</h1>
+          <p class="hero-sub">Describe any task in plain English. The AI designs the complete workflow in 30 seconds. It runs forever.</p>
+          <div class="hero-ctas">
+            <a href="#pricing" class="btn-primary sonar magnetic">Start free</a>
+            <a href="#terminal-demo" class="btn-secondary">See how it works</a>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat"><div><strong>30s</strong><span>to build a workflow</span></div></div>
+            <div class="hero-stat"><div><strong>96%</strong><span>gross margin</span></div></div>
+            <div class="hero-stat"><div><strong>0</strong><span>technical skill needed</span></div></div>
+          </div>
+        </div>
+        <div class="hero-side">
+          <div class="glass hero-card" data-tilt>
+            <div class="mono-line">standard execution</div>
+            <div style="font-family:var(--ff-display);font-size:42px;font-weight:800;letter-spacing:-0.04em;">Design once.</div>
+            <div style="color:var(--muted);line-height:1.7;">The AI thinks when you create the workflow. The runtime executes silently after that.</div>
+          </div>
+          <div class="glass hero-card" data-tilt>
+            <div class="mono-line">intelligence actions</div>
+            <div style="font-family:var(--ff-display);font-size:32px;font-weight:800;letter-spacing:-0.04em;">Metered only when judgment is needed.</div>
+          </div>
+        </div>
+      </div>
+      <div class="scroll-indicator"><span></span><span></span></div>
+    </section>
+    <section class="h-section" id="story">
+      <div class="h-track">
+        <article class="h-panel"><div><div class="mono-line">01 / Input</div><h3>The request starts in plain English.</h3><p class="hero-sub" style="margin-top:20px;">No builder. No workflow diagram. Just tell Dobly what should happen.</p></div><div class="panel-visual"><div class="typing-stage"><span>"When a customer pays via M-PESA..."</span><span class="caret"></span></div></div></article>
+        <article class="h-panel"><div><div class="mono-line">02 / Thinking</div><h3>Intent resolves into systems and logic.</h3><p class="hero-sub" style="margin-top:20px;">The planner figures out triggers, actions, approvals, credentials, and execution order.</p></div><div class="panel-visual"><div class="thinking-wrap"><div class="thinking-canvas" id="thinking-canvas"></div><div class="thinking-note">Analysing...</div></div></div></article>
+        <article class="h-panel"><div><div class="mono-line">03 / Blueprint</div><h3>The workflow spec appears line by line.</h3><p class="hero-sub" style="margin-top:20px;">What Dobly executes is deterministic. The AI designs. The runtime operates.</p></div><div class="panel-visual"><div class="blueprint-wrap"><div class="bp-card">Trigger      M-PESA payment received</div><div class="bp-card">Step 1       WhatsApp Business → Send message</div><div class="bp-card">Step 2       Google Sheets → Append row</div></div></div></article>
+        <article class="h-panel"><div><div class="mono-line">04 / Runtime</div><h3>Once live, it keeps going.</h3><p class="hero-sub" style="margin-top:20px;">Queued. Scheduled. Retried. Logged. Visible. Quietly handling the work in the background.</p></div><div class="panel-visual"><div class="forever-wrap"><div class="forever-counter" id="forever-counter">0000</div><div class="mono-line">running right now</div><div class="forever-word">Forever.</div></div></div></article>
+      </div>
+    </section>
+    <section class="statement"><div><h2 class="statement-head">The AI designs.<br>The runtime operates.</h2><div class="statement-line"></div></div></section>
+    <section class="section" id="terminal-demo">
+      <div class="container">
+        <div class="terminal" data-tilt>
+          <div class="terminal-top">
+            <div style="display:flex;align-items:center;gap:14px;"><div class="term-dots"><span class="term-red"></span><span class="term-amber"></span><span class="term-green"></span></div><div>dobly — workflow generator</div></div>
+            <div class="live-status"><div><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;"><span class="live-ping"></span><span>live</span></div><div class="prompt-counter" id="prompt-counter"><span>01 / 32</span></div></div></div>
+          </div>
+          <div class="terminal-body">
+            <div class="terminal-prompt" id="terminal-prompt"></div>
+            <div class="terminal-processing" id="terminal-processing"></div>
+            <div id="workflow-steps"></div>
+            <div class="terminal-ready" id="terminal-ready">✦ Ready · Saves approximately 4 hours per week</div>
+            <div class="scanline" id="scanline"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="section" id="steps">
+      <div class="container">
+        <h2 class="section-title">Four steps. Then done forever.</h2>
+        <div class="steps-grid">
+          <article class="step-card" data-tilt><div class="step-number">01</div><div class="step-mark">✦</div><h4>Describe it</h4><p>You type what you want in plain English. No forms. No dropdowns.</p></article>
+          <article class="step-card" data-tilt><div class="step-number">02</div><div class="step-mark">✦</div><h4>AI designs it</h4><p>The complete workflow blueprint generated in under 30 seconds.</p></article>
+          <article class="step-card" data-tilt><div class="step-number">03</div><div class="step-mark">✦</div><h4>Deploy it</h4><p>Connect your accounts. One click. Done.</p></article>
+          <article class="step-card" data-tilt><div class="step-number">04</div><div class="step-mark">✦</div><h4>Forget it</h4><p>It runs forever. You never touch it again.</p></article>
+        </div>
+      </div>
+    </section>
+    <section class="section">
+      <div class="container features">
+        <div class="feature-row feature-row-1"><div class="feature-copy" data-reveal><div class="mono-line">The AI brain</div><h3>Describe it once.</h3><p>Dobly turns language into an executable automation plan: trigger, systems, approvals, field mapping, and delivery path.</p></div><div class="feature-visual feature-visual-1"><div class="feature-card feature-logo" data-tilt><svg id="feature-logo-svg" width="120" height="92" viewBox="0 0 90 70" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="4" y1="10" x2="86" y2="10" stroke="#00DFA0" stroke-width="5.5" stroke-linecap="round"/><line x1="4" y1="26" x2="62" y2="26" stroke="#00DFA0" stroke-width="5.5" stroke-linecap="round"/><path d="M 4 42 L 38 42 C 54 42 62 50 62 56 C 62 62 54 66 42 66 C 20 66 12 58 16 50 C 19 44 28 42 38 42" stroke="#00DFA0" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg><div class="feature-note">language becomes machine</div></div></div></div>
+        <div class="feature-row reverse feature-row-2"><div class="feature-copy" data-reveal><div class="mono-line">Runs forever</div><h3>Set it. Forget it.</h3><p>Once the workflow is live, the runtime wakes on schedule, responds to events, retries safely, and keeps running without asking for technical attention.</p></div><div class="feature-visual feature-visual-2"><div class="feature-card" data-tilt><div id="torus-canvas" style="width:100%;height:300px;"></div></div></div></div>
+        <div class="feature-row feature-row-3"><div class="feature-copy" data-reveal><div class="mono-line">Plain-English failures</div><h3>When something breaks, you'll actually understand why.</h3><p>Dobly translates technical failure into the language of the operator, shows the fix, and can replay the failed run when the connection is healthy again.</p></div><div class="feature-visual feature-visual-3"><div class="feature-card" data-tilt style="display:grid;place-items:center;"><div class="failure-toast" id="failure-toast"><p>Your Gmail connection expired. Tap here to reconnect — takes 20 seconds. Your automation will replay automatically.</p></div></div></div></div>
+      </div>
+    </section>
+    <section class="section" id="pricing">
+      <div class="container">
+        <h2 class="section-title pricing-title">Priced for the world.</h2>
+        <div class="pricing-grid">
+          <article class="tile" data-tilt><div class="tile-label">Agency</div><div class="tile-price">$49<span>/mo</span></div><div class="tile-limit">Unlimited workflows · 40,000 executions/mo</div><ul><li>Client workspaces</li><li>White-label</li><li>Team collaboration</li><li>Dedicated support</li></ul><a class="btn-primary magnetic" href="#cta">Choose Agency</a></article>
+          <article class="tile tile-pro" data-tilt><div class="popular-badge">Most popular</div><div class="tile-label">Pro</div><div class="tile-price">$19<span>/mo</span></div><div class="tile-limit">100 workflows · 8,000 executions/mo</div><ul><li>All integrations</li><li>API access</li><li>Webhook support</li><li>AI-powered workflow design</li></ul><a class="btn-primary magnetic" href="#cta">Choose Pro</a></article>
+          <article class="tile" data-tilt><div class="tile-label">Starter</div><div class="tile-price">KES 999<span>/mo</span></div><div class="tile-limit">20 workflows · 1,500 executions/mo</div><ul><li>M-PESA payments</li><li>WhatsApp integration</li><li>WhatsApp monitoring</li><li>Kenya-first onboarding</li></ul><a class="btn-primary magnetic" href="#cta">Choose Starter</a></article>
+          <article class="tile" data-tilt><div class="tile-label">Free</div><div class="tile-price">$0<span> forever</span></div><div class="tile-limit">3 workflows · 200 executions/mo</div><ul><li>All core integrations</li><li>No card required</li><li>First live automation</li><li>Learn by doing</li></ul><a class="btn-primary magnetic" href="#cta">Start free</a></article>
+        </div>
+      </div>
+    </section>
+    <section class="section comparison-section" id="comparison">
+      <div class="container"><div class="comparison-head"><h2 class="comparison-title">Why not just use Zapier?</h2><p class="comparison-sub">Because 80% of people who sign up never build a single automation. The tool is the problem.</p></div></div>
+      <div class="comparison-table">
+        <div class="comparison-row header"><div>Feature</div><div>Zapier</div><div>Make</div><div>Dobly</div></div>
+        <div class="comparison-row"><div>Setup time</div><div class="bad">Hours</div><div class="bad">Hours</div><div class="good">30 seconds</div></div>
+        <div class="comparison-row"><div>Technical skill</div><div class="bad">Required</div><div class="bad">Required</div><div class="good">None</div></div>
+        <div class="comparison-row"><div>AI designs</div><div class="bad">✗</div><div class="bad">✗</div><div class="good">✓</div></div>
+        <div class="comparison-row"><div>Plain-English errors</div><div class="bad">✗</div><div class="bad">✗</div><div class="good">✓</div></div>
+        <div class="comparison-row"><div>M-PESA native</div><div class="bad">✗</div><div class="bad">✗</div><div class="good">✓</div></div>
+        <div class="comparison-row"><div>WhatsApp alerts</div><div class="bad">✗</div><div class="bad">✗</div><div class="good">✓</div></div>
+        <div class="comparison-row"><div>Time to first</div><div class="bad">~2 hrs</div><div class="bad">~3 hrs</div><div class="good">~2 minutes</div></div>
+      </div>
+    </section>
+    <section class="cta-section" id="cta">
+      <canvas id="cta-canvas"></canvas>
+      <div class="cta-copy"><h2 class="cta-title">Your first automation<br>runs in <span class="cta-counter" id="cta-counter">0</span><span id="cta-suffix"></span></h2><p class="cta-sub">Free forever. No credit card. No technical skill.</p><div style="margin-top:28px;"><a href="#pricing" class="btn-primary sonar magnetic">Start automating free →</a></div></div>
+    </section>
+    <footer class="footer">
+      <div class="footer-grid">
+        <div><div class="brand"><span class="brand-logo"><svg width="28" height="22" viewBox="0 0 90 70" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="4" y1="10" x2="86" y2="10" stroke="#00DFA0" stroke-width="5.5" stroke-linecap="round"/><line x1="4" y1="26" x2="62" y2="26" stroke="#00DFA0" stroke-width="5.5" stroke-linecap="round"/><path d="M 4 42 L 38 42 C 54 42 62 50 62 56 C 62 62 54 66 42 66 C 20 66 12 58 16 50 C 19 44 28 42 38 42" stroke="#00DFA0" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span><span class="brand-word">Dobly</span></div><p>Built in Mombasa, Kenya.</p><small>The AI designs. The runtime operates.</small></div>
+        <div class="footer-nav"><a href="#steps">How it works</a><a href="#pricing">Pricing</a><a href="#comparison">Why Dobly</a><a href="#cta">Start free</a></div>
+        <div><div style="font-family:var(--ff-mono);font-size:12px;color:var(--dim);">dobly.io</div><div style="margin-top:14px;display:flex;gap:18px;color:var(--muted);font-size:13px;"><a href="https://x.com">Twitter</a><a href="https://github.com">GitHub</a></div></div>
+      </div>
+      <div class="footer-bottom">© 2025 Dobly</div>
+    </footer>
+  </div>
+  <script>
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase);
+    ScrollTrigger.defaults({ start: "top 82%", toggleActions: "play none none none" });
+    CustomEase.create("dobly-out", "M0,0 C0.16,1 0.3,1 1,1");
+    CustomEase.create("dobly-spring", "M0,0 C0.34,1.56 0.64,1 1,1");
+    CustomEase.create("dobly-slow", "M0,0 C0.04,0 0.2,1 1,1");
+    const lenis = new Lenis({ duration: 1.4, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), smooth: true, smoothTouch: false });
+    function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+    requestAnimationFrame(raf);
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add((time) => { lenis.raf(time * 1000); });
+    gsap.ticker.lagSmoothing(0);
+
+    function setStrokeDash(svg) {
+      svg.querySelectorAll('line, path').forEach((shape) => {
+        const length = shape.getTotalLength ? shape.getTotalLength() : 160;
+        shape.style.strokeDasharray = length;
+        shape.style.strokeDashoffset = length;
+      });
+    }
+
+    function animateLoader() {
+      const loader = document.getElementById('loader');
+      const page = document.getElementById('page');
+      const logo = document.getElementById('loader-logo');
+      const shapes = logo.querySelectorAll('line, path');
+      const letters = document.querySelectorAll('.loader-word span');
+      setStrokeDash(logo);
+      gsap.timeline({ onComplete: () => { loader.style.display = 'none'; page.style.opacity = '1'; } })
+        .to(shapes[0], { strokeDashoffset: 0, duration: .35, ease: 'none' }, 0)
+        .to(shapes[1], { strokeDashoffset: 0, duration: .35, ease: 'none' }, .25)
+        .to(shapes[2], { strokeDashoffset: 0, duration: .55, ease: 'none' }, .45)
+        .to(letters, { opacity: 1, y: 0, stagger: .06, duration: .2 }, 1.2)
+        .to('.loader-line', { width: '100%', duration: .6, ease: 'none' }, 1.8)
+        .to(loader, { y: '-100vh', opacity: 0, duration: .4, ease: 'power1.in' }, 2.4)
+        .to('#page', { opacity: 1, y: 0, duration: .4, ease: 'dobly-out' }, 2.5);
+    }
+
+    function setupCursor() {
+      if (window.matchMedia('(pointer: coarse)').matches) return;
+      const dot = document.getElementById('cursor-dot');
+      const ring = document.getElementById('cursor-ring');
+      let tx = innerWidth / 2, ty = innerHeight / 2, rx = tx, ry = ty;
+      document.addEventListener('mousemove', (event) => {
+        tx = event.clientX;
+        ty = event.clientY;
+        dot.style.transform = `translate(${tx}px, ${ty}px)`;
+        dot.style.opacity = 1;
+        ring.style.opacity = 1;
+      });
+      document.querySelectorAll('a, button, [data-cursor]').forEach((el) => {
+        el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+        el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+      });
+      document.addEventListener('click', (event) => {
+        const pulse = document.createElement('div');
+        pulse.className = 'cursor-pulse';
+        pulse.style.left = `${event.clientX}px`;
+        pulse.style.top = `${event.clientY}px`;
+        document.body.appendChild(pulse);
+        gsap.fromTo(pulse, { scale: 1, opacity: 1 }, { scale: 3, opacity: 0, duration: .4, ease: 'power2.out', onComplete: () => pulse.remove() });
+      });
+      (function loop() {
+        rx += (tx - rx) * 0.12;
+        ry += (ty - ry) * 0.12;
+        ring.style.transform = `translate(${rx}px, ${ry}px)`;
+        requestAnimationFrame(loop);
+      })();
+    }
+
+    function setupNavAndParallax() {
+      const nav = document.getElementById('nav');
+      const navLogo = document.getElementById('nav-logo');
+      setStrokeDash(navLogo);
+      window.addEventListener('scroll', () => {
+        nav.classList.toggle('scrolled', window.scrollY > 60);
+        gsap.to('.scroll-indicator', { autoAlpha: window.scrollY > 80 ? 0 : .8, duration: .3 });
+      }, { passive: true });
+      navLogo.parentElement.addEventListener('mouseenter', () => {
+        const shapes = navLogo.querySelectorAll('line, path');
+        shapes.forEach((shape) => { shape.style.strokeDashoffset = shape.getTotalLength(); });
+        gsap.to(shapes, { strokeDashoffset: 0, duration: .6, stagger: .08, ease: 'none' });
+      });
+      document.addEventListener('mousemove', (e) => {
+        const cx = (e.clientX / innerWidth - .5);
+        const cy = (e.clientY / innerHeight - .5);
+        gsap.to('.hero-badge', { x: cx * -18, y: cy * -18, duration: 1.2, ease: 'power2.out' });
+        gsap.to('.hero-headline', { x: cx * -28, y: cy * -28, duration: 1.2, ease: 'power2.out' });
+        gsap.to('.hero-sub', { x: cx * -14, y: cy * -14, duration: 1.4, ease: 'power2.out' });
+        gsap.to('.hero-ctas', { x: cx * -8, y: cy * -8, duration: 1.6, ease: 'power2.out' });
+        gsap.to('#hero-canvas', { x: cx * 22, y: cy * 22, duration: 2.0, ease: 'power2.out' });
+      });
+    }
+
+    function setupMagneticAndTilt() {
+      document.querySelectorAll('.magnetic').forEach((button) => {
+        button.addEventListener('mousemove', (event) => {
+          const rect = button.getBoundingClientRect();
+          const dx = event.clientX - (rect.left + rect.width / 2);
+          const dy = event.clientY - (rect.top + rect.height / 2);
+          gsap.to(button, { x: dx * .35, y: dy * .35, duration: .3, ease: 'power2.out' });
+        });
+        button.addEventListener('mouseleave', () => gsap.to(button, { x: 0, y: 0, duration: .7, ease: 'dobly-spring' }));
+      });
+      document.querySelectorAll('[data-tilt], .step-card, .tile, .feature-card, .terminal').forEach((card) => {
+        card.addEventListener('mousemove', (event) => {
+          const rect = card.getBoundingClientRect();
+          const cx = (event.clientX - rect.left) / rect.width - .5;
+          const cy = (event.clientY - rect.top) / rect.height - .5;
+          gsap.to(card, { rotateX: cy * -14, rotateY: cx * 14, transformPerspective: 900, duration: .4, ease: 'power2.out' });
+          card.style.setProperty('--glow-x', ((event.clientX - rect.left) / rect.width * 100) + '%');
+          card.style.setProperty('--glow-y', ((event.clientY - rect.top) / rect.height * 100) + '%');
+          card.style.setProperty('--glow-opacity', '1');
+          gsap.to(card, { y: -8, borderColor: 'rgba(0,223,160,0.3)', boxShadow: '0 20px 60px rgba(0,223,160,0.1), 0 0 0 1px rgba(0,223,160,0.2)', duration: .3, ease: 'power2.out' });
+        });
+        card.addEventListener('mouseleave', () => {
+          gsap.to(card, { rotateX: 0, rotateY: 0, y: 0, duration: .9, ease: 'dobly-spring' });
+          card.style.setProperty('--glow-opacity', '0');
+        });
+      });
+    }
+
+    function setupThreeParticles(canvasId, total) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas || innerWidth < 768) return;
+      const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 1, 1000);
+      camera.position.z = 260;
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+      const count = innerWidth < 1100 ? 140 : total;
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const base = [], force = [], velocity = [], phases = [];
+      for (let i = 0; i < count; i++) {
+        const x = (Math.random() - .5) * 520, y = (Math.random() - .5) * 360, z = (Math.random() - .5) * 160;
+        positions[i * 3] = x; positions[i * 3 + 1] = y; positions[i * 3 + 2] = z;
+        base.push({ x, y, z }); force.push({ x: 0, y: 0 }); velocity.push({ x: 0, y: 0 });
+        phases.push({ a: Math.random() * Math.PI * 2, b: Math.random() * Math.PI * 2, s: 0.0003 + Math.random() * 0.0005 });
+        const r = Math.random();
+        if (r < .6) colors.set([0, .8745, .6274], i * 3);
+        else if (r < .9) colors.set([0, 1, .7019], i * 3);
+        else colors.set([.886, .941, .917], i * 3);
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      const material = new THREE.PointsMaterial({ size: 3.2, vertexColors: true, transparent: true, opacity: .65 });
+      const points = new THREE.Points(geometry, material);
+      scene.add(points);
+      const pointer = new THREE.Vector2(9999, 9999);
+      window.addEventListener('mousemove', (event) => {
+        pointer.x = (event.clientX / innerWidth) * 520 - 260;
+        pointer.y = -(event.clientY / innerHeight) * 360 + 180;
+      });
+      window.addEventListener('resize', () => { renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+      function animate(time) {
+        const arr = geometry.attributes.position.array;
+        for (let i = 0; i < count; i++) {
+          const driftX = Math.sin(time * phases[i].s + phases[i].a) * 3;
+          const driftY = Math.cos(time * phases[i].s + phases[i].b) * 4;
+          let x = base[i].x + driftX, y = base[i].y + driftY;
+          const dx = x - pointer.x, dy = y - pointer.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 150) {
+            const power = 1800 / Math.max(dist * dist, 30);
+            force[i].x += (dx / Math.max(dist, 1)) * power;
+            force[i].y += (dy / Math.max(dist, 1)) * power;
+          }
+          force[i].x *= .92; force[i].y *= .92;
+          velocity[i].x = (velocity[i].x + force[i].x) * .9;
+          velocity[i].y = (velocity[i].y + force[i].y) * .9;
+          arr[i * 3] = x + velocity[i].x;
+          arr[i * 3 + 1] = y + velocity[i].y;
+        }
+        geometry.attributes.position.needsUpdate = true;
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+      requestAnimationFrame(animate);
+    }
+
+    function setupAuxScenes() {
+      const thinkMount = document.getElementById('thinking-canvas');
+      if (thinkMount && innerWidth >= 768) {
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, thinkMount.clientWidth / thinkMount.clientHeight, 1, 1000);
+        camera.position.z = 220;
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(thinkMount.clientWidth, thinkMount.clientHeight);
+        thinkMount.appendChild(renderer.domElement);
+        const count = 80;
+        const positions = new Float32Array(count * 3);
+        const origin = [];
+        for (let i = 0; i < count; i++) {
+          const angle = (Math.PI * 2 * i) / count;
+          const radius = 100 + Math.random() * 40;
+          positions[i * 3] = Math.cos(angle) * radius;
+          positions[i * 3 + 1] = Math.sin(angle) * radius;
+          origin.push({ x: positions[i * 3], y: positions[i * 3 + 1] });
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const points = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0x00dfa0, size: 4, transparent: true, opacity: .8 }));
+        scene.add(points);
+        (function loop(time) {
+          const arr = geometry.attributes.position.array;
+          for (let i = 0; i < count; i++) {
+            const t = (Math.sin(time * 0.001 + i * 0.14) + 1) / 2;
+            arr[i * 3] = origin[i].x * (1 - t * .88);
+            arr[i * 3 + 1] = origin[i].y * (1 - t * .88);
+          }
+          geometry.attributes.position.needsUpdate = true;
+          renderer.render(scene, camera);
+          requestAnimationFrame(loop);
+        })(0);
+      }
+      const torusMount = document.getElementById('torus-canvas');
+      if (torusMount) {
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(42, torusMount.clientWidth / torusMount.clientHeight, 1, 1000);
+        camera.position.z = 4.2;
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setSize(torusMount.clientWidth, torusMount.clientHeight);
+        torusMount.appendChild(renderer.domElement);
+        const mesh = new THREE.Mesh(new THREE.TorusKnotGeometry(1, 0.3, 128, 16), new THREE.MeshBasicMaterial({ color: 0x00dfa0, wireframe: true, transparent: true, opacity: 0.4 }));
+        scene.add(mesh);
+        (function loop() { mesh.rotation.x += 0.003; mesh.rotation.y += 0.005; mesh.rotation.z += 0.002; renderer.render(scene, camera); requestAnimationFrame(loop); })();
+      }
+      gsap.timeline({ repeat: -1 }).fromTo('#failure-toast', { x: 120, opacity: 0 }, { x: 0, opacity: 1, duration: .6, ease: 'dobly-out' }).to('#failure-toast', { opacity: 1, duration: 3 }).to('#failure-toast', { x: 120, opacity: 0, duration: .6, ease: 'dobly-out' });
+      const featureLogo = document.getElementById('feature-logo-svg');
+      setStrokeDash(featureLogo);
+      const logoShapes = featureLogo.querySelectorAll('line, path');
+      gsap.timeline({ repeat: -1, repeatDelay: .6 }).to(logoShapes, { strokeDashoffset: (i, t) => t.getTotalLength(), duration: 1.2, stagger: .08, ease: 'none' }).to(logoShapes, { strokeDashoffset: 0, filter: 'drop-shadow(0 0 12px rgba(0,223,160,0.8))', duration: 1.4, stagger: .08, ease: 'none' });
+    }
+
+    function setupStoryAndReveals() {
+      if (!prefersReduced && innerWidth >= 768) {
+        gsap.to(".h-track", { x: () => -(document.querySelector(".h-track").scrollWidth - innerWidth), ease: "none", scrollTrigger: { trigger: ".h-section", pin: true, scrub: 1, end: () => "+=" + (document.querySelector(".h-track").scrollWidth - innerWidth) } });
+        gsap.to('.feature-visual-1', { y: -80, ease: 'none', scrollTrigger: { trigger: '.feature-row-1', scrub: 1.5 } });
+        gsap.to('.feature-visual-2', { y: -80, ease: 'none', scrollTrigger: { trigger: '.feature-row-2', scrub: 1.5 } });
+        gsap.to('.feature-visual-3', { y: -80, ease: 'none', scrollTrigger: { trigger: '.feature-row-3', scrub: 1.5 } });
+      }
+      if (typeof SplitText !== 'undefined' && !prefersReduced) {
+        const heroSplit = new SplitText('.hero-headline', { type: 'words' });
+        gsap.from(heroSplit.words, { opacity: 0, y: 60, rotateX: -40, stagger: .08, duration: .9, ease: 'dobly-out', transformPerspective: 800 });
+        const statementSplit = new SplitText('.statement-head', { type: 'words' });
+        gsap.from(statementSplit.words, { opacity: 0, y: 80, stagger: .06, duration: .8, ease: 'dobly-out', scrollTrigger: { trigger: '.statement', start: 'top 72%' } });
+        const titleSplit = new SplitText('.section-title', { type: 'words' });
+        gsap.from(titleSplit.words, { opacity: 0, y: 40, rotateX: -60, stagger: .06, duration: .8, ease: 'dobly-out', scrollTrigger: { trigger: '#steps', start: 'top 82%' } });
+      }
+      gsap.from('.step-card', { opacity: 0, y: 60, stagger: .12, duration: .9, ease: 'dobly-out', scrollTrigger: { trigger: '.steps-grid', start: 'top 80%' } });
+      gsap.from('.feature-copy, .feature-visual', { opacity: 0, y: 40, stagger: .12, duration: .8, ease: 'dobly-out', scrollTrigger: { trigger: '.features', start: 'top 82%' } });
+      gsap.from('.tile', { opacity: 0, y: 50, stagger: .1, duration: .8, ease: 'dobly-out', scrollTrigger: { trigger: '.pricing-grid', start: 'top 82%' } });
+      gsap.from('.comparison-row:not(.header)', { opacity: 0, x: -24, stagger: .07, duration: .6, ease: 'dobly-out', scrollTrigger: { trigger: '.comparison-table', start: 'top 82%' } });
+      gsap.to('.statement-line', { scaleX: 1, duration: .8, delay: .4, ease: 'dobly-out', scrollTrigger: { trigger: '.statement', start: 'top 72%' } });
+    }
+
+    function setupTerminalAndCounters() {
+      const prompts = ["When a customer pays via M-PESA, send them a WhatsApp thank-you and log it in Google Sheets","Every evening at 7pm, send me a WhatsApp summary of today's M-PESA transactions","When a new booking comes in, send the client a WhatsApp confirmation and add them to my calendar","When a salon appointment is made, remind the client 24 hours before via WhatsApp","When stock runs low in my spreadsheet, send me a WhatsApp alert to reorder","Every Friday at 5pm, send my weekly revenue summary to my email","When a new follower comments on my Instagram post, reply with a thank-you automatically","When a client fills my contact form, send them a welcome email and add them to my Google Sheet","Every Monday at 8am, email me a summary of last week's Instagram engagement","When a new order comes in on Shopify, create an invoice in Wave and notify me on Slack","When someone fills my contact form, add them to Notion and send a welcome email via Gmail","When a payment clears on Stripe, send the customer a receipt and update my revenue tracker","Every Sunday night, pull my week's tasks from Notion and email me a clean summary","When a new lead fills my Typeform, add them to my CRM and send a personalised follow-up email","When a client approves a proposal on DocuSign, create a project in Asana and send a kickoff email","Every morning at 7am, send me the top 5 industry news headlines in my niche","When a new client is added to my agency workspace, create their folder in Drive and send an onboarding email","When a campaign goes live on Meta Ads, notify the client on Slack and log the launch in Notion","Every Monday, pull last week's ad performance and email each client their personalised report","When a support ticket is marked urgent in Zendesk, immediately notify the team lead on WhatsApp and Slack","When a contractor submits an invoice, verify the amount against the contract and flag anomalies","When a YouTube video is published, automatically post it to Twitter, LinkedIn, and the team Slack","Every night at midnight, back up all new database entries to Google Sheets and send a confirmation","When a user upgrades their plan, send them a personalised welcome email and trigger an onboarding sequence","When a Shopify order is placed, send a WhatsApp confirmation and update inventory in Google Sheets","When a product goes out of stock, pause its Facebook ad and send me an alert","When a customer leaves a 5-star review, send them a 10% discount code automatically","When an abandoned cart is detected, send a reminder email after 1 hour and a WhatsApp after 24 hours","When an invoice is overdue by 3 days, send a polite payment reminder email automatically","Every month on the 1st, generate a financial summary and send it to my accountant","When a large transaction appears in my bank feed, send me an immediate WhatsApp alert","When a contract is signed, create a project timeline in Notion and schedule all milestone reminders"];
+      const promptEl = document.getElementById('terminal-prompt');
+      const processingEl = document.getElementById('terminal-processing');
+      const stepsEl = document.getElementById('workflow-steps');
+      const readyEl = document.getElementById('terminal-ready');
+      const scanline = document.getElementById('scanline');
+      const counterWrap = document.getElementById('prompt-counter');
+      let index = 0;
+      function variableDelay(length) { return length < 60 ? 22 + Math.random() * 10 : 28 + Math.random() * 14; }
+      function inferSteps(prompt) { const steps = []; if (/m-pesa|stripe|payment/i.test(prompt)) steps.push("✓ Trigger      Payment received"); else if (/every|daily|weekly|friday|monday|month/i.test(prompt)) steps.push("✓ Trigger      Scheduled workflow"); else steps.push("✓ Trigger      Event received"); if (/whatsapp/i.test(prompt)) steps.push("✓ Step 1       WhatsApp → Send message"); if (/google sheets|sheet/i.test(prompt)) steps.push("✓ Step 2       Google Sheets → Append row"); else if (/email|gmail/i.test(prompt)) steps.push("✓ Step 2       Gmail → Send email"); else if (/notion/i.test(prompt)) steps.push("✓ Step 2       Notion → Create record"); else steps.push("✓ Step 2       Dobly runtime → Execute action"); return steps.slice(0, 3); }
+      function renderCounter(nextIndex) { const current = counterWrap.querySelector('span'); const next = document.createElement('span'); next.textContent = `${String(nextIndex + 1).padStart(2, '0')} / 32`; next.style.transform = 'translateY(100%)'; next.style.opacity = '0'; counterWrap.appendChild(next); gsap.to(current, { yPercent: -100, opacity: 0, duration: .2, onComplete: () => current.remove() }); gsap.to(next, { yPercent: -100, opacity: 1, duration: .2 }); }
+      async function typeText(element, text) { element.textContent = ""; for (let i = 0; i < text.length; i++) { element.textContent += text[i]; await new Promise((resolve) => setTimeout(resolve, variableDelay(text.length))); } }
+      async function loopTerminal() {
+        const prompt = prompts[index];
+        renderCounter(index);
+        processingEl.innerHTML = ''; stepsEl.innerHTML = ''; readyEl.style.opacity = 0;
+        await typeText(promptEl, prompt);
+        for (const state of ["✦ Parsing intent...", "✦ Resolving connectors...", "✦ Compiling workflow spec..."]) { const line = document.createElement('div'); processingEl.appendChild(line); await typeText(line, state); gsap.to(line, { opacity: 1, duration: .2 }); }
+        for (const step of inferSteps(prompt)) { const node = document.createElement('div'); node.className = 'workflow-step'; node.textContent = step; stepsEl.appendChild(node); gsap.to(node, { opacity: 1, x: 0, duration: .3, ease: 'dobly-out' }); await new Promise((resolve) => setTimeout(resolve, 260)); }
+        gsap.to(readyEl, { opacity: 1, duration: .3 });
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await gsap.fromTo(scanline, { opacity: 1, top: 0 }, { top: '100%', opacity: 1, duration: .3, ease: 'none' });
+        gsap.set(scanline, { opacity: 0, top: 0 });
+        index = (index + 1) % prompts.length;
+        loopTerminal();
+      }
+      gsap.to('.terminal', { opacity: 1, scale: 1, duration: .9, ease: 'dobly-out', scrollTrigger: { trigger: '.terminal', start: 'top 82%' } });
+      loopTerminal();
+      const forever = document.getElementById('forever-counter');
+      gsap.fromTo({ value: 0 }, { value: 8000 + Math.floor(Math.random() * 4000), duration: 2, ease: 'power2.out', scrollTrigger: { trigger: '.forever-wrap', start: 'top 80%' }, onUpdate() { forever.textContent = Math.round(this.targets()[0].value).toLocaleString(); } });
+      const ctaCounter = document.getElementById('cta-counter');
+      const ctaSuffix = document.getElementById('cta-suffix');
+      ScrollTrigger.create({ trigger: '#cta', start: 'top 70%', once: true, onEnter: () => { gsap.fromTo({ value: 0 }, { value: 30, duration: 1.8, ease: 'power4.out', onUpdate() { ctaCounter.textContent = Math.round(this.targets()[0].value); }, onComplete() { let text = ' seconds.'; let i = 0; (function write(){ if (i < text.length) { ctaSuffix.textContent += text[i]; i += 1; setTimeout(write, 45); } })(); } }); } });
+    }
+
+    function setupSonarAndAnchors() {
+      document.querySelectorAll('.sonar').forEach((button) => {
+        const pulse = () => { const span = document.createElement('span'); span.style.position = 'absolute'; span.style.inset = '-12px'; span.style.border = '1px solid rgba(0,223,160,0.22)'; span.style.borderRadius = 'inherit'; button.appendChild(span); gsap.fromTo(span, { scale: 1, opacity: .6 }, { scale: 1.3, opacity: 0, duration: .9, ease: 'power2.out', onComplete: () => span.remove() }); };
+        pulse();
+        let timer = setInterval(pulse, 2500);
+        button.addEventListener('mouseenter', () => { clearInterval(timer); timer = setInterval(pulse, 1000); });
+        button.addEventListener('mouseleave', () => { clearInterval(timer); timer = setInterval(pulse, 2500); });
+      });
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener('click', (event) => {
+          const href = anchor.getAttribute('href');
+          const target = document.querySelector(href);
+          if (!target) return;
+          event.preventDefault();
+          lenis.scrollTo(target, { offset: -60 });
+        });
+      });
+    }
+
+    if (prefersReduced) {
+      gsap.globalTimeline.timeScale(0);
+      document.querySelectorAll('[data-reveal], .step-card, .tile').forEach(el => { el.style.opacity = 1; el.style.transform = 'none'; });
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('page').style.opacity = 1;
+    } else {
+      animateLoader();
+    }
+    setupCursor();
+    setupNavAndParallax();
+    setupMagneticAndTilt();
+    if (!prefersReduced) gsap.fromTo('.hero-content', { scale: 1.1, opacity: 0 }, { scale: 1, opacity: 1, duration: 1.6, ease: 'dobly-slow', delay: 2.5 });
+    setupThreeParticles('hero-canvas', 320);
+    setupThreeParticles('cta-canvas', 460);
+    setupAuxScenes();
+    setupStoryAndReveals();
+    setupTerminalAndCounters();
+    setupSonarAndAnchors();
+    window.addEventListener('load', () => ScrollTrigger.refresh());
+  </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Dobly Browser Agent</title>
+    <style>
+      body { font-family: sans-serif; padding: 16px; width: 280px; background: #0d1410; color: #f0fff4; }
+      input, button { width: 100%; margin-top: 8px; padding: 8px; border-radius: 8px; }
+      button { background: #00e87a; color: #050a07; border: none; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h3>Dobly Browser Agent</h3>
+    <label>User ID</label>
+    <input id="userId" placeholder="Supabase user id" />
+    <label>Worker Secret</label>
+    <input id="workerSecret" placeholder="WORKER_SECRET" />
+    <button id="registerBtn">Register Agent</button>
+    <p id="status"></p>
+    <script src="popup.js"></script>
+  </body>
+</html>
