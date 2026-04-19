@@ -3,12 +3,21 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, Link2, Loader2, ShieldCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  Link2,
+  Loader2,
+  ShieldCheck,
+  Sparkles,
+  Workflow,
+  Wrench,
+} from "lucide-react";
 import {
   CONNECTION_GROUPS,
   getLaunchReadyConnectionProviders,
 } from "@/lib/connection-catalog";
 import { getConnectionReadiness } from "@/lib/connection-readiness";
+import { getWorkflowConnectionStrategy } from "@/lib/provider-strategy";
 import type { Connection } from "@/types";
 
 export default function ConnectionsTab({
@@ -62,23 +71,82 @@ export default function ConnectionsTab({
   const successMessage = searchParams?.get("success");
   const errorMessage = searchParams?.get("error");
   const advancedMode = planId === "pro" || planId === "agency";
+  const connectedCount = connections.length;
+  const readyCount = connections.filter((connection) => getConnectionReadiness(connection).operational).length;
+  const strategyPreview = getWorkflowConnectionStrategy(
+    {
+      name: "Dobly preview",
+      description: "Support, scheduling, reporting, and approvals",
+      trigger: "manual",
+      category: "HR & Operations",
+      steps: [],
+      estimated_time_saved: "2 hours/week",
+      difficulty: "Simple",
+      integrations: [],
+      setup_steps: [],
+    },
+    "support, scheduling, reporting, approvals, reminders",
+  );
 
   return (
     <div className="space-y-6">
-      <section className="card">
+      <section className="card relative overflow-hidden">
+        <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,rgba(77,122,255,0.14),transparent_52%)] lg:block" />
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Connections</div>
             <h2 className="mt-2 font-display text-3xl font-semibold text-text">
-              Connect the tools your work and life already use.
+              Connect the tools your agents and automations actually depend on.
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">
-              Connect email, calendar, commerce, messaging, and workspace accounts. Dobly keeps the intelligence layer behind the scenes so you only connect tools you actually recognize.
+              Connect email, messaging, commerce, CRM, data stores, and internal systems without
+              dropping users into raw developer setup unless they ask for it.
             </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="badge-muted">Messaging and inboxes</span>
+              <span className="badge-muted">Payments and commerce</span>
+              <span className="badge-muted">CRM and databases</span>
+              <span className="badge-muted">Internal APIs</span>
+            </div>
           </div>
           <div className="badge-green">
             <ShieldCheck className="h-3.5 w-3.5" />
             {advancedMode ? "Easy setup + advanced mode" : "Easy setup only"}
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="premium-tile">
+            <div className="badge-green">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Ready
+            </div>
+            <p className="mt-4 font-display text-3xl font-semibold text-text">{readyCount}</p>
+            <p className="mt-2 text-sm text-text-muted">
+              Live connections operational inside workflows right now.
+            </p>
+          </div>
+          <div className="premium-tile">
+            <div className="badge-muted">
+              <Workflow className="h-3.5 w-3.5" />
+              Coverage
+            </div>
+            <p className="mt-4 font-display text-3xl font-semibold text-text">
+              {launchReadyProviders.length}
+            </p>
+            <p className="mt-2 text-sm text-text-muted">
+              Setup-ready providers across messaging, ops, finance, and infrastructure.
+            </p>
+          </div>
+          <div className="premium-tile">
+            <div className="badge-muted">
+              <Wrench className="h-3.5 w-3.5" />
+              Connected
+            </div>
+            <p className="mt-4 font-display text-3xl font-semibold text-text">{connectedCount}</p>
+            <p className="mt-2 text-sm text-text-muted">
+              Accounts or systems already linked into the Dobly workspace.
+            </p>
           </div>
         </div>
       </section>
@@ -96,6 +164,52 @@ export default function ConnectionsTab({
           Dobly could not finish that connection. Try again or use advanced setup if you are on Pro or Agency.
         </div>
       ) : null}
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="card">
+          <div className="badge-muted">
+            <Sparkles className="h-3.5 w-3.5" />
+            Dobly-managed first
+          </div>
+          <h3 className="mt-4 font-display text-2xl font-semibold text-text">
+            Most work should start inside Dobly
+          </h3>
+          <div className="mt-4 space-y-3 text-sm text-text-muted">
+            {strategyPreview.managedCapabilities.slice(0, 3).map((capability) => (
+              <div
+                key={capability.id}
+                className="rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-3"
+              >
+                <div className="text-text">{capability.label}</div>
+                <div className="mt-1 text-text-muted">{capability.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card">
+          <div className="badge-muted">
+            <Workflow className="h-3.5 w-3.5" />
+            Connection policy
+          </div>
+          <h3 className="mt-4 font-display text-2xl font-semibold text-text">
+            Connect late, not upfront
+          </h3>
+          <div className="mt-4 space-y-3 text-sm text-text-muted">
+            <div className="rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-3">
+              <div className="text-text">Required</div>
+              <div className="mt-1">Only for actions that must happen inside the customer&apos;s own account, ledger, store, inbox, or communication system.</div>
+            </div>
+            <div className="rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-3">
+              <div className="text-text">Optional</div>
+              <div className="mt-1">Helpful for sync, delivery, and deeper business context, but usually not necessary to design and stage the workflow.</div>
+            </div>
+            <div className="rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-3">
+              <div className="text-text">Dobly-managed</div>
+              <div className="mt-1">Drafting, routing, summaries, approvals, reports, prompts, and internal orchestration should work before most third-party connections are added.</div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {CONNECTION_GROUPS.map((group) => {
         const providers = launchReadyProviders.filter((provider) => provider.category === group.id);
@@ -149,6 +263,46 @@ export default function ConnectionsTab({
           </section>
         );
       })}
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <div className="card">
+          <div className="badge-muted">
+            <Sparkles className="h-3.5 w-3.5" />
+            Good starter stack
+          </div>
+          <h3 className="mt-4 font-display text-2xl font-semibold text-text">
+            Start with three
+          </h3>
+          <p className="mt-3 text-sm leading-7 text-text-muted">
+            Most teams only need one communication connector, one system-of-record connector, and
+            one payment or webhook connector to launch useful workflows.
+          </p>
+        </div>
+        <div className="card">
+          <div className="badge-muted">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            For agents
+          </div>
+          <h3 className="mt-4 font-display text-2xl font-semibold text-text">Channels and context</h3>
+          <p className="mt-3 text-sm leading-7 text-text-muted">
+            Agents usually need inbox, chat, CRM, or helpdesk-style connections so they can reply,
+            gather context, and escalate cleanly.
+          </p>
+        </div>
+        <div className="card">
+          <div className="badge-muted">
+            <Workflow className="h-3.5 w-3.5" />
+            For automations
+          </div>
+          <h3 className="mt-4 font-display text-2xl font-semibold text-text">
+            Triggers and destinations
+          </h3>
+          <p className="mt-3 text-sm leading-7 text-text-muted">
+            Automations need reliable event sources and update targets: payments, orders, records,
+            spreadsheets, APIs, and reporting endpoints.
+          </p>
+        </div>
+      </section>
 
       <section className="card">
         <div className="mb-4 flex items-center justify-between gap-3">

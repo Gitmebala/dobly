@@ -84,6 +84,143 @@ export interface WorkflowTrigger {
 export type WorkflowOperatorAutonomy = "supervised" | "guarded" | "delegated";
 export type WorkflowOperatorMode = "workflow" | "bounded_operator";
 
+// Agent-specific types
+export interface ConversationNode {
+  id: string;
+  type: "greeting" | "question" | "decision" | "action" | "handoff" | "end";
+  text: string;
+  nextNode?: string;
+  branches?: ConversationBranch[];
+  actionType?: string;
+  actionConfig?: Record<string, unknown>;
+}
+
+export interface ConversationBranch {
+  condition: string;
+  targetNodeId: string;
+}
+
+export interface EscalationTrigger {
+  type: "confidence_below" | "keyword_match" | "call_duration_exceeded" | "repeated_misunderstanding";
+  threshold?: number;
+  keywords?: string[];
+  seconds?: number;
+  count?: number;
+}
+
+export interface AgentConfig {
+  // Prompt & Behavior
+  systemPrompt: string;
+  conversationTone: "professional" | "friendly" | "empathetic" | "formal";
+  behaviorRules: string[];
+  maxResponseLength: number;
+  knowledgeBase?: string;
+
+  // Voice Configuration
+  voiceProvider: "google" | "eleven-labs" | "azure" | "aws";
+  voiceId: string;
+  language: string;
+  accent?: string;
+  speechRate: number;
+  pitch: number;
+
+  // Conversation Flow
+  conversationFlow: ConversationNode[];
+  maxTurnCount: number;
+  silenceTimeoutSeconds: number;
+
+  // Call Actions
+  callActions: {
+    beforeCall: {
+      fetchContext: string;
+      announceCallerName: boolean;
+      playHoldingMessage: boolean;
+    };
+    duringCall: {
+      allowTransfers: boolean;
+      transferPhoneNumber?: string;
+      pauseForConfirmation: string[];
+    };
+    afterCall: {
+      recordTranscript: boolean;
+      sendEmail: string[];
+      webhookUrl: string;
+      scheduleFollowup: boolean;
+      followupDelayMinutes: number;
+    };
+  };
+
+  // Calendar Integration
+  calendarIntegration?: {
+    provider: "google" | "microsoft" | "calendly" | "slack";
+    enabled: boolean;
+    checkAvailability: boolean;
+    autoBook: boolean;
+    calendarIds: string[];
+    bufferMinutes: number;
+    timezone: string;
+    businessHours: {
+      monday: { start: string; end: string } | null;
+      tuesday: { start: string; end: string } | null;
+      wednesday: { start: string; end: string } | null;
+      thursday: { start: string; end: string } | null;
+      friday: { start: string; end: string } | null;
+      saturday: { start: string; end: string } | null;
+      sunday: { start: string; end: string } | null;
+    };
+  };
+
+  // Escalation & Handoff
+  escalation: {
+    triggers: EscalationTrigger[];
+    handoffMessage: string;
+    handoffPhoneNumber?: string;
+    handoffEmail?: string;
+    escalationQueue?: "round_robin" | "first_available" | "skill_based";
+    maxWaitTime: number;
+  };
+
+  // Integrations (CRM, Data)
+  integrations: {
+    crm?: {
+      provider: "salesforce" | "hubspot" | "pipedrive";
+      syncOnCall: boolean;
+      createLead: boolean;
+      updateContact: boolean;
+    };
+    dataConnections: Array<{
+      connectionId: string;
+      syncField: string;
+      syncDirection: "read" | "write" | "bidirectional";
+    }>;
+  };
+
+  // Deployment
+  deployment: {
+    channels: Array<"voice" | "whatsapp" | "sms" | "web" | "api">;
+    voiceChannelConfig?: {
+      phoneNumber: string;
+      provider: "twilio" | "vonage" | "bandwidth";
+    };
+    webChannelConfig?: {
+      embedUrl: string;
+      widgetTheme: "light" | "dark";
+    };
+    apiConfig?: {
+      webhookSecret: string;
+      rateLimit: number;
+    };
+  };
+
+  // Monitoring & Analytics
+  monitoring: {
+    recordCalls: boolean;
+    transcriptSentiment: boolean;
+    keywords: string[];
+    reportingEmail: string[];
+  };
+}
+
 export interface WorkflowOperator {
   enabled: boolean;
   mode: WorkflowOperatorMode;
@@ -94,6 +231,7 @@ export interface WorkflowOperator {
   approvalRiskThreshold: "medium" | "high";
   allowedDomains: string[];
   escalationMessage?: string;
+  agentConfig?: AgentConfig;
 }
 
 export interface WorkflowActionStep {
@@ -400,6 +538,12 @@ export interface GenerateWorkflowResponse {
   workflow: WorkflowBlueprint;
   workflow_id: string;
   missing_providers?: string[];
+  connection_strategy?: {
+    likely_category: WorkflowCategory;
+    required_provider_ids: string[];
+    optional_provider_ids: string[];
+    managed_capability_ids: string[];
+  };
   next_url?: string | null;
 }
 

@@ -34,6 +34,23 @@ export const DOBLY_SKILL_MANIFESTS: DoblySkillManifest[] = [
     retryable: true,
   },
   {
+    key: "analyze_spreadsheet_data",
+    title: "Analyze Spreadsheet Data",
+    summary: "Use AI to interpret spreadsheet rows and generate insights.",
+    executionType: "intelligence",
+    riskLevel: "low",
+    requiredConnectors: ["google"],
+    inputSchema: [
+      { key: "spreadsheetId", type: "string", required: true, description: "The Google Sheets spreadsheet ID." },
+      { key: "range", type: "string", required: false, description: "The sheet range to analyze, e.g. Sheet1!A1:D100." },
+      { key: "prompt", type: "string", required: false, description: "Optional analysis question or prompt." },
+    ],
+    outputSchema: [
+      { key: "analysis", type: "string", required: true, description: "AI-generated insight or summary." },
+    ],
+    retryable: true,
+  },
+  {
     key: "compose_daily_summary",
     title: "Compose Daily Summary",
     summary: "Summarize structured activity into a concise daily update.",
@@ -45,6 +62,25 @@ export const DOBLY_SKILL_MANIFESTS: DoblySkillManifest[] = [
     ],
     outputSchema: [
       { key: "summary", type: "string", required: true, description: "Generated summary text." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "execute_agent_task",
+    title: "Execute Agent Task",
+    summary: "Turn a business task into a bounded AI agent response or next action.",
+    executionType: "intelligence",
+    riskLevel: "medium",
+    requiredConnectors: [],
+    inputSchema: [
+      { key: "task_description", type: "string", required: true, description: "What the agent should do." },
+      { key: "role", type: "string", required: false, description: "The agent role or persona." },
+      { key: "objective", type: "string", required: false, description: "The desired outcome or goal." },
+      { key: "context", type: "object", required: false, description: "Additional business or workflow context." },
+    ],
+    outputSchema: [
+      { key: "response", type: "string", required: true, description: "Agent-generated response or next step." },
+      { key: "summary", type: "string", required: true, description: "Short explanation of the recommended action." },
     ],
     retryable: true,
   },

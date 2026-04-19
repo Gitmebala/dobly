@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CheckCircle2, ShieldCheck } from "lucide-react";
 import { describeProviderReadinessIssue, findOperationalConnection } from "@/lib/connection-readiness";
+import { getWorkflowConnectionStrategy } from "@/lib/provider-strategy";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getRequiredProviderIdsForWorkflow, getRequiredProvidersById } from "@/lib/connection-requirements";
 import type { Connection } from "@/types";
@@ -25,6 +26,7 @@ export default async function WorkflowActivatePage({
 
   const integrations = ((workflow.blueprint as Record<string, unknown>)?.integrations ?? []) as string[];
   const requiredProviders = getRequiredProvidersById(getRequiredProviderIdsForWorkflow(workflow.blueprint, workflow.prompt));
+  const strategy = getWorkflowConnectionStrategy(workflow.blueprint, workflow.prompt);
   const allConnections = (connections ?? []) as Connection[];
   const missing = requiredProviders.filter((provider) => !findOperationalConnection(allConnections, provider.id));
   const definition = (workflow.blueprint as Record<string, unknown>)?.definition as
@@ -150,6 +152,45 @@ export default async function WorkflowActivatePage({
               {missing.length > 0 ? "Fix missing connections" : "Return to workflow"}
             </Link>
           </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="card">
+          <div className="mb-4 flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-accent" />
+            <h2 className="font-display text-2xl font-semibold text-text">Dobly-managed by default</h2>
+          </div>
+          <div className="space-y-3">
+            {strategy.managedCapabilities.map((capability) => (
+              <div key={capability.id} className="rounded-[1rem] border border-border px-4 py-3">
+                <div className="font-display text-lg font-medium text-text">{capability.label}</div>
+                <div className="mt-1 text-sm text-text-muted">{capability.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="mb-4 flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-accent" />
+            <h2 className="font-display text-2xl font-semibold text-text">Optional enrichments</h2>
+          </div>
+          {strategy.optionalProviders.length === 0 ? (
+            <p className="text-sm leading-7 text-text-muted">
+              Dobly can launch this workflow without extra optional systems right now.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {strategy.optionalProviders.map((provider) => (
+                <div key={provider.providerId} className="rounded-[1rem] border border-border px-4 py-3">
+                  <div className="font-display text-lg font-medium text-text">{provider.label}</div>
+                  <div className="mt-1 text-sm text-text-muted">{provider.reason}</div>
+                  <div className="mt-2 text-xs text-text-dim">{provider.description}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </div>

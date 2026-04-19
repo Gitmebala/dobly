@@ -17,6 +17,12 @@ const stars = [
   { top: "88%", left: "86%", size: 3, depth: -0.5 },
 ];
 
+const shootingStars = [
+  { top: "14%", left: "62%", delay: "0s", duration: "7.5s" },
+  { top: "28%", left: "78%", delay: "2.4s", duration: "9.2s" },
+  { top: "46%", left: "18%", delay: "4.8s", duration: "8.4s" },
+];
+
 export default function CinematicBackdrop({
   intensity = "default",
   className = "",
@@ -66,6 +72,20 @@ export default function CinematicBackdrop({
                 width: `${star.size}px`,
                 height: `${star.size}px`,
                 "--star-depth": String(star.depth),
+              } as React.CSSProperties
+            }
+          />
+        ))}
+        {shootingStars.map((shootingStar, index) => (
+          <span
+            key={`${shootingStar.top}-${shootingStar.left}-${index}`}
+            className="cinematic-shooting-star"
+            style={
+              {
+                top: shootingStar.top,
+                left: shootingStar.left,
+                animationDelay: shootingStar.delay,
+                animationDuration: shootingStar.duration,
               } as React.CSSProperties
             }
           />

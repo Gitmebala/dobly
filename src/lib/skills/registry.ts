@@ -1,4 +1,6 @@
 import { DOBLY_SKILL_MANIFESTS } from "@/lib/skills/manifests";
+import { anthropic } from "@/lib/anthropic";
+import { googleSheetsReadExecutor } from "@/lib/connectors/native/google";
 import type { DoblySkill, DoblySkillContext, DoblySkillManifest } from "@/lib/skills/types";
 
 function getString(value: unknown, fallback = "") {
@@ -50,6 +52,29 @@ export const DOBLY_SKILLS: DoblySkill[] = [
       summary: `Handled ${records.length} events today. What needed to happen, happened.`,
     });
   }),
+  createSkill(manifestsByKey.get("execute_agent_task")!, async ({ workflow, config, trigger, stepOutputs, step }) => {
+    const taskDescription = getString(config.task_description, step.description);
+    const role = getString(config.role, workflow.title || "Business agent");
+    const objective = getString(config.objective, "Complete this task safely and report the next recommended action.");
+    const context = config.context && typeof config.context === "object" ? JSON.stringify(config.context) : getString(config.context, "");
+
+    const message = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      max_tokens: 900,
+      system: "You are Dobly's bounded business agent. Provide a concise recommended action and a short explanation based on the task, role, and objective.",
+      messages: [
+        {
+          role: "user",
+          content: `Task: ${taskDescription}\nRole: ${role}\nObjective: ${objective}\nContext: ${context}`,
+        },
+      ],
+    });
+
+    const response = message.content[0]?.type === "text" ? message.content[0].text : "Unable to generate an agent response.";
+    const summary = response.split("\n").slice(0, 2).join(" ").slice(0, 240);
+
+    return intelligenceResult({ response, summary });
+  }),
   createSkill(manifestsByKey.get("classify_customer_message")!, async ({ config }) => {
     const message = getString(config.message).toLowerCase();
     const category = message.includes("refund")
@@ -60,6 +85,48 @@ export const DOBLY_SKILLS: DoblySkill[] = [
           ? "support"
           : "general";
     return intelligenceResult({ category, confidence: 0.76 });
+  }),
+  createSkill(
+    manifestsByKey.get("analyze_spreadsheet_data")!,
+    async ({ workflow, definition, trigger, triggerPayload, step, config, stepOutputs }) => {
+      const spreadsheetId = getString(config.spreadsheetId);
+      const range = getString(config.range, "Sheet1!A:Z");
+      const prompt = getString(
+        config.prompt,
+        "Analyze this spreadsheet data and summarize the key business insights."
+      );
+
+      const sheetResult = await googleSheetsReadExecutor.execute({
+        workflow,
+        definition,
+        trigger,
+        triggerPayload,
+        step,
+        config: { spreadsheetId, range },
+        stepOutputs,
+      });
+
+    const values = Array.isArray(sheetResult.values) ? sheetResult.values : [];
+    const rowsString = JSON.stringify(values.slice(0, 100));
+
+    const analysisMessage = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      max_tokens: 1000,
+      system: "You are an expert data analyst. Analyze the spreadsheet rows and answer the prompt clearly.",
+      messages: [
+        {
+          role: "user",
+          content: `${prompt}\n\nSpreadsheet rows:\n${rowsString}`,
+        },
+      ],
+    });
+
+    const analysis =
+      analysisMessage.content[0]?.type === "text"
+        ? analysisMessage.content[0].text
+        : "Unable to analyze sheet data.";
+
+    return intelligenceResult({ analysis });
   }),
   createSkill(manifestsByKey.get("detect_payment_anomaly")!, async ({ config }) => {
     const payment = getObject(config.payment);

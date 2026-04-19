@@ -10,6 +10,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        background: "rgb(var(--bg) / <alpha-value>)",
+        foreground: "rgb(var(--text) / <alpha-value>)",
         surface: {
           DEFAULT: "rgb(var(--surface-rgb) / <alpha-value>)",
           1: "rgb(var(--surface-1-rgb) / <alpha-value>)",

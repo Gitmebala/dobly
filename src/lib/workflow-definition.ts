@@ -11,17 +11,64 @@ import { selectSkillKeyForBlueprintStep } from "@/lib/skills/select";
 import { getRequiredProviderIdsForWorkflow } from "@/lib/connection-requirements";
 
 const SUPPORTED_INTEGRATIONS = new Map<string, string>([
+  // Communication & Email
   ["google", "Google"],
   ["gmail", "Google"],
   ["google sheets", "Google"],
   ["slack", "Slack"],
+  ["whatsapp", "WhatsApp"],
+  ["twilio", "Twilio"],
+  ["email", "Email"],
+  ["resend", "Resend"],
+  ["intercom", "Intercom"],
+
+  // E-Commerce
   ["shopify", "Shopify"],
+  ["stripe", "Stripe"],
+  ["square", "Square"],
   ["m-pesa", "M-PESA"],
   ["mpesa", "M-PESA"],
+
+  // CRM & Sales
+  ["hubspot", "HubSpot"],
+  ["salesforce", "Salesforce"],
+  ["pipedrive", "Pipedrive"],
+  ["zoho", "Zoho CRM"],
+
+  // Support & Ticketing
+  ["zendesk", "Zendesk"],
+  ["freshdesk", "Freshdesk"],
+
+  // Documents & Productivity
+  ["notion", "Notion"],
+  ["airtable", "Airtable"],
+  ["docusign", "DocuSign"],
+  ["typeform", "Typeform"],
+
+  // Operations & Collaboration
+  ["calendly", "Calendly"],
+  ["trello", "Trello"],
+  ["asana", "Asana"],
+  ["monday", "monday.com"],
+  ["clickup", "ClickUp"],
+
+  // Marketing
+  ["mailchimp", "Mailchimp"],
+  ["klaviyo", "Klaviyo"],
+  ["linkedin", "LinkedIn"],
+
+  // Finance
+  ["quickbooks", "QuickBooks"],
+  ["xero", "Xero"],
+  ["wave", "Wave"],
+
+  // Video & Communication
+  ["zoom", "Zoom"],
+
+  // Utilities
   ["webhook", "Webhook / API"],
   ["api", "Webhook / API"],
   ["http", "Webhook / API"],
-  ["email", "Email"],
   ["file", "File"],
   ["formatter", "Formatter"],
   ["dobly orchestrator", "Dobly Orchestrator"],
@@ -84,16 +131,116 @@ function inferOperator(blueprint: WorkflowBlueprint): WorkflowOperator | undefin
 
   if (!looksOperator) return undefined;
 
+  const primaryChannel = blueprint.integrations?.[0] ?? "web";
+  const defaultRules = [
+    "Answer only within the approved business role.",
+    "Escalate instead of guessing when confidence is low.",
+    "Confirm important details before taking action.",
+  ];
+
   return {
     enabled: true,
     mode: "bounded_operator",
     role: blueprint.name,
     objective: blueprint.description,
-    channel: blueprint.integrations?.[0] ?? "mixed",
+    channel: primaryChannel,
     autonomy: "guarded",
     approvalRiskThreshold: "high",
     allowedDomains: (blueprint.integrations ?? []).slice(0, 6),
     escalationMessage: "Escalate to the owner when the request is risky, unclear, or outside the approved role.",
+    agentConfig: {
+      systemPrompt: `${blueprint.name}. ${blueprint.description} Stay within policy, collect missing context, and escalate when needed.`,
+      conversationTone: /support|care|success|concierge|patient/.test(corpus) ? "empathetic" : "professional",
+      behaviorRules: defaultRules,
+      maxResponseLength: 480,
+      knowledgeBase: blueprint.setup_steps.join("\n"),
+      voiceProvider: "google",
+      voiceId: "en-US-Neural2-F",
+      language: "en",
+      speechRate: 1,
+      pitch: 0,
+      conversationFlow: [
+        {
+          id: "greeting",
+          type: "greeting",
+          text: `Introduce yourself as ${blueprint.name} and clarify the request.`,
+          nextNode: "qualify",
+        },
+        {
+          id: "qualify",
+          type: "question",
+          text: "Ask the next best question needed to complete the task safely.",
+          nextNode: "decide",
+        },
+        {
+          id: "decide",
+          type: "decision",
+          text: "If the request is clear and allowed, proceed. Otherwise escalate.",
+          branches: [
+            { condition: "clear_and_allowed", targetNodeId: "action" },
+            { condition: "unclear_or_risky", targetNodeId: "handoff" },
+          ],
+        },
+        {
+          id: "action",
+          type: "action",
+          text: "Complete the approved action and confirm the result.",
+          nextNode: "end",
+        },
+        {
+          id: "handoff",
+          type: "handoff",
+          text: "Create a structured handoff for a human operator.",
+          nextNode: "end",
+        },
+        {
+          id: "end",
+          type: "end",
+          text: "Close clearly and politely.",
+        },
+      ],
+      maxTurnCount: 12,
+      silenceTimeoutSeconds: 18,
+      callActions: {
+        beforeCall: {
+          fetchContext: "Load business context, recent activity, and known customer details.",
+          announceCallerName: true,
+          playHoldingMessage: false,
+        },
+        duringCall: {
+          allowTransfers: true,
+          pauseForConfirmation: ["booking", "payment", "handoff"],
+        },
+        afterCall: {
+          recordTranscript: true,
+          sendEmail: [],
+          webhookUrl: "",
+          scheduleFollowup: false,
+          followupDelayMinutes: 30,
+        },
+      },
+      escalation: {
+        triggers: [{ type: "confidence_below", threshold: 0.65 }],
+        handoffMessage: "Handing this to a human teammate with full context.",
+        maxWaitTime: 10,
+      },
+      integrations: {
+        dataConnections: [],
+      },
+      deployment: {
+        channels: primaryChannel === "whatsapp" ? ["whatsapp", "web"] : ["web", "api"],
+        apiConfig: {
+          webhookSecret: randomWebhookToken(24),
+          rateLimit: 60,
+        },
+      },
+      monitoring: {
+        recordCalls: true,
+        transcriptSentiment: true,
+        keywords: ["urgent", "refund", "cancel", "speak to human"],
+        reportingEmail: [],
+      },
+    },
   };
 }
 

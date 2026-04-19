@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { usePathname } from "next/navigation";
 import Lenis from "lenis";
+import GlobalStarfield from "@/components/GlobalStarfield";
 import MotionLayer from "@/components/MotionLayer";
 import PageTransitionShell from "@/components/PageTransitionShell";
 import PageLoader from "@/components/shared/PageLoader";
@@ -49,6 +50,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <GlobalStarfield />
       <Starfield />
       {pathname === "/" ? null : <PageLoader />}
       <MotionLayer />

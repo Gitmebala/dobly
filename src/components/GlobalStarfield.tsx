@@ -20,12 +20,13 @@ export default function GlobalStarfield() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     const mobile = window.innerWidth < 768;
-    const starCount = mobile ? 80 : 190;
+    const starCount = mobile ? 60 : 140;
     const stars: Star[] = [];
     const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
@@ -50,11 +51,11 @@ export default function GlobalStarfield() {
             zone === "top"
               ? Math.pow(Math.random(), 1.9) * window.innerHeight * 0.42
               : Math.random() * window.innerHeight,
-          vx: (Math.random() - 0.5) * 0.12,
-          vy: (Math.random() - 0.5) * 0.08,
+          vx: (Math.random() - 0.5) * 0.08,
+          vy: (Math.random() - 0.5) * 0.06,
           drift: Math.random() * Math.PI * 2,
-          size: 0.3 + Math.random() * 0.85,
-          alpha: zone === "top" ? 0.24 + Math.random() * 0.58 : 0.1 + Math.random() * 0.26,
+          size: 0.8 + Math.random() * 1.6,
+          alpha: zone === "top" ? 0.3 + Math.random() * 0.7 : 0.15 + Math.random() * 0.35,
           twinkle: Math.random() * Math.PI * 2,
           zone,
         });
@@ -66,27 +67,75 @@ export default function GlobalStarfield() {
       mouse.y = event.clientY;
     };
 
+    const drawStar = (x: number, y: number, size: number, opacity: number) => {
+      const innerRadius = size * 0.4;
+      const outerRadius = size;
+      const spikes = 5;
+
+      // Draw outer glow
+      const glowGradient = ctx.createRadialGradient(x, y, 0, x, y, outerRadius * 1.8);
+      glowGradient.addColorStop(0, `rgba(255, 255, 255, ${opacity * 0.15})`);
+      glowGradient.addColorStop(0.6, `rgba(220, 240, 255, ${opacity * 0.05})`);
+      glowGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = glowGradient;
+      ctx.beginPath();
+      ctx.arc(x, y, outerRadius * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw star points
+      ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+      ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.9})`;
+      ctx.lineWidth = 0;
+      ctx.beginPath();
+
+      for (let i = 0; i < spikes * 2; i++) {
+        const angle = (i * Math.PI) / spikes - Math.PI / 2;
+        const radius = i % 2 === 0 ? outerRadius : innerRadius;
+        const px = x + Math.cos(angle) * radius;
+        const py = y + Math.sin(angle) * radius;
+
+        if (i === 0) {
+          ctx.moveTo(px, py);
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Add center highlight
+      const centerGradient = ctx.createRadialGradient(x, y, 0, x, y, innerRadius * 0.5);
+      centerGradient.addColorStop(0, `rgba(255, 255, 255, ${opacity * 0.6})`);
+      centerGradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
+      ctx.fillStyle = centerGradient;
+      ctx.beginPath();
+      ctx.arc(x, y, innerRadius * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
     let frame = 0;
     const render = () => {
       elapsed += 0.008;
       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      // Subtle background gradient
       const topGlow = ctx.createLinearGradient(0, 0, 0, window.innerHeight * 0.42);
-      topGlow.addColorStop(0, "rgba(255,255,255,0.04)");
-      topGlow.addColorStop(0.35, "rgba(0,223,160,0.035)");
+      topGlow.addColorStop(0, "rgba(255,255,255,0.02)");
+      topGlow.addColorStop(0.35, "rgba(0,223,160,0.015)");
       topGlow.addColorStop(1, "rgba(255,255,255,0)");
       ctx.fillStyle = topGlow;
       ctx.fillRect(0, 0, window.innerWidth, window.innerHeight * 0.45);
 
       for (const star of stars) {
-        const zoneDrift = star.zone === "top" ? 0.05 : 0.08;
+        const zoneDrift = star.zone === "top" ? 0.012 : 0.024;
         star.x += star.vx + Math.cos(elapsed + star.drift) * zoneDrift;
         star.y += star.vy + Math.sin(elapsed * 0.9 + star.drift) * zoneDrift;
         star.twinkle += 0.024;
 
-        if (star.x < -16) star.x = window.innerWidth + 16;
-        if (star.x > window.innerWidth + 16) star.x = -16;
-        if (star.y < -16) star.y = window.innerHeight + 16;
-        if (star.y > window.innerHeight + 16) star.y = -16;
+        if (star.x < -32) star.x = window.innerWidth + 32;
+        if (star.x > window.innerWidth + 32) star.x = -32;
+        if (star.y < -32) star.y = window.innerHeight + 32;
+        if (star.y > window.innerHeight + 32) star.y = -32;
 
         const dx = star.x - mouse.x;
         const dy = star.y - mouse.y;
@@ -95,21 +144,14 @@ export default function GlobalStarfield() {
         if (distance < 150) {
           const force = (150 - distance) / 150;
           const angle = Math.atan2(dy, dx);
-          star.x += Math.cos(angle) * force * 2.4;
-          star.y += Math.sin(angle) * force * 2.4;
+          star.x += Math.cos(angle) * force * 1.8;
+          star.y += Math.sin(angle) * force * 1.8;
         }
 
-        const glowBoost = distance < 180 ? 1 + ((180 - distance) / 180) * 0.65 : 1;
-        const opacity = star.alpha * (0.72 + Math.sin(star.twinkle) * 0.28) * glowBoost;
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-        ctx.fill();
+        const glowBoost = distance < 180 ? 1 + ((180 - distance) / 180) * 0.5 : 1;
+        const opacity = star.alpha * (0.6 + Math.sin(star.twinkle) * 0.4) * glowBoost;
 
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.12})`;
-        ctx.arc(star.x, star.y, star.size * 2.2, 0, Math.PI * 2);
-        ctx.fill();
+        drawStar(star.x, star.y, star.size, opacity);
       }
 
       frame = window.requestAnimationFrame(render);

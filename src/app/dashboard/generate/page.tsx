@@ -9,9 +9,19 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { WorkflowBlueprint } from "@/types";
+import { getWorkflowConnectionStrategy } from "@/lib/provider-strategy";
 import { STARTER_TEMPLATES } from "@/lib/starter-templates";
 
-const EXAMPLE_PROMPTS = [
+const AGENT_EXAMPLES = [
+  "A receptionist that answers calls, qualifies leads, and schedules meetings on my calendar",
+  "A support agent that handles common customer questions and escalates complex issues",
+  "A sales qualifier that screens inbound calls and routes high-intent prospects to sales",
+  "An appointment reminder agent that calls patients 24 hours before their scheduled visits",
+  "A billing agent that handles payment questions and processes refund requests",
+  "A customer success agent that onboards new clients and answers product questions",
+];
+
+const AUTOMATION_EXAMPLES = [
   "Every Sunday at 7pm, send me a summary of my calendar, unpaid bills, and top priorities for the week",
   "When someone books a call, send them a confirmation and add it to my calendar automatically",
   "Every morning at 7am, send me a short summary of important emails that need a reply today",
@@ -65,10 +75,11 @@ export default function GeneratePage() {
   }, []);
 
   const kind = searchParams?.get("kind") === "agent" ? "agent" : searchParams?.get("kind") === "automation" ? "automation" : null;
+  const EXAMPLE_PROMPTS = kind === "agent" ? AGENT_EXAMPLES : AUTOMATION_EXAMPLES;
 
   async function handleGenerate() {
     if (!prompt.trim() || prompt.trim().length < 10) {
-      setError("Please describe your automation in at least 10 characters.");
+      setError(`Please describe your ${kind === "agent" ? "agent" : kind === "automation" ? "automation" : "system"} in at least 10 characters.`);
       return;
     }
 
@@ -152,29 +163,29 @@ export default function GeneratePage() {
       <div className="max-w-3xl mx-auto space-y-8">
         <div>
           <h1 className="font-display font-bold text-3xl text-text mb-2">
-            {kind === "agent" ? "Generate an agent" : kind === "automation" ? "Generate an automation" : "Generate a system"}
+            {kind === "agent" ? "Design an agent" : kind === "automation" ? "Design an automation" : "Design a system"}
           </h1>
           <p className="text-text-muted">
             {kind === "agent"
-              ? "Describe the business role you want handled. Dobly will draft a bounded agent with the right behavior, tools, and safeguards."
+              ? "Describe the role. Dobly will draft the guardrails, channels, and runtime shape."
               : kind === "automation"
-                ? "Describe the business process you want running. Dobly will draft a deployable automation with triggers, steps, and required tools."
-                : "Describe the business role or process you want handled. Dobly will classify it and draft the right system."}
+                ? "Describe the process. Dobly will draft the trigger, steps, and leanest route to launch."
+                : "Describe the outcome. Dobly will classify and draft the right system."}
           </p>
         </div>
 
         {businessSummary ? (
           <div className="rounded-[1rem] border border-accent/16 bg-accent-dim px-4 py-3 text-sm text-text-muted">
-            Using saved business context: <span className="text-text">{businessSummary}</span>.{" "}
+            Using saved context: <span className="text-text">{businessSummary}</span>.{" "}
             <Link href="/dashboard/business" className="text-accent hover:text-text">
-              Edit business context
+              Edit
             </Link>
           </div>
         ) : (
           <div className="rounded-[1rem] border border-border bg-surface px-4 py-3 text-sm text-text-muted">
-            Add your website, FAQs, and brand context once to make new agents and automations generate faster and more accurately.{" "}
+            Add business context once to make new systems sharper.{" "}
             <Link href="/dashboard/business" className="text-accent hover:text-text">
-              Open business setup
+              Open setup
             </Link>
           </div>
         )}
@@ -182,13 +193,13 @@ export default function GeneratePage() {
         {/* Input */}
         <div className="card">
           <label className="block text-sm font-display font-medium text-text mb-3">
-            What do you want to automate?
+            {kind === "agent" ? "What business role do you want handled?" : "What do you want to automate?"}
           </label>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             className="input min-h-[120px] resize-none text-base leading-relaxed"
-            placeholder="e.g. Every Sunday at 7pm, send me next week's calendar, unpaid bills, and my top priorities..."
+            placeholder={kind === "agent" ? "e.g. A receptionist that answers calls, qualifies leads, and schedules meetings..." : "e.g. Every Sunday at 7pm, send me next week's calendar, unpaid bills, and my top priorities..."}
             maxLength={1000}
           />
           <div className="flex items-center justify-between mt-2">
@@ -235,17 +246,19 @@ export default function GeneratePage() {
             </Link>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
-            {STARTER_TEMPLATES.slice(0, 4).map((template) => (
-              <button
-                key={template.id}
-                onClick={() => setPrompt(template.prompt)}
-                className="premium-tile text-left"
-              >
-                <div className="badge-muted mb-3">{template.category}</div>
-                <div className="font-display text-lg font-semibold text-text">{template.title}</div>
-                <p className="mt-2 text-sm leading-6 text-text-muted">{template.summary}</p>
-              </button>
-            ))}
+            {STARTER_TEMPLATES.filter(t => kind === "agent" ? t.type === "agent" : kind === "automation" ? t.type === "automation" : true)
+              .slice(0, 4)
+              .map((template) => (
+                <button
+                  key={template.id}
+                  onClick={() => setPrompt(template.prompt)}
+                  className="premium-tile text-left"
+                >
+                  <div className="badge-muted mb-3">{template.category}</div>
+                  <div className="font-display text-lg font-semibold text-text">{template.title}</div>
+                  <p className="mt-2 text-sm leading-6 text-text-muted">{template.summary}</p>
+                </button>
+              ))}
           </div>
         </div>
       </div>
@@ -254,12 +267,21 @@ export default function GeneratePage() {
 
   // ── Generating step ─────────────────────────────────────────────────────────
   if (step === "generating") {
-    const generationSteps = [
+    const agentGenerationSteps = [
+      { threshold: 0, msg: "Analysing your agent requirements..." },
+      { threshold: 25, msg: "Designing conversation flow..." },
+      { threshold: 55, msg: "Configuring guardrails and escalation..." },
+      { threshold: 80, msg: "Building your bounded agent..." },
+    ];
+
+    const automationGenerationSteps = [
       { threshold: 0, msg: "Analysing your request..." },
       { threshold: 25, msg: "Identifying the right tools..." },
       { threshold: 55, msg: "Mapping automation steps..." },
       { threshold: 80, msg: "Finalising your workflow..." },
     ];
+
+    const generationSteps = kind === "agent" ? agentGenerationSteps : automationGenerationSteps;
 
     return (
       <div className="max-w-2xl mx-auto">
@@ -272,11 +294,12 @@ export default function GeneratePage() {
           </div>
 
           <h2 className="font-display font-bold text-xl text-text mb-2">
-            Designing your workflow...
+            {kind === "agent" ? "Designing your agent..." : "Designing your workflow..."}
           </h2>
           <p className="text-sm text-text-muted mb-8 max-w-sm mx-auto">
-            Dobly's AI is mapping every step, selecting the right tools, and
-            building your runnable workflow draft.
+            Dobly's AI is {kind === "agent"
+              ? "architecting your bounded agent with the right tone, guardrails, and conversation flow."
+              : "mapping every step, selecting the right tools, and building your runnable workflow draft."}
           </p>
 
           {/* Progress */}
@@ -324,6 +347,7 @@ export default function GeneratePage() {
   const wf = result?.workflow;
   if (!wf) return null;
   const operator = wf.definition?.operator;
+  const strategy = getWorkflowConnectionStrategy(wf, prompt);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-up">
@@ -359,7 +383,7 @@ export default function GeneratePage() {
       {/* Integrations */}
       <div className="card">
         <p className="text-xs font-mono text-text-dim uppercase tracking-wider mb-3">
-          Tools required
+          Connected systems referenced
         </p>
         <div className="flex flex-wrap gap-2">
           {wf.integrations.map((tool) => (
@@ -370,6 +394,66 @@ export default function GeneratePage() {
               {tool}
             </span>
           ))}
+        </div>
+      </div>
+
+     <div className="grid gap-4 lg:grid-cols-2">
+        <div className="card">
+          <p className="text-xs font-mono text-text-dim uppercase tracking-wider mb-3">
+            Launch profile
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-border bg-surface-2 px-3 py-3">
+              <div className="text-xs uppercase tracking-[0.18em] text-text-dim">Type</div>
+              <div className="mt-2 text-sm font-display text-text">
+                {operator?.enabled ? "Agent system" : "Automation system"}
+              </div>
+            </div>
+            <div className="rounded-lg border border-border bg-surface-2 px-3 py-3">
+              <div className="text-xs uppercase tracking-[0.18em] text-text-dim">Runtime</div>
+              <div className="mt-2 text-sm font-display text-text">
+                {wf.definition?.trigger.type === "schedule" ? "Scheduled" : wf.definition?.trigger.type === "webhook" ? "Event-driven" : "Manual first"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <p className="text-xs font-mono text-text-dim uppercase tracking-wider mb-3">
+            Dobly-managed by default
+          </p>
+          <div className="space-y-3">
+            {strategy.managedCapabilities.slice(0, 3).map((capability) => (
+              <div key={capability.id} className="rounded-lg border border-border bg-surface-2 px-3 py-3">
+                <div className="text-sm font-display font-medium text-text">{capability.label}</div>
+                <div className="mt-1 text-xs leading-6 text-text-muted">{capability.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <p className="text-xs font-mono text-text-dim uppercase tracking-wider mb-3">
+            Connection strategy
+          </p>
+          <div className="space-y-3 text-sm text-text-muted">
+            <div className="rounded-lg border border-border bg-surface-2 px-3 py-3">
+              <span className="text-text">Required:</span>{" "}
+              {strategy.requiredProviders.length > 0
+                ? strategy.requiredProviders.map((provider) => provider.label).join(", ")
+                : "None detected yet"}
+            </div>
+            <div className="rounded-lg border border-border bg-surface-2 px-3 py-3">
+              <span className="text-text">Optional:</span>{" "}
+              {strategy.optionalProviders.length > 0
+                ? strategy.optionalProviders.slice(0, 4).map((provider) => provider.label).join(", ")
+                : "No optional enrichments suggested"}
+            </div>
+            <div className="rounded-lg border border-border bg-surface-2 px-3 py-3">
+              Dobly should stage the workflow first, then ask for live connections only where an
+              action must run inside the customer&apos;s own account.
+            </div>
+          </div>
         </div>
       </div>
 

@@ -1,28 +1,25 @@
 import type { Metadata } from "next";
-import { Instrument_Serif, Plus_Jakarta_Sans, Space_Grotesk, Geist } from "next/font/google";
+import { Public_Sans, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import AppChrome from "@/components/shared/AppChrome";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-display",
-  weight: ["500", "700"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+const publicSans = Public_Sans({
   subsets: ["latin"],
   variable: "--font-body",
   weight: ["400", "500", "600", "700"],
 });
 
-const instrumentSerif = Instrument_Serif({
+const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-serif",
-  weight: ["400"],
-  style: ["normal", "italic"],
+  variable: "--font-mono",
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -44,6 +41,11 @@ export const metadata: Metadata = {
     creator: "@doblyhq",
   },
   robots: { index: true, follow: true },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Dobly",
+  },
 };
 
 export default function RootLayout({
@@ -52,7 +54,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn(spaceGrotesk.variable, publicSans.variable, jetBrainsMono.variable)}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -72,7 +78,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} ${instrumentSerif.variable} font-body bg-[var(--bg)] text-[var(--text)] antialiased`}
+        className={`font-body bg-[var(--bg)] text-[var(--text)] antialiased`}
       >
         <AppChrome>{children}</AppChrome>
       </body>

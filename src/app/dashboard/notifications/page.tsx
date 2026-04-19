@@ -69,10 +69,10 @@ export default async function NotificationsPage() {
           <div>
             <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Attention center</div>
             <h1 className="mt-2 font-display text-4xl font-bold tracking-tight text-text">
-              Signals that deserve your attention
+              Signals worth surfacing
             </h1>
             <p className="mt-3 max-w-2xl text-base leading-7 text-text-muted">
-              Dobly should stay quiet by default and surface only the moments that actually change what you need to do next.
+              Dobly should stay quiet until the next action changes.
             </p>
           </div>
           <div className="badge-green capitalize">{preference} first</div>
@@ -97,13 +97,13 @@ export default async function NotificationsPage() {
           label="Email"
           active={preference === "email"}
           icon={<Mail className="h-5 w-5 text-accent" />}
-          copy="Best for longer recovery notes, summaries, and billing follow-up."
+          copy="For summaries and recovery notes."
         />
         <ChannelCard
           label="WhatsApp"
           active={preference === "whatsapp"}
           icon={<Smartphone className="h-5 w-5 text-accent" />}
-          copy="Best for staying in the loop from the phone once a live messaging connection is ready."
+          copy="For phone-first alerts once messaging is live."
         />
       </section>
 

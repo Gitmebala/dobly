@@ -1,5 +1,5 @@
 export const BRAND = {
-  name: "Dobly",
+  name: "dobly",
   domain: "dobly.io",
   twitter: "@doblyhq",
   email: "hello@dobly.io",

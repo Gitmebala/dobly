@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Link2 } from "lucide-react";
 import { describeProviderReadinessIssue, findOperationalConnection } from "@/lib/connection-readiness";
+import { getWorkflowConnectionStrategy } from "@/lib/provider-strategy";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getRequiredProviderIdsForWorkflow, getRequiredProvidersById } from "@/lib/connection-requirements";
 import type { Connection } from "@/types";
@@ -25,6 +26,7 @@ export default async function WorkflowMissingConnectionsPage({
 
   const requiredProviderIds = getRequiredProviderIdsForWorkflow(workflow.blueprint, workflow.prompt);
   const requiredProviders = getRequiredProvidersById(requiredProviderIds);
+  const strategy = getWorkflowConnectionStrategy(workflow.blueprint, workflow.prompt);
   const allConnections = (connections ?? []) as Connection[];
   const missing = requiredProviders.filter((provider) => !findOperationalConnection(allConnections, provider.id));
 
@@ -70,6 +72,23 @@ export default async function WorkflowMissingConnectionsPage({
           </div>
         ) : null}
       </section>
+
+      {strategy.optionalProviders.length > 0 ? (
+        <section className="card">
+          <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Optional later</div>
+          <h2 className="mt-2 font-display text-2xl font-semibold text-text">
+            Useful additions, but not blockers
+          </h2>
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            {strategy.optionalProviders.map((provider) => (
+              <div key={provider.providerId} className="rounded-[1rem] border border-border px-4 py-3">
+                <div className="font-display text-lg font-medium text-text">{provider.label}</div>
+                <div className="mt-1 text-sm text-text-muted">{provider.reason}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

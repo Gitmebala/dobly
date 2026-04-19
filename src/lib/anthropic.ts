@@ -1,8 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { getPromptConnectionStrategy } from "@/lib/provider-strategy";
 import { ensureWorkflowDefinition } from "@/lib/workflow-definition";
 import type { BusinessProfile, WorkflowBlueprint } from "@/types";
 
-const anthropic = new Anthropic({
+export const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
@@ -23,7 +24,7 @@ The JSON must match this exact structure:
       "id": 1,
       "name": "Step name",
       "description": "What this step does",
-      "tool": "Tool/app name",
+      "tool": "Tool/app name or capability",
       "action": "Specific action name",
       "config": {},
       "output": "Optional output"
@@ -58,8 +59,8 @@ The JSON must match this exact structure:
         "id": "step_1",
         "name": "Step name",
         "description": "What this step does",
-        "app": "Resend | Webhook | Formatter | Delay | Branch",
-        "actionType": "compose_text" | "send_email" | "webhook_request" | "delay" | "branch",
+        "app": "Email | SMS | Mailchimp | Zendesk | Stripe | HubSpot | Salesforce | Pipedrive | Notion | Airtable | LinkedIn | Zoom | Freshdesk | Intercom | Square | QuickBooks | Xero | Wave | Typeform | Calendly | Trello | Asana | monday.com | ClickUp | Zoho CRM | Klaviyo | DocuSign | Slack | Webhook | Formatter | Delay | Branch | File",
+        "actionType": "compose_text" | "send_email" | "webhook_request" | "delay" | "branch" | "skill" | "file_write" | "orchestrate_document",
         "enabled": true,
         "config": {}
       }
@@ -67,13 +68,42 @@ The JSON must match this exact structure:
   }
 }
 
+CRITICAL RULES - Read First:
+1. INFER INTENT FROM THE PROMPT. DO NOT GUESS TOOLS THE USER DIDN'T MENTION.
+2. Dobly handles most capabilities INTERNALLY. Only mark a tool as required if the user EXPLICITLY named it or if Dobly cannot fulfill the outcome.
+3. When the user describes what they want (e.g., "email customers"), generate steps using outcome-driven action names, not tool names.
+4. If the user mentions a specific tool by name (Mailchimp, Zendesk, HubSpot, etc.), include it in integrations and steps. Otherwise, let Dobly handle it.
+
+CAPABILITY MAPPINGS (Dobly handles these internally):
+- "Email my customers" → send_email (don't force Mailchimp)
+- "Send SMS/text" → SMS (Dobly has Twilio)
+- "Create support ticket" → Create ticket (Dobly can create in Zendesk)
+- "Track a deal" → Track opportunity (Dobly can log in CRM)
+- "Generate invoice" → Generate invoice (Dobly can create in Stripe)
+- "Add to a list" → Add to list (Dobly can add in Mailchimp, Klaviyo, etc.)
+- "Create a task" → Create task (Dobly handles internally)
+- "Draft content" → compose_text (Dobly's strength)
+- "Route/qualify" → Dobly-managed routing (Dobly's strength)
+- "Approve something" → approval workflow (Dobly handles internally)
+- "Generate document" → Document generation (PDFs, contracts, etc.)
+- "Summarize data" → Data summary (Dobly's strength)
+
+WHEN TO REQUIRE A CONNECTION:
+- ONLY if the user explicitly names a tool: "Send to my Mailchimp", "Track in my Salesforce", "Pay via Stripe"
+- ONLY if the action requires the user's specific account: custom CRM fields, user's bank details, user's specific settings
+- Otherwise, Dobly handles it by default
+
+WHEN TO USE WEBHOOK:
+- When the user wants integration with a custom system or API they haven't named
+- When the user explicitly asks for "API" or "webhook"
+- NOT as a fallback for tools Dobly supports natively
+
 Rules:
-- Prefer runnable actions Dobly can execute today: compose_text, send_email, webhook_request, delay, branch.
-- Stay inside Dobly's strongest supported deployment surface: Google, Slack, Shopify, M-PESA, generic Webhook/API calls, file output, and Dobly's internal formatter/orchestrator.
-- Do NOT rely on Microsoft, Meta, Notion, Airtable, HubSpot, Yahoo, Stripe, or WhatsApp unless the user explicitly asks for them. If the request clearly needs an unsupported integration, convert the step into a generic webhook/API action instead of pretending Dobly has a native live path.
-- Use "send_email" only when an email outcome makes sense.
-- Use "webhook_request" for external systems like Slack, Discord, CRMs, Shopify webhooks, custom APIs, or generic integrations.
-- Use placeholder values in config, for example "{{trigger.email}}" or "{{workflow.title}}".
+- Default to Dobly-managed capabilities first: drafting, summaries, approvals, routing, qualification, internal logic, document generation, reminders, and staging.
+- Only require external connections when the user explicitly names a tool or when Dobly cannot fulfill the outcome.
+- Use "send_email" when an email outcome makes sense.
+- Use outcome-driven step names: "add_to_email_list", "create_support_ticket", "generate_invoice" instead of tool names.
+- Use placeholder values in config: "{{trigger.email}}", "{{workflow.title}}", etc.
 - Keep workflows practical and focused.
 - Include 3-8 steps.
 - Design for people and operators, not engineers.
@@ -87,6 +117,7 @@ export async function generateWorkflowBlueprint(
   userId: string,
   businessProfile?: BusinessProfile | null
 ): Promise<WorkflowBlueprint> {
+  const promptStrategy = getPromptConnectionStrategy(prompt);
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 2200,
@@ -95,6 +126,18 @@ export async function generateWorkflowBlueprint(
       {
         role: "user",
         content: `User ${userId} wants this system: ${prompt}
+
+Pre-draft connection guidance:
+${JSON.stringify(
+  {
+    likely_category: promptStrategy.likelyCategory,
+    dobly_managed_first: promptStrategy.managedCapabilities.map((item) => item.label),
+    explicit_required_providers: promptStrategy.requiredProviders.map((item) => item.label),
+    optional_providers: promptStrategy.optionalProviders.slice(0, 6).map((item) => item.label),
+  },
+  null,
+  2,
+)}
 
 Business context (use only if relevant and do not invent missing facts):
 ${businessProfile ? JSON.stringify({

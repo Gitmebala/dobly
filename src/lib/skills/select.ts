@@ -7,6 +7,7 @@ const SKILL_MATCHERS: Array<{ key: string; test: (text: string) => boolean }> = 
   { key: "classify_customer_message", test: (text) => /classify|categorize|route message|customer message/.test(text) },
   { key: "detect_payment_anomaly", test: (text) => /anomaly|unusual|suspicious|large transaction/.test(text) },
   { key: "draft_followup_email", test: (text) => /follow-up email|follow up email|personalized email|draft email/.test(text) },
+  { key: "execute_agent_task", test: (text) => /\b(agent|assistant|reception|operator|handle this request|perform this task|manage this ticket|respond to.*customer)\b/.test(text) },
   { key: "route_support_ticket", test: (text) => /support ticket|zendesk|route support|urgent issue/.test(text) },
   { key: "prepare_approval_request", test: (text) => /approval|required approval|approve/.test(text) },
   { key: "explain_connection_failure", test: (text) => /expired connection|token expired|connection failed/.test(text) },

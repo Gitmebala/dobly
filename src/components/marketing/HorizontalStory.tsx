@@ -64,13 +64,13 @@ export default function HorizontalStory() {
   }, []);
 
   return (
-    <section ref={sectionRef} id="product" className="relative min-h-[260vh]">
+    <section ref={sectionRef} id="product" className="relative">
       <div className="sticky top-0 flex min-h-screen items-center overflow-hidden py-24">
         <div className="container-main grid gap-12 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
           <div className="max-w-[520px]">
-            <div className="badge-muted mb-4">How it works</div>
+            <div className="badge-muted mb-4" style={{ color: "var(--accent-2)" }}>How it works</div>
             <h2 className="font-display text-[clamp(34px,5vw,58px)] font-bold leading-[0.94] tracking-[-0.05em]">
-              Quiet systems start with one plain-English sentence.
+              Focus on what makes your business yours. <span style={{ color: "var(--accent-2)" }}>We handle the repetitive.</span>
             </h2>
             <p className="mt-5 text-base leading-8 text-[var(--text-muted)]">
               You don&apos;t build the flow by hand. You pull the system into place by scrolling through how Dobly interprets, understands, and starts running the work.
@@ -102,7 +102,7 @@ export default function HorizontalStory() {
           </div>
 
           <div className="relative min-h-[520px]">
-            <div ref={sceneOneRef} className="absolute inset-0 rounded-[2rem] border border-[var(--border)] bg-[rgba(19,18,40,0.72)] p-6 backdrop-blur-3xl noise-indigo">
+            <div ref={sceneOneRef} className="absolute inset-0 rounded-[2rem] border border-[rgba(79,70,229,0.2)] bg-gradient-to-br from-[rgba(79,70,229,0.08)] to-[rgba(79,70,229,0.02)] p-6 backdrop-blur-3xl shadow-[0_0_50px_rgba(79,70,229,0.05)] transition-all duration-500">
               <div className="mb-4 text-xs uppercase tracking-[0.22em] text-[var(--text-dim)]">Describe</div>
               <div className="rounded-[1.4rem] border border-[rgba(79,70,229,0.18)] bg-[rgba(255,255,255,0.03)] px-5 py-5 shadow-[0_0_0_1px_rgba(79,70,229,0.08)]">
                 <div className="mb-3 flex items-center gap-2 text-xs text-[var(--text-dim)]">
@@ -116,19 +116,24 @@ export default function HorizontalStory() {
               </div>
             </div>
 
-            <div ref={sceneTwoRef} className="absolute inset-0 rounded-[2rem] border border-[var(--border)] bg-[rgba(19,18,40,0.72)] p-6 backdrop-blur-3xl noise-indigo">
-              <div className="mb-4 text-xs uppercase tracking-[0.22em] text-[var(--text-dim)]">Understand</div>
+            <div ref={sceneTwoRef} className="absolute inset-0 rounded-[2rem] border border-[rgba(196,154,42,0.2)] bg-gradient-to-br from-[rgba(196,154,42,0.08)] to-[rgba(196,154,42,0.02)] p-6 backdrop-blur-3xl shadow-[0_0_50px_rgba(196,154,42,0.05)] transition-all duration-500">
+              <div className="mb-6 text-xs uppercase tracking-[0.22em] text-[var(--text-dim)]">Smart connections</div>
               <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-center">
-                {["Calendar", "Email", "Tasks"].map((connector, index) => (
-                  <div key={connector} className="contents">
+                {[
+                  { name: "Calendar", color: "from-cyan-600 to-blue-600", icon: "📅" },
+                  { name: "Email", color: "from-violet-600 to-purple-600", icon: "📧" },
+                  { name: "Tasks", color: "from-emerald-600 to-teal-600", icon: "✓" }
+                ].map((connector, index) => (
+                  <div key={connector.name} className="contents">
                     <div
                       ref={(node) => {
                         connectorRefs.current[index] = node;
                       }}
-                      className="rounded-[1.2rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-6 text-center"
+                      className={`rounded-[1.2rem] border border-[rgba(255,255,255,0.12)] bg-gradient-to-br ${connector.color} p-6 text-center shadow-[0_8px_32px_rgba(0,0,0,0.3)]`}
                     >
-                      <div className="mb-2 text-[11px] uppercase tracking-[0.22em] text-[var(--text-dim)]">Connector</div>
-                      <div className="font-display text-xl font-bold tracking-[-0.03em] text-[var(--text)]">{connector}</div>
+                      <div className="mb-3 text-2xl">{connector.icon}</div>
+                      <div className="font-display text-lg font-bold tracking-[-0.03em] text-white">{connector.name}</div>
+                      <div className="mt-2 text-xs text-white/70">Connected</div>
                     </div>
                     {index < 2 ? (
                       <div className="hidden px-2 md:block">
@@ -140,7 +145,7 @@ export default function HorizontalStory() {
               </div>
             </div>
 
-            <div ref={sceneThreeRef} className="absolute inset-0 rounded-[2rem] border border-[var(--border)] bg-[rgba(19,18,40,0.72)] p-6 backdrop-blur-3xl noise-indigo">
+            <div ref={sceneThreeRef} className="absolute inset-0 rounded-[2rem] border border-[rgba(20,168,151,0.2)] bg-gradient-to-br from-[rgba(20,168,151,0.08)] to-[rgba(20,168,151,0.02)] p-6 backdrop-blur-3xl shadow-[0_0_50px_rgba(20,168,151,0.05)] transition-all duration-500">
               <div className="mb-5 flex items-center gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,168,151,0.22)] bg-[rgba(20,168,151,0.14)] px-3 py-1 text-xs uppercase tracking-[0.16em] text-[var(--green)]">
                   <span className="h-2 w-2 rounded-full bg-[var(--green)]" />
@@ -169,6 +174,7 @@ export default function HorizontalStory() {
           </div>
         </div>
       </div>
+      <div className="h-[100vh]" />
     </section>
   );
 }

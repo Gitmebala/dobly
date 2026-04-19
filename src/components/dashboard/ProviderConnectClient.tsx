@@ -179,7 +179,7 @@ export default function ProviderConnectClient({
         `${provider.label} number verified. Finish the messaging setup before Dobly can send outbound WhatsApp messages.`
       );
       window.setTimeout(() => {
-        window.location.href = "/dashboard/settings?tab=connections&success=whatsapp_number_verified";
+        window.location.href = "/dashboard/connections?success=whatsapp_number_verified";
       }, 700);
     } finally {
       setLoading(false);
@@ -188,7 +188,7 @@ export default function ProviderConnectClient({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <Link href="/dashboard/settings?tab=connections" className="btn-ghost inline-flex">
+      <Link href="/dashboard/connections" className="btn-ghost inline-flex">
         <ArrowLeft className="h-4 w-4" />
         Back to connections
       </Link>
@@ -271,7 +271,7 @@ export default function ProviderConnectClient({
             )}
             {showAdvanced ? `Save ${provider.label} manually` : flow.ctaLabel}
           </button>
-          <Link href="/dashboard/settings?tab=connections" className="btn-secondary">
+          <Link href="/dashboard/connections" className="btn-secondary">
             Cancel
           </Link>
         </div>

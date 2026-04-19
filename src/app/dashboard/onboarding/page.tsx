@@ -13,13 +13,15 @@ export default async function OnboardingPage() {
 
   if (!user) redirect("/auth/login");
 
-  const [{ data: workflows }, { data: connections }] = await Promise.all([
+  const [{ data: workflows }, { data: connections }, { data: businessProfile }] = await Promise.all([
     supabase.from("workflows").select("id").eq("user_id", user.id),
     supabase.from("connections").select("*").eq("user_id", user.id),
+    supabase.from("business_profiles").select("*").eq("user_id", user.id).single(),
   ]);
 
   const hasWorkflow = (workflows ?? []).length > 0;
   const hasConnection = (connections ?? []).some((connection) => isConnectionOperational(connection));
+  const hasBusinessContext = businessProfile?.business_name && businessProfile?.description;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -36,12 +38,20 @@ export default async function OnboardingPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid gap-4 lg:grid-cols-2">
+        <ChecklistCard
+          done={hasBusinessContext}
+          icon={<Sparkles className="h-5 w-5 text-accent" />}
+          title="Set business context"
+          copy="Share your website or business details. Dobly analyzes this to make your automations smarter and more aligned with your business."
+          href="/dashboard/business"
+          action="Set context"
+        />
         <ChecklistCard
           done={hasConnection}
           icon={<Link2 className="h-5 w-5 text-accent" />}
           title="Connect your tools"
-          copy="Start with the launch-ready accounts the workflow actually needs, like Google, Slack, Shopify, M-PESA, or a custom webhook/API."
+          copy="Start with the accounts your workflow needs: Google, Slack, Shopify, M-PESA, or custom APIs."
           href="/dashboard/settings?tab=connections"
           action="Open connections"
         />
@@ -54,7 +64,7 @@ export default async function OnboardingPage() {
           action="Build workflow"
         />
         <ChecklistCard
-          done={hasConnection && hasWorkflow}
+          done={hasConnection && hasWorkflow && hasBusinessContext}
           icon={<Waypoints className="h-5 w-5 text-accent" />}
           title="Review health and approvals"
           copy="Make sure your automations are visible, replayable, and protected by approvals when the action is risky or sensitive."

@@ -381,7 +381,7 @@ export default function HomePageExperience() {
 
       <main>
         <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 pt-32 pb-16 text-center">
-          <div className="hero-bloom absolute left-1/2 top-[28%] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(79,70,229,0.18)_0%,rgba(79,70,229,0.08)_34%,transparent_70%)] blur-3xl" />
+          <div className="hero-bloom absolute left-1/2 top-[28%] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(196,154,42,0.18)_0%,rgba(196,154,42,0.08)_34%,transparent_70%)] blur-3xl" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03),transparent_54%)]" />
           <div className="container-main relative z-10 flex flex-col items-center">
             <div ref={heroMarkRef} data-nav-item className="mb-8">
@@ -440,8 +440,8 @@ export default function HomePageExperience() {
             </div>
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {featureCards.map((card) => (
-                <article key={card.title} className="card-hover noise-indigo min-h-[260px] p-7">
-                  <div className="mb-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-[rgba(79,70,229,0.22)] bg-[rgba(79,70,229,0.1)]">
+                <article key={card.title} className="card-hover noise min-h-[260px] p-7">
+                  <div className="mb-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-[rgba(196,154,42,0.22)] bg-[rgba(196,154,42,0.1)]">
                     <FeatureIcon type={card.icon} />
                   </div>
                   <div className="text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">{card.label}</div>
@@ -469,7 +469,7 @@ export default function HomePageExperience() {
               {personas.map((persona) => (
                 <article
                   key={persona.title}
-                  className="card-hover noise-indigo w-full min-w-0 flex-shrink-0 p-7 md:min-w-[32rem] lg:min-w-[36rem]"
+                  className="card-hover noise w-full min-w-0 flex-shrink-0 p-7 md:min-w-[32rem] lg:min-w-[36rem]"
                 >
                   <div className="mb-8 flex items-center gap-3">
                     <span className="h-3 w-3 rounded-full bg-[var(--accent-2)] shadow-[0_0_18px_rgba(196,154,42,0.32)]" />
@@ -479,7 +479,7 @@ export default function HomePageExperience() {
                     {persona.title}
                   </h3>
                   <p className="mt-5 text-base leading-8 text-[var(--text-muted)]">{persona.pain}</p>
-                  <div className="mt-8 rounded-[1.1rem] border border-[rgba(79,70,229,0.18)] bg-[rgba(79,70,229,0.08)] px-5 py-5">
+                  <div className="mt-8 rounded-[1.1rem] border border-[rgba(196,154,42,0.18)] bg-[rgba(196,154,42,0.08)] px-5 py-5">
                     <div className="text-xs uppercase tracking-[0.22em] text-[var(--accent)]">Dobly outcome</div>
                     <p className="mt-3 text-base leading-7 text-[var(--text)]">{persona.outcome}</p>
                   </div>
@@ -491,11 +491,11 @@ export default function HomePageExperience() {
 
         <section className="page-section bg-[rgba(13,12,28,0.75)]" data-reveal>
           <div className="container-main grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-            <div className="card-hover noise-indigo p-7">
+            <div className="card-hover noise p-7">
               <div className="mb-6 badge-muted">Live automation feed</div>
               <FeedWindow index={feedIndex} />
             </div>
-            <div className="card-hover noise-indigo p-8">
+            <div className="card-hover noise p-8">
               <div className="text-[3rem] leading-none text-[var(--accent-2)]">"</div>
               <blockquote className="mt-4 max-w-[24ch] font-display text-[clamp(1.6rem,3vw,2rem)] font-bold leading-[1.2] tracking-[-0.04em] text-[var(--text)]">
                 Dobly feels like hiring a reliable operator, except it never forgets and never needs chasing.
@@ -522,13 +522,13 @@ export default function HomePageExperience() {
               {pricingCards.map((card) => (
                 <article
                   key={card.name}
-                  className={`card-hover noise-indigo flex min-h-[420px] flex-col justify-between p-7 ${
-                    card.featured ? "scale-[1.02] border-[rgba(79,70,229,0.4)] shadow-[0_0_60px_rgba(79,70,229,0.2)]" : ""
+                  className={`card-hover noise flex min-h-[420px] flex-col justify-between p-7 ${
+                    card.featured ? "scale-[1.02] border-[rgba(196,154,42,0.4)] shadow-[0_0_60px_rgba(196,154,42,0.2)]" : ""
                   }`}
                 >
                   <div>
                     {card.featured ? (
-                      <div className="mb-5 inline-flex rounded-full bg-[rgba(79,70,229,0.14)] px-3 py-1 text-xs uppercase tracking-[0.2em] text-[var(--accent)]">
+                      <div className="mb-5 inline-flex rounded-full bg-[rgba(26,107,107,0.14)] px-3 py-1 text-xs uppercase tracking-[0.2em] text-[var(--accent)]">
                         Recommended
                       </div>
                     ) : null}
@@ -552,8 +552,8 @@ export default function HomePageExperience() {
                     href={card.href}
                     className={`mt-8 inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-semibold transition-all duration-300 ${
                       card.featured
-                        ? "button-sheen bg-[var(--accent)] text-white shadow-[0_18px_36px_rgba(79,70,229,0.24)]"
-                        : "border border-[rgba(79,70,229,0.24)] bg-transparent text-[var(--text)] hover:bg-[rgba(79,70,229,0.08)]"
+                        ? "button-sheen bg-[var(--accent)] text-white shadow-[0_18px_36px_rgba(26,107,107,0.24)]"
+                        : "border border-[rgba(196,154,42,0.24)] bg-transparent text-[var(--text)] hover:bg-[rgba(196,154,42,0.08)]"
                     }`}
                     data-ripple
                   >

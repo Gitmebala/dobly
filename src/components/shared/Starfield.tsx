@@ -10,11 +10,18 @@ export default function Starfield() {
     const mount = mountRef.current;
     if (!mount || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    } catch (error) {
+      console.warn("WebGL not available, skipping Starfield:", error);
+      return;
+    }
+
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 1.2;
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     mount.appendChild(renderer.domElement);

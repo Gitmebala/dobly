@@ -1,0 +1,26 @@
+
+> dobly@0.1.0 dev
+> node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev
+
+   ▲ Next.js 15.1.0
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.100.13:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 18.6s
+ ○ Compiling /auth/signup ...
+ ✓ Compiled /auth/signup in 46.4s (1498 modules)
+ GET /auth/signup 200 in 56372ms
+ ○ Compiling /auth/login ...
+ ✓ Compiled /auth/login in 9.9s (1507 modules)
+ GET /auth/login 200 in 15460ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 6.8s (1648 modules)
+ GET /dashboard 200 in 271ms
+ ✓ Compiled in 59s (772 modules)
+ ✓ Compiled in 7.8s (772 modules)
+ ✓ Compiled in 67.5s (772 modules)
+ ✓ Compiled in 138.3s (772 modules)
+ ○ Compiling / ...
+ ✓ Compiled /dashboard/connections in 627.1s (1687 modules)

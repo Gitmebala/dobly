@@ -7,7 +7,7 @@ import { rateLimits } from "@/lib/rate-limit";
 import { canCreateWorkflow } from "@/lib/plans";
 import { findOperationalConnection } from "@/lib/connection-readiness";
 import { generateWorkflowSchema } from "@/lib/validations";
-import { getRequiredProviderIdsForWorkflow } from "@/lib/connection-requirements";
+import { getWorkflowConnectionStrategy } from "@/lib/provider-strategy";
 import type { GenerateWorkflowResponse, ApiError, Connection } from "@/types";
 
 export async function POST(req: NextRequest) {
@@ -155,7 +155,8 @@ export async function POST(req: NextRequest) {
     // Non-critical, ignore error
   }
 
-  const requiredProviders = getRequiredProviderIdsForWorkflow(blueprint, prompt);
+  const connectionStrategy = getWorkflowConnectionStrategy(blueprint, prompt);
+  const requiredProviders = connectionStrategy.requiredProviders.map((provider) => provider.providerId);
   const { data: activeConnections } = await supabase
     .from("connections")
     .select("*")
@@ -171,6 +172,12 @@ export async function POST(req: NextRequest) {
     workflow: blueprint,
     workflow_id: workflow.id,
     missing_providers: missingProviders,
+    connection_strategy: {
+      likely_category: blueprint.category,
+      required_provider_ids: connectionStrategy.requiredProviders.map((provider) => provider.providerId),
+      optional_provider_ids: connectionStrategy.optionalProviders.map((provider) => provider.providerId),
+      managed_capability_ids: connectionStrategy.managedCapabilities.map((capability) => capability.id),
+    },
     next_url: missingProviders.length > 0 ? `/dashboard/workflows/${workflow.id}/connections` : `/dashboard/workflows/${workflow.id}/activate`,
   });
 }

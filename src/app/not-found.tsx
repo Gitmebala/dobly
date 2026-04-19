@@ -6,10 +6,11 @@ export default function NotFound() {
       <div className="badge-green mb-5">404</div>
       <h1 className="font-display text-5xl font-bold tracking-tight text-text">That page is not here.</h1>
       <p className="mt-4 max-w-xl text-base leading-7 text-text-muted">
-        The workflow, connection, or route you asked for could not be found.
+        The workflow, connection, or route you asked for could not be found. If you are not signed in yet, start from the landing page or create an account first.
       </p>
       <div className="mt-8 flex flex-wrap gap-3">
-        <Link href="/dashboard" className="btn-primary">Go to dashboard</Link>
+        <Link href="/auth/signup" className="btn-primary">Start free</Link>
+        <Link href="/auth/login" className="btn-secondary">Sign in</Link>
         <Link href="/" className="btn-secondary">Open landing page</Link>
       </div>
     </div>

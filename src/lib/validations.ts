@@ -82,6 +82,175 @@ const workflowStepSchema = z.object({
   config: z.record(z.string(), z.unknown()),
 });
 
+const conversationNodeSchema: z.ZodType<any> = z.lazy(() =>
+  z.object({
+    id: z.string().min(1),
+    type: z.enum(["greeting", "question", "decision", "action", "handoff", "end"]),
+    text: z.string().min(1).max(1000),
+    nextNode: z.string().optional(),
+    branches: z
+      .array(
+        z.object({
+          condition: z.string().min(1).max(500),
+          targetNodeId: z.string().min(1),
+        })
+      )
+      .optional(),
+    actionType: z.string().optional(),
+    actionConfig: z.record(z.string(), z.unknown()).optional(),
+  })
+);
+
+const agentConfigSchema = z
+  .object({
+    systemPrompt: z.string().min(1).max(3000),
+    conversationTone: z.enum(["professional", "friendly", "empathetic", "formal"]),
+    behaviorRules: z.array(z.string().min(1).max(500)).max(20).optional(),
+    maxResponseLength: z.number().int().positive().max(4000).optional(),
+    knowledgeBase: z.string().max(5000).optional(),
+    voiceProvider: z.enum(["google", "eleven-labs", "azure", "aws"]),
+    voiceId: z.string().min(1).max(120),
+    language: z.string().min(2).max(10),
+    accent: z.string().max(120).optional(),
+    speechRate: z.number().min(0.5).max(2).optional(),
+    pitch: z.number().min(-20).max(20).optional(),
+    conversationFlow: z.array(conversationNodeSchema).min(1).max(50),
+    maxTurnCount: z.number().int().positive().max(100).optional(),
+    silenceTimeoutSeconds: z.number().int().positive().max(120).optional(),
+    callActions: z.object({
+      beforeCall: z.object({
+        fetchContext: z.string().max(500).optional(),
+        announceCallerName: z.boolean().optional(),
+        playHoldingMessage: z.boolean().optional(),
+      }),
+      duringCall: z.object({
+        allowTransfers: z.boolean().optional(),
+        transferPhoneNumber: z.string().regex(/^\+?[\d\s-()]{7,}$/).optional(),
+        pauseForConfirmation: z.array(z.string()).optional(),
+      }),
+      afterCall: z.object({
+        recordTranscript: z.boolean().optional(),
+        sendEmail: z.array(z.string().email()).optional(),
+        webhookUrl: z.string().url().optional(),
+        scheduleFollowup: z.boolean().optional(),
+        followupDelayMinutes: z.number().int().positive().optional(),
+      }),
+    }),
+    calendarIntegration: z
+      .object({
+        provider: z.enum(["google", "microsoft", "calendly", "slack"]),
+        enabled: z.boolean(),
+        checkAvailability: z.boolean().optional(),
+        autoBook: z.boolean().optional(),
+        calendarIds: z.array(z.string()).optional(),
+        bufferMinutes: z.number().int().min(0).max(480).optional(),
+        timezone: z.string().min(1).max(100),
+        businessHours: z.object({
+          monday: z
+            .object({ start: z.string(), end: z.string() })
+            .nullable()
+            .optional(),
+          tuesday: z
+            .object({ start: z.string(), end: z.string() })
+            .nullable()
+            .optional(),
+          wednesday: z
+            .object({ start: z.string(), end: z.string() })
+            .nullable()
+            .optional(),
+          thursday: z
+            .object({ start: z.string(), end: z.string() })
+            .nullable()
+            .optional(),
+          friday: z
+            .object({ start: z.string(), end: z.string() })
+            .nullable()
+            .optional(),
+          saturday: z
+            .object({ start: z.string(), end: z.string() })
+            .nullable()
+            .optional(),
+          sunday: z
+            .object({ start: z.string(), end: z.string() })
+            .nullable()
+            .optional(),
+        }),
+      })
+      .optional(),
+    escalation: z.object({
+      triggers: z
+        .array(
+          z.object({
+            type: z.enum([
+              "confidence_below",
+              "keyword_match",
+              "call_duration_exceeded",
+              "repeated_misunderstanding",
+            ]),
+            threshold: z.number().min(0).max(1).optional(),
+            keywords: z.array(z.string()).optional(),
+            seconds: z.number().int().positive().optional(),
+            count: z.number().int().positive().optional(),
+          })
+        )
+        .optional(),
+      handoffMessage: z.string().max(500).optional(),
+      handoffPhoneNumber: z.string().regex(/^\+?[\d\s-()]{7,}$/).optional(),
+      handoffEmail: z.string().email().optional(),
+      escalationQueue: z.enum(["round_robin", "first_available", "skill_based"]).optional(),
+      maxWaitTime: z.number().int().positive().optional(),
+    }),
+    integrations: z.object({
+      crm: z
+        .object({
+          provider: z.enum(["salesforce", "hubspot", "pipedrive"]),
+          syncOnCall: z.boolean().optional(),
+          createLead: z.boolean().optional(),
+          updateContact: z.boolean().optional(),
+        })
+        .optional(),
+      dataConnections: z
+        .array(
+          z.object({
+            connectionId: z.string(),
+            syncField: z.string(),
+            syncDirection: z.enum(["read", "write", "bidirectional"]),
+          })
+        )
+        .optional(),
+    }),
+    deployment: z.object({
+      channels: z
+        .array(z.enum(["voice", "whatsapp", "sms", "web", "api"]))
+        .optional(),
+      voiceChannelConfig: z
+        .object({
+          phoneNumber: z.string(),
+          provider: z.enum(["twilio", "vonage", "bandwidth"]),
+        })
+        .optional(),
+      webChannelConfig: z
+        .object({
+          embedUrl: z.string().url(),
+          widgetTheme: z.enum(["light", "dark"]),
+        })
+        .optional(),
+      apiConfig: z
+        .object({
+          webhookSecret: z.string(),
+          rateLimit: z.number().int().positive(),
+        })
+        .optional(),
+    }),
+    monitoring: z.object({
+      recordCalls: z.boolean().optional(),
+      transcriptSentiment: z.boolean().optional(),
+      keywords: z.array(z.string()).optional(),
+      reportingEmail: z.array(z.string().email()).optional(),
+    }),
+  })
+  .optional();
+
 const workflowDefinitionSchema = z.object({
   version: z.number().int().positive(),
   trigger: z.object({
@@ -102,6 +271,7 @@ const workflowDefinitionSchema = z.object({
       approvalRiskThreshold: z.enum(["medium", "high"]),
       allowedDomains: z.array(z.string().min(1).max(120)).max(20),
       escalationMessage: z.string().max(300).optional(),
+      agentConfig: agentConfigSchema,
     })
     .optional(),
   steps: z.array(workflowStepSchema).min(1).max(20),

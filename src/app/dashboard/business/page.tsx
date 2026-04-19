@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import BusinessProfileEditor from "@/components/dashboard/BusinessProfileEditor";
+import { BusinessSetupClient } from "@/components/dashboard/BusinessSetupClient";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export default async function BusinessPage() {
@@ -16,5 +16,5 @@ export default async function BusinessPage() {
     .eq("user_id", user.id)
     .single();
 
-  return <BusinessProfileEditor initialProfile={businessProfile ?? null} />;
+  return <BusinessSetupClient initialProfile={businessProfile ?? null} />;
 }

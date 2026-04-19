@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { isConnectionOperational } from "@/lib/connection-readiness";
 import { CONNECTOR_CATALOG, getConnector, getConnectorAction } from "@/lib/connectors/catalog";
+import { getWorkflowConnectionStrategy } from "@/lib/provider-strategy";
 import type { Connection, Workflow, WorkflowActionStep, WorkflowDefinition, WorkflowRun } from "@/types";
 
 function prettyJson(value: Record<string, unknown>) {
@@ -23,6 +24,26 @@ function prettyJson(value: Record<string, unknown>) {
 
 function artifactHref(path: string) {
   return `/api/artifacts?path=${encodeURIComponent(path)}`;
+}
+
+function collectVariables(value: unknown, bucket = new Set<string>()) {
+  if (typeof value === "string") {
+    for (const match of value.matchAll(/\{\{\s*([^}]+?)\s*\}\}/g)) {
+      if (match[1]) bucket.add(match[1]);
+    }
+    return bucket;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) collectVariables(item, bucket);
+    return bucket;
+  }
+
+  if (value && typeof value === "object") {
+    for (const nested of Object.values(value)) collectVariables(nested, bucket);
+  }
+
+  return bucket;
 }
 
 const SUPPORTED_CONNECTOR_IDS = new Set(
@@ -112,10 +133,19 @@ export default function WorkflowEditor({
 
   const definition = blueprint.definition as WorkflowDefinition;
   const hasLegacyAgentSteps = definition?.steps.some((step) => isLegacyAgentStep(step)) ?? false;
+  const operator = definition?.operator;
   const webhookUrl = useMemo(() => {
     if (definition?.trigger.type !== "webhook" || !definition.trigger.webhook_path) return "";
     return `${appUrl}/api/triggers/webhook/${definition.trigger.webhook_path}`;
   }, [appUrl, definition]);
+  const variableList = useMemo(
+    () => Array.from(collectVariables({ trigger: definition?.trigger, steps: definition?.steps ?? [] })),
+    [definition],
+  );
+  const connectionStrategy = useMemo(
+    () => getWorkflowConnectionStrategy(blueprint, workflow.prompt),
+    [blueprint, workflow.prompt],
+  );
 
   useEffect(() => {
       fetch("/api/connections")
@@ -377,6 +407,115 @@ export default function WorkflowEditor({
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
         <div className="space-y-6">
+          {operator?.enabled ? (
+            <div className="card space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-display font-semibold text-xl text-text">Agent runtime</h2>
+                  <p className="text-sm text-text-muted">
+                    Role, autonomy, and escalation in one place.
+                  </p>
+                </div>
+                <span className="badge-green">{operator.autonomy}</span>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-display font-medium text-text-muted mb-2">
+                    Role
+                  </label>
+                  <input
+                    className="input"
+                    value={operator.role}
+                    onChange={(e) =>
+                      updateDefinition({
+                        ...definition,
+                        operator: { ...operator, role: e.target.value },
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-display font-medium text-text-muted mb-2">
+                    Channel
+                  </label>
+                  <input
+                    className="input"
+                    value={operator.channel ?? ""}
+                    onChange={(e) =>
+                      updateDefinition({
+                        ...definition,
+                        operator: { ...operator, channel: e.target.value },
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-display font-medium text-text-muted mb-2">
+                  Objective
+                </label>
+                <textarea
+                  className="input min-h-[88px]"
+                  value={operator.objective}
+                  onChange={(e) =>
+                    updateDefinition({
+                      ...definition,
+                      operator: { ...operator, objective: e.target.value },
+                    })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-display font-medium text-text-muted mb-2">
+                    Autonomy
+                  </label>
+                  <select
+                    className="input"
+                    value={operator.autonomy}
+                    onChange={(e) =>
+                      updateDefinition({
+                        ...definition,
+                        operator: {
+                          ...operator,
+                          autonomy: e.target.value as typeof operator.autonomy,
+                        },
+                      })
+                    }
+                  >
+                    <option value="supervised">Supervised</option>
+                    <option value="guarded">Guarded</option>
+                    <option value="delegated">Delegated</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-display font-medium text-text-muted mb-2">
+                    Approval threshold
+                  </label>
+                  <select
+                    className="input"
+                    value={operator.approvalRiskThreshold}
+                    onChange={(e) =>
+                      updateDefinition({
+                        ...definition,
+                        operator: {
+                          ...operator,
+                          approvalRiskThreshold: e.target.value as typeof operator.approvalRiskThreshold,
+                        },
+                      })
+                    }
+                  >
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <div className="card space-y-4">
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -733,6 +872,67 @@ export default function WorkflowEditor({
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="card space-y-4">
+            <div>
+              <h2 className="font-display font-semibold text-xl text-text">Launch readiness</h2>
+              <p className="text-sm text-text-muted mt-1">
+                Keep setup lean. Connect only what must run live.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border bg-surface-2 px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-text-dim">Required</div>
+                <div className="mt-2 text-sm text-text">
+                  {connectionStrategy.requiredProviders.length > 0
+                    ? connectionStrategy.requiredProviders.map((item) => item.label).join(", ")
+                    : "No hard connection requirement detected."}
+                </div>
+              </div>
+              <div className="rounded-xl border border-border bg-surface-2 px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-text-dim">Optional</div>
+                <div className="mt-2 text-sm text-text">
+                  {connectionStrategy.optionalProviders.length > 0
+                    ? connectionStrategy.optionalProviders.slice(0, 5).map((item) => item.label).join(", ")
+                    : "No optional enrichments suggested."}
+                </div>
+              </div>
+              <div className="rounded-xl border border-border bg-surface-2 px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-text-dim">Dobly-managed</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {connectionStrategy.managedCapabilities.slice(0, 3).map((item) => (
+                    <span key={item.id} className="badge-muted">
+                      {item.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card space-y-4">
+            <div>
+              <h2 className="font-display font-semibold text-xl text-text">Variables</h2>
+              <p className="text-sm text-text-muted mt-1">
+                Inputs already referenced by this runtime.
+              </p>
+            </div>
+
+            {variableList.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border-bright p-4 text-sm text-text-muted">
+                No runtime variables detected yet.
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {variableList.map((item) => (
+                  <span key={item} className="badge-muted">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="card space-y-4">
