@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
-import { createClient } from "@/lib/supabase/client";
+import "../reference-auth.css";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [resetUrl, setResetUrl] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,16 +19,19 @@ export default function ForgotPasswordPage() {
     setError("");
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+      const response = await fetch("/api/auth/password/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
+      const result = await response.json().catch(() => ({}));
 
-      if (error) {
-        setError("We could not send the reset email. Please try again.");
+      if (!response.ok) {
+        setError(result.error || "We could not prepare the reset link. Please try again.");
         return;
       }
 
+      setResetUrl(result.resetUrl || "");
       setSuccess(true);
     } catch {
       setError("Something went wrong. Please try again.");
@@ -37,8 +41,10 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-4">
-      <div className="relative w-full max-w-md">
+    <main className="reference-auth">
+      <div className="reference-auth__frame">
+        <div className="reference-auth__panel">
+          <div className="relative w-full max-w-md">
         <div className="text-center mb-8">
           <BrandLogo className="justify-center" markClassName="h-10 w-10" wordmarkClassName="text-xl" />
         </div>
@@ -51,8 +57,11 @@ export default function ForgotPasswordPage() {
               </div>
               <h1 className="font-display text-2xl font-bold text-text">Check your email</h1>
               <p className="mt-3 text-sm leading-7 text-text-muted">
-                We sent a password reset link to <span className="text-text">{email}</span>.
+                {resetUrl
+                  ? "This local demo does not send email. Use the secure one-time link below."
+                  : <>We sent a password reset link to <span className="text-text">{email}</span>.</>}
               </p>
+              {resetUrl ? <Link href={resetUrl} className="btn-primary mt-6">Reset password</Link> : null}
               <Link href="/auth/login" className="btn-secondary mt-6">
                 Back to sign in
               </Link>
@@ -103,6 +112,8 @@ export default function ForgotPasswordPage() {
           )}
         </div>
       </div>
-    </div>
+        </div>
+      </div>
+    </main>
   );
 }

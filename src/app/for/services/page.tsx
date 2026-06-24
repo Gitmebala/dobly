@@ -22,7 +22,7 @@ export default function ServicesPage() {
       title: "Appointment Scheduling",
       description:
         "Auto-confirm bookings, send reminders 24 hours before, reschedule no-shows, and track cancellations automatically.",
-      color: "from-blue-600/20 to-blue-600/5",
+      color: "from-amber-600/20 to-amber-600/5",
     },
     {
       icon: <Users className="w-8 h-8" />,
@@ -110,7 +110,7 @@ export default function ServicesPage() {
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-              <p className="text-4xl font-bold text-blue-400 mb-2">35%</p>
+              <p className="text-4xl font-bold text-[var(--dobly-accent)] mb-2">35%</p>
               <p className="text-white/70">Reduction in no-shows with automated reminders</p>
             </motion.div>
             <motion.div

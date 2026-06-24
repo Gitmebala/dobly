@@ -1,4 +1,5 @@
 import { getConnectionProvider } from "@/lib/connection-catalog";
+import { resolveDoblyCapabilities } from "@/lib/capability-resolver";
 import type { WorkflowBlueprint, WorkflowCategory } from "@/types";
 
 export type ProviderMode = "required" | "optional";
@@ -18,15 +19,17 @@ export interface ProviderRecommendation {
 }
 
 const PROVIDER_ALIASES: Record<string, string[]> = {
-  google: ["google", "gmail", "google sheets", "sheets", "calendar"],
+  google: ["google", "gmail", "google sheets", "google doc", "google docs", "google drive", "sheets"],
   microsoft: ["microsoft", "outlook", "office", "microsoft 365"],
   yahoo: ["yahoo", "yahoo mail"],
   whatsapp: ["whatsapp"],
   slack: ["slack"],
   discord: ["discord"],
   telegram: ["telegram"],
-  twilio: ["twilio", "sms"],
+  kenya_local_comms: ["sms", "kenya sms", "kenya calls", "business phone", "business number"],
+  twilio: ["twilio"],
   shopify: ["shopify", "storefront"],
+  paystack: ["paystack", "checkout", "payment link"],
   stripe: ["stripe"],
   mpesa: ["mpesa", "m-pesa", "daraja"],
   quickbooks: ["quickbooks"],
@@ -38,22 +41,35 @@ const PROVIDER_ALIASES: Record<string, string[]> = {
   trello: ["trello"],
   asana: ["asana"],
   salesforce: ["salesforce"],
+  canva: ["canva", "design", "presentation", "social graphic"],
   webhook: ["webhook", "api", "internal api", "custom api"],
-  postgres: ["postgres", "postgresql"],
-  supabase: ["supabase"],
 };
 
+const OPTIONAL_SIGNAL_ALIASES = new Set([
+  "calendar",
+  "microsoft",
+  "outlook",
+  "office",
+  "microsoft 365",
+  "whatsapp",
+  "shopify",
+  "storefront",
+  "meta",
+  "instagram",
+  "facebook",
+]);
+
 const CATEGORY_OPTIONAL_PROVIDERS: Record<WorkflowCategory, string[]> = {
-  "Customer Communication": ["google", "whatsapp", "slack", "hubspot", "salesforce", "twilio"],
-  "Sales & Marketing": ["hubspot", "salesforce", "google", "whatsapp", "slack", "shopify"],
-  "Finance & Invoicing": ["stripe", "mpesa", "quickbooks", "xero", "google"],
-  "Social Media": ["meta", "slack", "airtable", "notion"],
-  "E-commerce": ["shopify", "stripe", "whatsapp", "hubspot", "slack"],
-  "Productivity": ["google", "notion", "airtable", "trello", "asana", "calendly"],
-  "Life & Personal Admin": ["google", "whatsapp", "telegram", "calendly"],
-  "Data & Reporting": ["google", "airtable", "notion", "webhook"],
-  "HR & Operations": ["slack", "google", "notion", "airtable", "calendly", "trello", "asana"],
-  Other: ["google", "slack", "webhook", "notion"],
+  "Customer Communication": ["whatsapp", "kenya_local_comms", "google", "slack", "hubspot"],
+  "Sales & Marketing": ["whatsapp", "kenya_local_comms", "hubspot", "google", "canva"],
+  "Finance & Invoicing": ["paystack", "mpesa", "whatsapp", "kenya_local_comms", "google"],
+  "Social Media": ["canva", "google", "webhook"],
+  "E-commerce": ["paystack", "mpesa", "whatsapp", "hubspot", "webhook"],
+  "Productivity": ["google", "slack", "webhook"],
+  "Life & Personal Admin": ["whatsapp", "kenya_local_comms", "google"],
+  "Data & Reporting": ["google", "webhook"],
+  "HR & Operations": ["whatsapp", "kenya_local_comms", "google", "slack", "webhook"],
+  Other: ["whatsapp", "kenya_local_comms", "paystack", "mpesa", "google", "webhook"],
 };
 
 const CATEGORY_MANAGED_CAPABILITIES: Record<WorkflowCategory, ManagedCapability[]> = {
@@ -159,7 +175,12 @@ function getCorpus(blueprint: WorkflowBlueprint, prompt = "") {
 
 function providerMentioned(providerId: string, corpus: string[]) {
   const aliases = PROVIDER_ALIASES[providerId] ?? [providerId];
-  return aliases.some((alias) => corpus.some((entry) => entry.includes(alias)));
+  return aliases.some((alias) => {
+    if (OPTIONAL_SIGNAL_ALIASES.has(alias)) {
+      return corpus.some((entry) => new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(entry));
+    }
+    return corpus.some((entry) => entry.includes(alias));
+  });
 }
 
 function inferCategoryFromCorpus(corpus: string[]): WorkflowCategory {
@@ -226,11 +247,22 @@ export function getPromptConnectionStrategy(prompt: string) {
 }
 
 export function getWorkflowConnectionStrategy(blueprint: WorkflowBlueprint, prompt = "") {
+  const promptCorpus = [normalize(prompt)];
   const corpus = getCorpus(blueprint, prompt);
   const category = blueprint.category ?? "Other";
+  const capabilityPlan = resolveDoblyCapabilities({
+    prompt,
+    blueprint,
+    connections: [],
+  });
   const requiredProviderIds = Object.keys(PROVIDER_ALIASES).filter((providerId) =>
-    providerMentioned(providerId, corpus),
+    providerMentioned(providerId, promptCorpus),
   );
+  for (const providerId of capabilityPlan.needed_now_provider_ids) {
+    if (!requiredProviderIds.includes(providerId)) {
+      requiredProviderIds.push(providerId);
+    }
+  }
   const optionalCandidateIds = CATEGORY_OPTIONAL_PROVIDERS[category] ?? [];
   const optionalProviderIds = optionalCandidateIds.filter((providerId) => !requiredProviderIds.includes(providerId));
 
@@ -243,7 +275,7 @@ export function getWorkflowConnectionStrategy(blueprint: WorkflowBlueprint, prom
       mode: "required",
       label: provider.label,
       description: provider.description,
-      reason: `This workflow explicitly references ${provider.label} or a capability that normally has to run inside that account.`,
+      reason: `Dobly identified a live capability that may need ${provider.label}, but this should still stay flexible if you use another supported tool.`,
     });
   }
 

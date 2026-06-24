@@ -1,0 +1,38 @@
+services:
+  - type: worker
+    name: dobly-runtime-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    envVars:
+      - key: DOBLY_SERVICE_MODE
+        value: runtime
+      - key: DOBLY_APP_URL
+        sync: false
+      - key: WORKER_SECRET
+        sync: false
+  - type: worker
+    name: dobly-office-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    envVars:
+      - key: DOBLY_SERVICE_MODE
+        value: office
+      - key: DOBLY_SERVICE_INTERVAL_MS
+        value: "30000"
+      - key: DOBLY_APP_URL
+        sync: false
+      - key: WORKER_SECRET
+        sync: false
+  - type: worker
+    name: dobly-scheduler
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    envVars:
+      - key: DOBLY_SERVICE_MODE
+        value: scheduler
+      - key: DOBLY_SERVICE_INTERVAL_MS
+        value: "60000"
+      - key: DOBLY_APP_URL
+        sync: false
+      - key: SCHEDULER_SECRET
+        sync: false

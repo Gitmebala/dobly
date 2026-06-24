@@ -3,7 +3,7 @@ import { getRequestIp } from "@/lib/api-security";
 import { rateLimits } from "@/lib/rate-limit";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { verifyConnectionCodeSchema } from "@/lib/validations";
-import { verifyWhatsappOtp } from "@/lib/verifications";
+import { verifyPhoneOtp, verifyWhatsappOtp } from "@/lib/verifications";
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabaseClient();
@@ -27,7 +27,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const connection = await verifyWhatsappOtp({
+    const { data: verification } = await supabase
+      .from("connection_verifications")
+      .select("channel")
+      .eq("id", parsed.data.verificationId)
+      .eq("user_id", user.id)
+      .single();
+
+    const verifier = verification?.channel === "sms" ? verifyPhoneOtp : verifyWhatsappOtp;
+    const connection = await verifier({
       userId: user.id,
       verificationId: parsed.data.verificationId,
       code: parsed.data.code,

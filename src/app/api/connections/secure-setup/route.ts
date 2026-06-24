@@ -5,6 +5,7 @@ import { upsertConnection, storeConnectionSecrets } from "@/lib/connections";
 import { rateLimits } from "@/lib/rate-limit";
 import { secureConnectionSetupSchema } from "@/lib/validations";
 import { validateDarajaCredentials } from "@/lib/mpesa/daraja";
+import { isConnectionProviderLaunchReady } from "@/lib/connection-catalog";
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabaseClient();
@@ -25,6 +26,9 @@ export async function POST(req: NextRequest) {
   const parsed = secureConnectionSetupSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Missing provider or label" }, { status: 400 });
+  }
+  if (!isConnectionProviderLaunchReady(parsed.data.provider)) {
+    return NextResponse.json({ error: "This provider is not available in the current Dobly release." }, { status: 404 });
   }
 
   try {

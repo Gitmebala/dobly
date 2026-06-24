@@ -25,7 +25,11 @@ export async function POST(req: NextRequest) {
   const expectedSecret = process.env.DOBLY_WHATSAPP_WEBHOOK_SECRET;
   const providedSecret = req.headers.get("x-dobly-webhook-secret");
 
-  if (expectedSecret && providedSecret !== expectedSecret) {
+  if (!expectedSecret) {
+    return NextResponse.json({ error: "WhatsApp webhook is not configured." }, { status: 503 });
+  }
+
+  if (providedSecret !== expectedSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

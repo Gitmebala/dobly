@@ -3,9 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
+import GoogleLogo from "@/components/GoogleLogo";
 import { createClient } from "@/lib/supabase/client";
+import "../reference-auth.css";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,135 +18,134 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const redirectTo = searchParams?.get("redirect");
+  const safeRedirect = redirectTo?.startsWith("/") ? redirectTo : "/dashboard";
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(result?.error ?? "Sign in failed. Please try again.");
+        return;
+      }
+
+      router.push(safeRedirect);
+      router.refresh();
+    } catch {
+      setError("Authentication service unavailable. Please try again shortly.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
     setError("");
     setLoading(true);
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setError("Invalid email or password.");
-        return;
-      }
-      const redirectTo = searchParams?.get("redirect");
-      router.push(redirectTo && redirectTo.startsWith("/") ? redirectTo : "/dashboard");
-      router.refresh();
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
+        },
+      });
+
+      if (oauthError) setError(oauthError.message);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Google sign in could not reach the authentication service.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="auth-shell min-h-screen bg-surface flex items-center justify-center p-4">
-      {/* Background */}
-      <div className="fixed inset-0 bg-grid-pattern bg-grid opacity-40" />
-      <div className="fixed inset-0 bg-glow-gradient opacity-50" />
+    <main className="reference-auth">
+      <div className="reference-auth__frame">
+        <header className="reference-auth__header">
+          <BrandLogo href="/" className="reference-auth__logo" markClassName="h-10 w-10" wordmarkClassName="text-2xl" />
+          <Link href="/" className="reference-auth__back"><ArrowLeft size={16} /> Back to home</Link>
+        </header>
 
-      <div className="relative w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <BrandLogo className="justify-center" markClassName="h-10 w-10 drop-shadow-[0_0_20px_rgba(79,70,229,0.35)]" wordmarkClassName="text-xl" />
-        </div>
-
-        {/* Card */}
-        <div className="bg-surface-1 border border-border rounded-2xl p-8 shadow-2xl">
-          <h1 className="font-display font-bold text-2xl text-text mb-1">
-            Welcome back
-          </h1>
-          <p className="text-text-muted text-sm mb-8">
-            Sign in to your Dobly account
-          </p>
-
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            <div>
-              <label className="block text-xs font-display font-medium text-text-muted mb-1.5">
-                Email address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input"
-                placeholder="you@example.com"
-                autoComplete="email"
-                required
-              />
+        <section className="reference-auth__panel">
+          <div className="reference-auth__card">
+            <div className="reference-auth__intro">
+              <span>Welcome back</span>
+              <h1>Sign in to Dobly</h1>
+              <p>Continue to your workspace and the work already in motion.</p>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-display font-medium text-text-muted">
-                  Password
-                </label>
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-xs text-text-muted hover:text-accent transition-colors"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative">
+            <button type="button" onClick={handleGoogleSignIn} disabled={loading} className="reference-auth__oauth">
+              <GoogleLogo className="h-5 w-5" /> Continue with Google
+            </button>
+            <div className="reference-auth__divider">or</div>
+
+            <form onSubmit={handleSubmit} noValidate>
+              <AuthField label="Email" icon={<Mail />}>
                 <input
+                  className="reference-auth__input"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  onBlur={() => setEmail((value) => value.trim().toLowerCase())}
+                  placeholder="you@company.com"
+                  autoComplete="email"
+                  required
+                />
+              </AuthField>
+              <AuthField label="Password" icon={<LockKeyhole />}>
+                <input
+                  className="reference-auth__input"
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input pr-10"
-                  placeholder="••••••••"
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Enter your password"
                   autoComplete="current-password"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim hover:text-text-muted transition-colors"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
+                <button type="button" onClick={() => setShowPassword((value) => !value)} className="reference-auth__eye" aria-label={showPassword ? "Hide password" : "Show password"}>
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
+              </AuthField>
+
+              <div className="reference-auth__meta">
+                <label><input type="checkbox" /> Remember me</label>
+                <Link href="/auth/forgot-password">Forgot password?</Link>
               </div>
-            </div>
+              {error ? <div className="reference-auth__error" role="alert">{error}</div> : null}
+              <button type="submit" disabled={loading || !email || !password} className="reference-auth__submit">
+                {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</> : "Sign in"}
+              </button>
+            </form>
 
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
-                <p className="text-sm text-red-400">{error}</p>
-              </div>
-            )}
+            <p className="reference-auth__switch">
+              Don&apos;t have an account?{" "}
+              <Link href={`/auth/signup?next=${encodeURIComponent(safeRedirect)}`}>Create one</Link>
+            </p>
+            <div className="reference-auth__secure"><ShieldCheck size={15} /> Secure authentication. Dobly never stores your password.</div>
+          </div>
+        </section>
 
-            <button
-              type="submit"
-              disabled={loading || !email || !password}
-              className="btn-primary w-full justify-center mt-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                "Sign in"
-              )}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-text-muted mt-6">
-            No account yet?{" "}
-            <Link
-              href="/auth/signup"
-              className="text-accent hover:text-accent-hover transition-colors font-medium"
-            >
-              Start for free
-            </Link>
-          </p>
-        </div>
+        <footer className="reference-auth__footer">
+          <span>&copy; 2026 Dobly</span>
+          <Link href="/terms">Terms</Link>
+          <Link href="/privacy">Privacy</Link>
+        </footer>
       </div>
-    </div>
+    </main>
   );
+}
+
+function AuthField({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return <div className="reference-auth__field"><label>{label}</label><div className="reference-auth__input-wrap">{icon}{children}</div></div>;
 }

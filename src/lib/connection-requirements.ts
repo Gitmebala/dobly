@@ -1,4 +1,7 @@
 import { CONNECTION_PROVIDERS, isConnectionProviderLaunchReady } from "@/lib/connection-catalog";
+import { resolveDoblyCapabilities } from "@/lib/capability-resolver";
+import { resolveCoworkerCapabilities } from "@/lib/coworker-capabilities";
+import { isProviderVerifiedLive } from "@/lib/integration-contract";
 import type { WorkflowBlueprint } from "@/types";
 
 const INTEGRATION_ALIASES: Record<string, string[]> = {
@@ -6,11 +9,14 @@ const INTEGRATION_ALIASES: Record<string, string[]> = {
   microsoft: ["microsoft", "outlook", "office 365", "microsoft 365"],
   yahoo: ["yahoo", "yahoo mail"],
   whatsapp: ["whatsapp", "whatsapp business"],
+  kenya_local_comms: ["sms", "call", "calls", "phone", "business phone", "business number", "reception", "receptionist", "kenya calls", "kenya sms"],
   slack: ["slack"],
   shopify: ["shopify"],
+  paystack: ["paystack", "checkout", "card payment"],
+  mpesa: ["m-pesa", "mpesa", "m pesa", "daraja", "stk push", "intasend", "pesapal"],
   stripe: ["stripe"],
-  mpesa: ["m-pesa", "mpesa", "m pesa", "intasend", "pesapal"],
   meta: ["meta", "instagram", "facebook", "instagram business"],
+  canva: ["canva", "design", "graphic", "presentation", "slides"],
   notion: ["notion"],
   airtable: ["airtable"],
   hubspot: ["hubspot", "hub spot"],
@@ -22,6 +28,11 @@ function normalize(value: string) {
 }
 
 export function getRequiredProviderIdsForWorkflow(blueprint: WorkflowBlueprint, prompt?: string) {
+  const capabilityPlan = resolveDoblyCapabilities({
+    prompt: prompt ?? blueprint.description ?? blueprint.name ?? "",
+    blueprint,
+    connections: [],
+  });
   const corpus = [
     ...(blueprint.integrations ?? []),
     blueprint.trigger,
@@ -33,12 +44,25 @@ export function getRequiredProviderIdsForWorkflow(blueprint: WorkflowBlueprint, 
     .map((value) => normalize(String(value)));
 
   const required = new Set<string>();
+  const allConnections = [];
 
   for (const provider of CONNECTION_PROVIDERS.filter((item) => isConnectionProviderLaunchReady(item.id))) {
     const aliases = INTEGRATION_ALIASES[provider.id] ?? [provider.id, provider.label.toLowerCase()];
     if (aliases.some((alias) => corpus.some((entry) => entry.includes(alias)))) {
       required.add(provider.id);
     }
+  }
+
+  for (const providerId of capabilityPlan.needed_now_provider_ids) {
+    if (isProviderVerifiedLive(providerId)) required.add(providerId);
+  }
+
+  const coworkerCapabilities = resolveCoworkerCapabilities({
+    prompt: corpus.join(" "),
+    connections: allConnections,
+  });
+  for (const providerId of coworkerCapabilities.requiredConnectionProviderIds) {
+    if (isConnectionProviderLaunchReady(providerId)) required.add(providerId);
   }
 
   return Array.from(required);

@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "AI operators and automations that launch with less setup friction.",
     start_url: "/dashboard",
     display: "standalone",
-    background_color: "#050b14",
-    theme_color: "#4D7AFF",
+    background_color: "#fff8f1",
+    theme_color: "#ed5a24",
     orientation: "portrait",
     categories: ["productivity", "business", "utilities"],
   };

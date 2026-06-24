@@ -1,0 +1,3 @@
+-- Development-only seed file. Production customer data must never be seeded.
+-- Product templates are inserted by idempotent migrations so every environment
+-- receives the same catalog without requiring a privileged application session.

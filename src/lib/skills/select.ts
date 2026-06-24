@@ -1,6 +1,7 @@
 import type { WorkflowBlueprint } from "@/types";
 
 const SKILL_MATCHERS: Array<{ key: string; test: (text: string) => boolean }> = [
+  { key: "plan_task_breakdown", test: (text) => /plan|breakdown|next steps|what should happen|orchestrate|run plan/.test(text) },
   { key: "send_whatsapp_confirmation", test: (text) => /whatsapp|confirmation|thank-you|thank you/.test(text) },
   { key: "log_payment_to_sheet", test: (text) => /sheet|google sheets|append row|log payment/.test(text) },
   { key: "compose_daily_summary", test: (text) => /summary|digest|daily summary|weekly summary/.test(text) },
@@ -15,6 +16,7 @@ const SKILL_MATCHERS: Array<{ key: string; test: (text: string) => boolean }> = 
   { key: "schedule_booking_reminder", test: (text) => /booking reminder|appointment reminder|remind the client/.test(text) },
   { key: "reconcile_inventory_update", test: (text) => /inventory|stock runs low|reconcile stock/.test(text) },
   { key: "generate_weekly_report", test: (text) => /weekly report|performance report|revenue summary/.test(text) },
+  { key: "synthesize_work_report", test: (text) => /report back|what changed|what happened|executive summary|briefing/.test(text) },
   { key: "extract_structured_lead", test: (text) => /lead|typeform|contact form|crm/.test(text) },
   { key: "prepare_whatsapp_approval_reply", test: (text) => /reply yes|reply no|whatsapp approval/.test(text) },
 ];

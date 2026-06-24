@@ -22,11 +22,18 @@ export default async function NotificationsPage() {
 
   if (!user) redirect("/auth/login");
 
-  const [{ data: profile }, { data: approvals }, { data: failedRuns }, { data: connections }, { data: workflows }] =
+  const [{ data: profile }, { data: legacyApprovals }, { data: runtimeApprovals }, { data: legacyFailedRuns }, { data: runtimeFailedRuns }, { data: connections }, { data: workflows }] =
     await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
       supabase
         .from("approvals")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "pending")
+        .order("requested_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("runtime_approvals")
         .select("*")
         .eq("user_id", user.id)
         .eq("status", "pending")
@@ -39,12 +46,28 @@ export default async function NotificationsPage() {
         .eq("status", "failed")
         .order("started_at", { ascending: false })
         .limit(10),
+      supabase
+        .from("software_execution_runs")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "failed")
+        .order("started_at", { ascending: false })
+        .limit(10),
       supabase.from("connections").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }),
       supabase.from("workflows").select("id,title").eq("user_id", user.id),
     ]);
 
+  const approvals = [...(runtimeApprovals ?? []), ...(legacyApprovals ?? [])]
+    .sort((a: any, b: any) => new Date(b.requested_at ?? b.created_at).getTime() - new Date(a.requested_at ?? a.created_at).getTime())
+    .slice(0, 10);
+  const failedRuns = [...(runtimeFailedRuns ?? []), ...(legacyFailedRuns ?? [])]
+    .sort((a: any, b: any) => new Date(b.started_at ?? b.created_at).getTime() - new Date(a.started_at ?? a.created_at).getTime())
+    .slice(0, 10);
+
   const usage = await getPlanUsageSnapshot(user.id, ((profile?.plan ?? "free") as PlanId));
-  const workflowMap = new Map((workflows ?? []).map((workflow) => [workflow.id, workflow.title] as const));
+  const workflowMap = new Map<string, string>(
+    (workflows ?? []).map((workflow) => [workflow.id, workflow.title] as const)
+  );
   const riskyConnections = (connections ?? []).filter((connection) => !isConnectionOperational(connection));
   const standardPressure =
     usage.standard_executions_limit !== -1 &&
@@ -54,8 +77,8 @@ export default async function NotificationsPage() {
     percentUsed(usage.intelligence_actions_used, usage.intelligence_actions_limit) >= 80;
 
   const totalSignals =
-    (approvals ?? []).length +
-    (failedRuns ?? []).length +
+    approvals.length +
+    failedRuns.length +
     riskyConnections.length +
     (standardPressure ? 1 : 0) +
     (intelligencePressure ? 1 : 0);
@@ -81,9 +104,9 @@ export default async function NotificationsPage() {
 
       <section className="grid gap-4 md:grid-cols-4">
         <SignalMetric label="Open signals" value={totalSignals} />
-        <SignalMetric label="Approvals" value={(approvals ?? []).length} />
-        <SignalMetric label="Failed runs" value={(failedRuns ?? []).length} />
-        <SignalMetric label="Connection issues" value={riskyConnections.length} />
+        <SignalMetric label="Approvals" value={approvals.length} />
+        <SignalMetric label="Failed runs" value={failedRuns.length} />
+        <SignalMetric label="Access issues" value={riskyConnections.length} />
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
@@ -114,10 +137,10 @@ export default async function NotificationsPage() {
             <h2 className="font-display text-2xl font-semibold text-text">Approvals and failures</h2>
           </div>
           <div className="space-y-3">
-            {(approvals ?? []).map((approval) => (
+            {approvals.map((approval: any) => (
               <Link
                 key={approval.id}
-                href={`/dashboard/approvals/${approval.id}`}
+                href="/dashboard/approvals"
                 className="block rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-3 transition-all hover:border-border-hi"
               >
                 <div className="font-display text-base font-medium text-text">{approval.title}</div>
@@ -128,17 +151,17 @@ export default async function NotificationsPage() {
               </Link>
             ))}
 
-            {(failedRuns ?? []).map((run) => (
+            {failedRuns.map((run: any) => (
               <Link
                 key={run.id}
-                href={`/dashboard/workflows/${run.workflow_id}/runs`}
+                href={run.workflow_id ? `/dashboard/workflows/${run.workflow_id}/runs` : "/dashboard/activity"}
                 className="block rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-3 transition-all hover:border-border-hi"
               >
                 <div className="font-display text-base font-medium text-text">
                   {workflowMap.get(run.workflow_id) ?? "Workflow run"}
                 </div>
                 <div className="mt-2 text-sm leading-6 text-text-muted">
-                  {run.error_message ?? "Execution failed."}
+                  {run.error_message ?? run.summary ?? "Execution failed."}
                 </div>
                 <div className="mt-3 text-xs uppercase tracking-[0.18em] text-text-dim">
                   {new Date(run.started_at).toLocaleString()}
@@ -146,7 +169,7 @@ export default async function NotificationsPage() {
               </Link>
             ))}
 
-            {(approvals ?? []).length === 0 && (failedRuns ?? []).length === 0 ? (
+            {approvals.length === 0 && failedRuns.length === 0 ? (
               <div className="rounded-[1rem] border border-dashed border-border p-5 text-sm text-text-muted">
                 No approval or failure signals right now.
               </div>
@@ -158,7 +181,7 @@ export default async function NotificationsPage() {
           <div className="card">
             <div className="mb-5 flex items-center gap-3">
               <Link2 className="h-5 w-5 text-accent" />
-              <h2 className="font-display text-2xl font-semibold text-text">Connection recovery</h2>
+              <h2 className="font-display text-2xl font-semibold text-text">Access recovery</h2>
             </div>
             <div className="space-y-3">
               {riskyConnections.map((connection) => {
@@ -167,7 +190,9 @@ export default async function NotificationsPage() {
                   <div key={connection.id} className="rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-3">
                     <div className="font-display text-base font-medium text-text">{connection.label}</div>
                     <div className="mt-2 text-sm leading-6 text-text-muted">
-                      {readiness.detail ?? "Dobly needs this connection reviewed before it can keep using it."}
+                      {typeof readiness.detail === "string"
+                        ? readiness.detail
+                        : "Dobly needs this access reviewed before it can keep using it."}
                     </div>
                   </div>
                 );
@@ -179,7 +204,7 @@ export default async function NotificationsPage() {
               ) : null}
             </div>
             <Link href="/dashboard/settings?tab=connections" className="btn-secondary mt-5">
-              Open connections
+              Open access
             </Link>
           </div>
 

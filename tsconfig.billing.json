@@ -1,0 +1,43 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "plugins": []
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/lib/billing/**/*.ts",
+    "src/lib/intasend.ts",
+    "src/lib/paystack.ts",
+    "src/lib/stripe.ts",
+    "src/lib/startup-readiness.ts",
+    "src/lib/dobly-product-model.ts",
+    "src/lib/local-runtime/**/*.ts",
+    "src/lib/runtime/research.ts",
+    "src/lib/runtime/media.ts",
+    "src/lib/runtime/custom-api.ts",
+    "src/lib/runtime/universal-mcp-execution.ts",
+    "src/lib/runtime/payments-commerce.ts",
+    "src/lib/runtime/publishing-execution.ts",
+    "src/lib/software-execution-runs.ts",
+    "src/lib/voice/orchestrator.ts",
+    "src/lib/communications/runtime.ts",
+    "src/lib/anthropic.ts",
+    "src/app/api/business-profile/analyze/route.ts",
+    "src/lib/agents/tool-operation.ts",
+    "src/lib/sales/proposal-generation.ts",
+    "src/lib/execution.ts",
+    "src/app/api/billing/**/*.ts",
+    "src/app/api/admin/billing/**/*.ts",
+    "src/app/api/internal/scheduler/route.ts",
+    "src/app/api/checkout/route.ts",
+    "src/app/api/webhooks/intasend/route.ts",
+    "src/app/api/webhooks/mpesa/route.ts",
+    "src/app/api/webhooks/paystack/route.ts",
+    "src/app/api/webhooks/stripe/subscriptions/route.ts",
+    "src/app/dashboard/billing/page.tsx",
+    "src/app/pricing/page.tsx",
+    "src/components/dashboard/WorkspaceBillingClient.tsx"
+  ],
+  "exclude": ["node_modules", ".next", "mobile"]
+}

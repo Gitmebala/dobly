@@ -1,7 +1,7 @@
 "use client";
 
-import { useParams, useRouter, usePathname } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { useParams, usePathname } from "next/navigation";
+import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left.js";
 import Link from "next/link";
 
 type ConfigTab =
@@ -21,15 +21,15 @@ const CONFIG_TABS: Array<{
   label: string;
   description: string;
 }> = [
-  { id: "basic", label: "Basic Info", description: "Agent name, role, industry" },
-  { id: "prompts", label: "Prompts & Behavior", description: "System prompt and rules" },
+  { id: "basic", label: "Role Foundation", description: "Desk type, role, business context" },
+  { id: "prompts", label: "Prompts & Behavior", description: "Handling style and rules" },
   { id: "voice", label: "Voice & Audio", description: "Voice selection and parameters" },
   { id: "conversation-flow", label: "Conversation Flow", description: "Call conversation tree" },
   { id: "call-actions", label: "Call Actions", description: "Before/during/after actions" },
   { id: "calendar", label: "Calendar", description: "Booking and availability" },
   { id: "escalation", label: "Escalation", description: "Escalation rules" },
   { id: "integrations", label: "Integrations", description: "CRM and data sync" },
-  { id: "deployment", label: "Deployment", description: "Channel configuration" },
+  { id: "deployment", label: "Deployment", description: "Numbers, channels, and webhooks" },
   { id: "monitoring", label: "Monitoring", description: "Analytics and call history" },
 ];
 
@@ -48,12 +48,12 @@ export default function AgentConfigPage() {
       <div className="mb-8 flex items-center gap-4">
         <Link href={`/dashboard/workflows/${workflowId}`} className="btn-ghost">
           <ArrowLeft className="h-4 w-4" />
-          Back to agent
+          Back to setup
         </Link>
         <div>
-          <h1 className="font-display text-3xl font-bold text-text">Agent Configuration</h1>
+          <h1 className="font-display text-3xl font-bold text-text">Desk Configuration</h1>
           <p className="mt-1 text-sm text-text-muted">
-            Set up all aspects of your agent's behavior, voice, and integrations
+            Set up how this desk handles calls, routing, escalations, and deployment
           </p>
         </div>
       </div>

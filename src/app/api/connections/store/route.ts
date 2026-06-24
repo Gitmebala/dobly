@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { upsertConnection, storeConnectionSecrets } from "@/lib/connections";
 import { logConnectionAudit } from "@/lib/connection-audit";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { isConnectionProviderLaunchReady } from "@/lib/connection-catalog";
+import { secureConnectionSetupSchema } from "@/lib/validations";
 
 /**
  * POST /api/connections/store
@@ -8,30 +11,32 @@ import { logConnectionAudit } from "@/lib/connection-audit";
  */
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createServerSupabaseClient();
     const {
-      userId,
-      provider,
-      label,
-      accountIdentifier,
-      accessToken,
-      refreshToken,
-      secret,
-      metadata,
-    } = await request.json();
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    if (!userId || !provider) {
+    const parsed = secureConnectionSetupSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Missing userId or provider" },
+        { error: "Invalid connection setup." },
         { status: 400 }
       );
+    }
+    const { provider, label, accountIdentifier, accessToken, refreshToken, secret, metadata } = parsed.data;
+    if (!isConnectionProviderLaunchReady(provider)) {
+      return NextResponse.json({ error: "This provider is not available in the current Dobly release." }, { status: 404 });
     }
 
     // Create or update connection
     const connection = await upsertConnection({
-      userId,
+      userId: user.id,
       provider,
-      label: label || `${provider} Connection`,
-      status: "active",
+      label,
+      status: "pending",
       accountIdentifier,
       metadata,
     });
@@ -48,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     // Log audit
     await logConnectionAudit({
-      userId,
+      userId: user.id,
       connectionId: connection.id,
       action: "connection_created",
       status: "success",
@@ -58,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       connectionId: connection.id,
-      status: "active",
+      status: "pending",
       provider,
     });
   } catch (error) {

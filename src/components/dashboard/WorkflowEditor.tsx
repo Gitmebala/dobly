@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   Check,
@@ -109,6 +109,7 @@ export default function WorkflowEditor({
   recentRuns: WorkflowRun[];
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(workflow.title);
   const [description, setDescription] = useState(workflow.description);
@@ -123,6 +124,7 @@ export default function WorkflowEditor({
       : workflow.blueprint.definition,
   }));
   const [runPayload, setRunPayload] = useState('{\n  "email": "customer@example.com"\n}');
+  const [dryRun, setDryRun] = useState(true);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(
     null
   );
@@ -132,6 +134,8 @@ export default function WorkflowEditor({
   const [connectedProviders, setConnectedProviders] = useState<string[]>([]);
 
   const definition = blueprint.definition as WorkflowDefinition;
+  const operatingModel = blueprint.operating_model;
+  const sandboxMode = searchParams?.get("mode") === "sandbox";
   const hasLegacyAgentSteps = definition?.steps.some((step) => isLegacyAgentStep(step)) ?? false;
   const operator = definition?.operator;
   const webhookUrl = useMemo(() => {
@@ -244,7 +248,7 @@ export default function WorkflowEditor({
     });
   }
 
-  async function runWorkflow() {
+  async function runWorkflow(runMode: "dry_run" | "live" = dryRun ? "dry_run" : "live") {
     setMessage(null);
     let payload: Record<string, unknown>;
 
@@ -259,7 +263,10 @@ export default function WorkflowEditor({
       const res = await fetch(`/api/workflows/${workflow.id}/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          mode: runMode,
+          payload,
+        }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -268,7 +275,17 @@ export default function WorkflowEditor({
         return;
       }
 
-      setMessage({ type: "success", text: "Workflow run completed." });
+      const runStatus = typeof data.run?.status === "string" ? data.run.status : null;
+      const successText =
+        runMode === "dry_run"
+          ? runStatus === "awaiting_approval"
+            ? "Dry run reached an approval checkpoint successfully."
+            : "Dry run completed. No live systems were touched."
+          : runStatus === "awaiting_approval"
+            ? "Live run is waiting for approval."
+            : "Workflow run completed.";
+
+      setMessage({ type: "success", text: successText });
       router.refresh();
     });
   }
@@ -328,18 +345,26 @@ export default function WorkflowEditor({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-mono uppercase tracking-[0.2em] text-accent mb-2">
-              Runnable workflow
+              {sandboxMode ? "Safe sandbox" : "Runnable workflow"}
             </p>
-            <h1 className="font-display font-bold text-3xl text-text">Edit and run</h1>
+            <h1 className="font-display font-bold text-3xl text-text">
+              {sandboxMode ? "Test safely first" : "Edit and run"}
+            </h1>
             <p className="text-sm text-text-muted mt-1">
-              Dobly builds the first draft. You can tune the runtime before turning it loose.
+              {sandboxMode
+                ? "Dobly simulates the run here first so you can see what happens before any live system is touched."
+                : "Dobly builds the first draft. You can tune the runtime before turning it loose."}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button onClick={runWorkflow} disabled={isPending || status !== "active"} className="btn-primary">
+            <button onClick={() => runWorkflow("live")} disabled={isPending || status !== "active"} className="btn-primary">
               {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
               Run now
+            </button>
+            <button onClick={() => runWorkflow("dry_run")} disabled={isPending} className="btn-secondary">
+              {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              Dry run
             </button>
             <button onClick={saveWorkflow} disabled={isPending} className="btn-secondary">
               {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -351,6 +376,17 @@ export default function WorkflowEditor({
             </button>
           </div>
         </div>
+
+        {sandboxMode ? (
+          <div className="rounded-xl border border-accent/30 bg-accent-dim px-4 py-3 text-sm text-text">
+            Start with <span className="font-medium text-white">Dry run</span>. Dobly will simulate external side effects,
+            keep live systems untouched, and show you the full run result before you decide to go live.
+          </div>
+        ) : (
+          <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-text-muted">
+            This is the optional advanced layer. Most users should test in sandbox first, then only open the editor if they want deeper control.
+          </div>
+        )}
 
         {message ? (
           <div
@@ -407,6 +443,47 @@ export default function WorkflowEditor({
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
         <div className="space-y-6">
+          {operatingModel ? (
+            <div className="card space-y-4">
+              <div>
+                <h2 className="font-display font-semibold text-xl text-text">What this setup owns</h2>
+                <p className="text-sm text-text-muted">
+                  Dobly should feel like it owns real work, not just a sequence of steps.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-display font-medium text-text-muted mb-2">
+                    Job to be done
+                  </label>
+                  <div className="rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-text-muted">
+                    {operatingModel.job_to_be_done}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-display font-medium text-text-muted mb-2">
+                    Work talents
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {operatingModel.work_talents.map((talent) => (
+                      <span key={talent} className="badge-muted">
+                        {talent.replace(/_/g, " ")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <InlineMiniList title="Responsibilities" items={operatingModel.responsibilities} />
+                <InlineMiniList title="Watches" items={operatingModel.watches} />
+                <InlineMiniList title="Handled by Dobly" items={operatingModel.handled_by_dobly} />
+                <InlineMiniList title="Approvals" items={operatingModel.approval_contract} />
+              </div>
+            </div>
+          ) : null}
+
           {operator?.enabled ? (
             <div className="card space-y-4">
               <div className="flex items-center justify-between gap-4">
@@ -852,23 +929,32 @@ export default function WorkflowEditor({
 
         <div className="space-y-6">
           <div className="card space-y-4">
-            <div>
-              <h2 className="font-display font-semibold text-xl text-text">Test payload</h2>
-              <p className="text-sm text-text-muted mt-1">
-                Used when you click Run now.
-              </p>
-            </div>
-            <textarea
-              value={runPayload}
-              onChange={(e) => setRunPayload(e.target.value)}
-              className="input min-h-[180px] font-mono text-xs"
+          <div>
+            <h2 className="font-display font-semibold text-xl text-text">
+              {sandboxMode ? "Sandbox payload" : "Test payload"}
+            </h2>
+            <p className="text-sm text-text-muted mt-1">
+              {sandboxMode ? "Used for safe sandbox runs first, then live runs if you choose." : "Used for live runs and dry runs."}
+            </p>
+          </div>
+          <textarea
+            value={runPayload}
+            onChange={(e) => setRunPayload(e.target.value)}
+            className="input min-h-[180px] font-mono text-xs"
+          />
+          <label className="inline-flex items-center gap-2 text-sm text-text-muted">
+            <input
+              type="checkbox"
+              checked={dryRun}
+              onChange={(e) => setDryRun(e.target.checked)}
             />
-            <div className="rounded-xl border border-border bg-surface-2 p-4 text-xs text-text-muted">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
-                <p>
-                  Email steps use `trigger.email`. Webhook steps post to the URL you place in each
-                  step config. Delay steps are capped to 30 seconds per run in-app so testing stays fast.
+            Default to dry runs first
+          </label>
+          <div className="rounded-xl border border-border bg-surface-2 p-4 text-xs text-text-muted">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+              <p>
+                  Email steps use `trigger.email`. Dry runs simulate external side effects, while live runs hit real connected systems. Delay steps are capped to 30 seconds per run in-app so testing stays fast.
                 </p>
               </div>
             </div>
@@ -973,6 +1059,11 @@ export default function WorkflowEditor({
                     {run.error_message ? (
                       <p className="text-xs text-red-300 mt-2">{run.error_message}</p>
                     ) : null}
+                    {run.trigger_payload && typeof run.trigger_payload === "object" && "mode" in run.trigger_payload ? (
+                      <p className="mt-2 text-xs text-text-dim">
+                        Mode: {String((run.trigger_payload as Record<string, unknown>).mode)}
+                      </p>
+                    ) : null}
                     <div className="mt-3 space-y-2">
                       {run.step_results?.slice(0, 3).map((step) => (
                         <div key={step.id} className="rounded-lg border border-border px-3 py-2">
@@ -985,6 +1076,12 @@ export default function WorkflowEditor({
                           {step.output?.verification ? (
                             <p className="mt-2 text-[11px] text-accent">
                               Verified selector: {String((step.output.verification as Record<string, unknown>).selector ?? "")}
+                            </p>
+                          ) : null}
+                          {step.output?._meta ? (
+                            <p className="mt-2 text-[11px] text-text-dim">
+                              Attempts: {String(((step.output._meta as Record<string, unknown>).attempts ?? 1))} ·
+                              Dry run: {String(((step.output._meta as Record<string, unknown>).dryRun ?? false))}
                             </p>
                           ) : null}
                           {step.output?.artifacts ? (
@@ -1056,6 +1153,12 @@ export default function WorkflowEditor({
                   </div>
 
                   {step.error ? <p className="text-sm text-red-300">{step.error}</p> : null}
+                  {step.output?._meta ? (
+                    <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-surface px-3 py-2 text-xs text-text-dim">
+                      Attempts: {String(((step.output._meta as Record<string, unknown>).attempts ?? 1))} ·
+                      Dry run: {String(((step.output._meta as Record<string, unknown>).dryRun ?? false))}
+                    </div>
+                  ) : null}
 
                   {step.output?.verification ? (
                     <div className="rounded-xl border border-accent/20 bg-accent-dim px-3 py-2 text-xs text-accent">
@@ -1106,6 +1209,21 @@ export default function WorkflowEditor({
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function InlineMiniList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <label className="block text-xs font-display font-medium text-text-muted mb-2">{title}</label>
+      <div className="space-y-2">
+        {items.map((item) => (
+          <div key={item} className="rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-text-muted">
+            {item}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

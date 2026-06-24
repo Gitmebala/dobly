@@ -64,7 +64,7 @@ export default async function HelpPage() {
   if (!user) redirect("/auth/login");
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="help-page mx-auto max-w-5xl space-y-6">
       <section className="card">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>

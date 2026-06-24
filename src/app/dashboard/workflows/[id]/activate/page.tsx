@@ -58,7 +58,7 @@ export default async function WorkflowActivatePage({
         <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Activation review</div>
         <h1 className="mt-2 font-display text-4xl font-bold tracking-tight text-text">{workflow.title}</h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-text-muted">
-          Review what this automation will do, what it needs, and what should be approved before you let it run on its own.
+          Review what this setup will do, what it needs, and what should be approved before you let it run on its own.
         </p>
       </section>
 
@@ -128,7 +128,7 @@ export default async function WorkflowActivatePage({
             <h2 className="font-display text-2xl font-semibold text-text">Missing before launch</h2>
           </div>
           {missing.length === 0 ? (
-            <p className="text-sm leading-7 text-text-muted">All known required connections appear to be deploy-ready.</p>
+            <p className="text-sm leading-7 text-text-muted">All known required access appears to be deploy-ready.</p>
           ) : (
             <div className="space-y-3">
               {missing.map((provider) => (
@@ -141,7 +141,7 @@ export default async function WorkflowActivatePage({
                     </div>
                   </div>
                   <Link href={`/dashboard/connect/${provider.id}`} className="btn-secondary">
-                    Connect
+                    Unlock
                   </Link>
                 </div>
               ))}
@@ -149,7 +149,7 @@ export default async function WorkflowActivatePage({
           )}
           <div className="mt-5">
             <Link href={missing.length > 0 ? `/dashboard/workflows/${id}/connections` : `/dashboard/workflows/${id}`} className="btn-primary">
-              {missing.length > 0 ? "Fix missing connections" : "Return to workflow"}
+              {missing.length > 0 ? "Fix missing access" : "Return to workflow"}
             </Link>
           </div>
         </div>
@@ -178,7 +178,8 @@ export default async function WorkflowActivatePage({
           </div>
           {strategy.optionalProviders.length === 0 ? (
             <p className="text-sm leading-7 text-text-muted">
-              Dobly can launch this workflow without extra optional systems right now.
+              Launch this workflow without extra optional systems right now.
+              
             </p>
           ) : (
             <div className="space-y-3">

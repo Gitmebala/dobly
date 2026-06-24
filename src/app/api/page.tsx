@@ -160,8 +160,8 @@ const ENDPOINTS: APIEndpoint[] = [
       "authenticated": true
     },
     {
-      "id": "stripe",
-      "name": "Stripe",
+      "id": "paystack",
+      "name": "Paystack",
       "category": "payments",
       "authenticated": false
     }

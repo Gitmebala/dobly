@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -13,9 +13,9 @@ import {
   Mail,
   Shield,
   Sparkles,
+  Trash2,
   User,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import ConnectionsTab from "@/components/dashboard/ConnectionsTab";
 import { PLANS, type PlanId, type Profile } from "@/types";
 
@@ -34,15 +34,13 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from("profiles")
-      .select("*")
-      .single()
-      .then(({ data }) => {
-        setProfile(data);
-        setLoading(false);
-      });
+    fetch("/api/profile")
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Could not load profile.");
+        setProfile(result.profile);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const tabs: { id: Tab; label: string; icon: typeof User }[] = [
@@ -61,7 +59,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="settings-page mx-auto max-w-4xl space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold text-text">Settings</h1>
         <p className="mt-1 text-sm text-text-muted">
@@ -108,24 +106,47 @@ function ProfileTab({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmation !== "DELETE" || deleting) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const response = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: deleteConfirmation, reason: deleteReason.trim() || null }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Dobly could not delete this account.");
+      window.location.assign("/");
+    } catch (deleteFailure) {
+      setDeleteError(deleteFailure instanceof Error ? deleteFailure.message : "Dobly could not delete this account.");
+      setDeleting(false);
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError("");
 
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("profiles")
-      .update({ full_name: name.trim(), notification_preference: notificationPreference })
-      .eq("id", profile?.id ?? "")
-      .select()
-      .single();
+    const response = await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full_name: name.trim(), notification_preference: notificationPreference }),
+    });
+    const result = await response.json().catch(() => ({}));
 
-    if (error) {
-      setError("Dobly could not save your changes. Please try again.");
+    if (!response.ok) {
+      setError(result.error || "Dobly could not save your changes. Please try again.");
     } else {
-      setProfile(data as Profile);
+      setProfile(result.profile as Profile);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     }
@@ -214,14 +235,42 @@ function ProfileTab({
             <div>
               <div className="font-display text-lg font-semibold text-text">Delete account</div>
               <p className="mt-2 text-sm leading-7 text-text-muted">
-                Account deletion is handled by support so we can verify ownership and prevent accidental loss of workflows and history.
+                Permanently remove your account, coworkers, work history, and active Dobly access. This cannot be undone.
               </p>
-              <a
-                href="mailto:hello@dobly.io?subject=Delete%20my%20Dobly%20account"
-                className="btn-secondary mt-5 border-red-500/30 text-red-300 hover:bg-red-500/10"
-              >
-                Contact support
-              </a>
+              {!deleteOpen ? (
+                <button type="button" onClick={() => setDeleteOpen(true)} className="btn-secondary mt-5 border-red-500/30 text-red-300 hover:bg-red-500/10">
+                  <Trash2 className="h-4 w-4" /> Delete account
+                </button>
+              ) : (
+                <div className="mt-5 grid gap-3">
+                  <textarea
+                    className="input min-h-[86px]"
+                    value={deleteReason}
+                    onChange={(event) => setDeleteReason(event.target.value)}
+                    maxLength={1000}
+                    placeholder="Optional: tell us why you are leaving"
+                    aria-label="Reason for deleting account"
+                  />
+                  <label className="grid gap-2 text-sm text-text-muted">
+                    Type <strong className="text-text">DELETE</strong> to confirm
+                    <input
+                      className="input"
+                      value={deleteConfirmation}
+                      onChange={(event) => setDeleteConfirmation(event.target.value)}
+                      autoComplete="off"
+                    />
+                  </label>
+                  {deleteError ? <p className="text-sm text-red-400" role="alert">{deleteError}</p> : null}
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={handleDeleteAccount} disabled={deleteConfirmation !== "DELETE" || deleting} className="btn-secondary border-red-500/30 text-red-300 hover:bg-red-500/10 disabled:opacity-50">
+                      {deleting ? <><Loader2 className="h-4 w-4 animate-spin" /> Deleting</> : <><Trash2 className="h-4 w-4" /> Permanently delete</>}
+                    </button>
+                    <button type="button" onClick={() => { setDeleteOpen(false); setDeleteConfirmation(""); setDeleteError(""); }} disabled={deleting} className="btn-ghost">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -430,15 +479,22 @@ function SecurityTab({ email }: { email: string }) {
     setSaving(true);
     setMessage(null);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+    const response = await fetch("/api/auth/password/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
     });
+    const result = await response.json().catch(() => ({}));
 
-    if (error) {
-      setMessage({ type: "error", text: "Dobly could not send a reset email right now. Please try again." });
+    if (!response.ok) {
+      setMessage({ type: "error", text: result.error || "Dobly could not create a reset link right now." });
     } else {
-      setMessage({ type: "success", text: `Password reset email sent to ${email}.` });
+      setMessage({
+        type: "success",
+        text: result.resetUrl
+          ? "A local reset link is ready. Open Forgot password from the sign-in page to use it."
+          : `Password reset email sent to ${email}.`,
+      });
     }
 
     setSaving(false);

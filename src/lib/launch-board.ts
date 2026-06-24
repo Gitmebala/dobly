@@ -71,12 +71,12 @@ export const launchBoardSections: LaunchBoardSection[] = [
           "This is outside the repo. Before taking recurring revenue at scale, Dobly needs the right legal entity, bank account, bookkeeping process, and tax calendar.",
       },
       {
-        id: "stripe-live",
-        title: "Stripe live products, prices, checkout, and webhook events verified",
+        id: "paystack-live",
+        title: "Paystack live keys, checkout, plan codes, and webhook events verified",
         status: "working",
         owner: "Engineering",
         notes:
-          "The code path exists. Dobly still needs live Stripe dashboard setup, event delivery verification, and a full upgrade-downgrade-cancel test.",
+          "The Kenya-first code path exists. Dobly still needs live Paystack setup, event delivery verification, and a full upgrade-downgrade-cancel support test. Stripe remains optional for supported-country entities.",
       },
       {
         id: "billing-policy",

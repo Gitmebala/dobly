@@ -2,19 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRequestIp } from "@/lib/api-security";
 import { rateLimits } from "@/lib/rate-limit";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
-import { enqueueWorkflowRun, processQueue } from "@/lib/queue";
+import { enqueueWorkflowRun } from "@/lib/queue";
 import type { ApiError, Workflow } from "@/types";
+import { secureSecretMatches } from "@/lib/security/secrets";
+
+const MAX_WEBHOOK_BYTES = 256 * 1024;
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ path: string }> }
 ) {
   const { path } = await params;
+  if (!/^[a-zA-Z0-9_-]{3,128}$/.test(path)) {
+    return NextResponse.json<ApiError>({ error: "Webhook not found" }, { status: 404 });
+  }
   const supabase = createAdminSupabaseClient();
-  const body = await req.json().catch(() => ({}));
   const rl = rateLimits.webhook(`${path}:${getRequestIp(req)}`);
   if (!rl.allowed) {
     return NextResponse.json<ApiError>({ error: "Too many webhook requests." }, { status: 429 });
+  }
+
+  const contentLength = Number(req.headers.get("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > MAX_WEBHOOK_BYTES) {
+    return NextResponse.json<ApiError>({ error: "Webhook payload is too large." }, { status: 413 });
+  }
+  const rawBody = await req.text();
+  if (Buffer.byteLength(rawBody, "utf8") > MAX_WEBHOOK_BYTES) {
+    return NextResponse.json<ApiError>({ error: "Webhook payload is too large." }, { status: 413 });
+  }
+  let body: Record<string, unknown> = {};
+  if (rawBody.trim()) {
+    try {
+      const parsedBody: unknown = JSON.parse(rawBody);
+      if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) {
+        return NextResponse.json<ApiError>({ error: "Webhook payload must be a JSON object." }, { status: 400 });
+      }
+      body = parsedBody as Record<string, unknown>;
+    } catch {
+      return NextResponse.json<ApiError>({ error: "Webhook payload must be valid JSON." }, { status: 400 });
+    }
   }
 
   const { data: workflow, error } = await supabase
@@ -31,7 +57,7 @@ export async function POST(
   const expectedSecret = String(workflow.blueprint?.definition?.trigger?.config?.secret ?? "").trim();
   const providedSecret = req.headers.get("x-dobly-webhook-secret")?.trim() ?? "";
 
-  if (!expectedSecret || providedSecret !== expectedSecret) {
+  if (!secureSecretMatches(expectedSecret, providedSecret)) {
     return NextResponse.json<ApiError>({ error: "Invalid webhook secret." }, { status: 401 });
   }
 
@@ -50,9 +76,10 @@ export async function POST(
       priority: 50,
     });
 
-    const processed = await processQueue(1, "dobly-webhook-runner", [job.id]);
-
-    return NextResponse.json({ accepted: true, job, processed });
+    return NextResponse.json(
+      { accepted: true, jobId: job.id },
+      { status: 202, headers: { "cache-control": "no-store" } }
+    );
   } catch (error) {
     return NextResponse.json<ApiError>(
       { error: error instanceof Error ? error.message : "Webhook execution failed" },

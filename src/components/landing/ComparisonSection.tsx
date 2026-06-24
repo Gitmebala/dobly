@@ -1,10 +1,10 @@
 const rows = [
-  ["Setup experience", "Build step by step", "Describe in plain English"],
-  ["Mental model required", "Triggers, actions, APIs", "Just the outcome"],
-  ["Failure handling", "You debug it", "Plain-English explanation"],
-  ["AI involvement", "You configure AI steps", "Built into interpretation"],
-  ["Pricing transparency", "Per task, unclear", "Standard vs Intelligence, clear split"],
-  ["Learning curve", "Hours to days", "Minutes"],
+  ["Setup experience", "Build step by step", "Describe the department outcome"],
+  ["Mental model required", "Triggers, actions, APIs", "Worker swarm plus guardrails"],
+  ["Execution style", "Single workflows", "Persistent multi-tool operating loops"],
+  ["Failure handling", "You debug it", "Plain-English explanation and retries"],
+  ["Autonomy model", "One-size-fits-all", "Aggressive outside finance, approval-gated for money"],
+  ["Learning curve", "Hours to days", "Minutes to first live department"],
 ];
 
 export default function ComparisonSection() {

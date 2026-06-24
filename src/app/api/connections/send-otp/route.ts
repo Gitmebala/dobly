@@ -1,37 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminSupabaseClient } from "@/lib/supabase/server";
+import { getRequestIp } from "@/lib/api-security";
+import { rateLimits } from "@/lib/rate-limit";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { requestConnectionCodeSchema } from "@/lib/validations";
+import { requestWhatsappOtp } from "@/lib/verifications";
 
-/**
- * POST /api/connections/send-otp
- * Send OTP for verification-based connection setup (WhatsApp, Telegram, etc.)
- */
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rl = rateLimits.write(user.id || getRequestIp(req));
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many verification requests." }, { status: 429 });
+  }
+
+  const body = await req.json().catch(() => null);
+  const parsed = requestConnectionCodeSchema.safeParse(body);
+  if (!parsed.success || parsed.data.provider !== "whatsapp") {
+    return NextResponse.json({ error: "Enter a valid WhatsApp number first." }, { status: 400 });
+  }
+
   try {
-    const { provider, accountIdentifier } = await request.json();
+    const result = await requestWhatsappOtp({
+      userId: user.id,
+      provider: parsed.data.provider,
+      label: parsed.data.label,
+      destination: parsed.data.accountIdentifier,
+      metadata: parsed.data.metadata,
+    });
 
-    if (!provider || !accountIdentifier) {
-      return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
-    }
-
-    // In a real implementation, integrate with Twilio or similar OTP service
-    // For now, we'll simulate sending OTP
-    const otp = Math.random().toString().slice(2, 8);
-
-    // Store OTP in cache (Redis or in-memory for demo)
-    // await redis.set(`otp:${provider}:${accountIdentifier}`, otp, "EX", 600);
-
-    // Send OTP via SMS/WhatsApp
-    console.log(`[DEMO] OTP for ${provider} (${accountIdentifier}): ${otp}`);
-
-    return NextResponse.json(
-      {
-        message: "OTP sent successfully",
-        // In production, don't return OTP to client!
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      message: "OTP sent successfully",
+      verificationId: result.verification.id,
+      connectionId: result.connection.id,
+      destination: result.verification.destination,
+      developmentCodePreview: result.developmentCodePreview,
+    });
   } catch (error) {
-    console.error("Failed to send OTP:", error);
-    return NextResponse.json({ message: "Failed to send OTP" }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to send OTP." },
+      { status: 500 },
+    );
   }
 }

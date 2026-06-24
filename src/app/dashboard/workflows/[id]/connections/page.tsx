@@ -38,12 +38,12 @@ export default async function WorkflowMissingConnectionsPage({
       </Link>
 
       <section className="card">
-        <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Missing connections</div>
+        <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Missing access</div>
         <h1 className="mt-2 font-display text-4xl font-bold tracking-tight text-text">
-          To run this, connect the missing tools.
+          To run this, unlock the missing tools.
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-text-muted">
-          Dobly already knows what this workflow needs. Connect only the missing accounts below.
+          Dobly already knows what this setup needs. Unlock only the missing accounts below.
         </p>
       </section>
 
@@ -58,14 +58,14 @@ export default async function WorkflowMissingConnectionsPage({
               </div>
               <Link href={`/dashboard/connect/${provider.id}`} className="btn-primary">
                 <Link2 className="h-4 w-4" />
-                Connect {provider.label}
+                Use {provider.label}
               </Link>
             </div>
           </div>
         ))}
         {missing.length === 0 ? (
           <div className="card space-y-4 text-sm text-text-muted">
-            <div>No missing connections found for this workflow.</div>
+            <div>No missing access found for this workflow.</div>
             <Link href={`/dashboard/workflows/${id}/activate`} className="btn-secondary inline-flex">
               Return to activation review
             </Link>

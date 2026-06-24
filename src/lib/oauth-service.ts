@@ -24,7 +24,12 @@ const OAUTH_PROVIDERS: Record<string, OAuthConfig> = {
     redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/google/callback`,
     authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
-    scopes: ["https://www.googleapis.com/auth/gmail.send", "https://www.googleapis.com/auth/spreadsheets"],
+    scopes: [
+      "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/documents",
+      "https://www.googleapis.com/auth/drive.file",
+    ],
   },
   microsoft: {
     clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID || "",
@@ -137,6 +142,22 @@ const OAUTH_PROVIDERS: Record<string, OAuthConfig> = {
     authorizationUrl: "https://airtable.com/oauth2/v1/authorize",
     tokenUrl: "https://airtable.com/oauth2/v1/token",
     scopes: ["data.records:read", "data.records:write"],
+  },
+  canva: {
+    clientId: process.env.CANVA_CLIENT_ID || "",
+    clientSecret: process.env.CANVA_CLIENT_SECRET || "",
+    redirectUri: process.env.CANVA_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/canva/callback`,
+    authorizationUrl: "https://www.canva.com/api/oauth/authorize",
+    tokenUrl: "https://api.canva.com/rest/v1/oauth/token",
+    scopes: [
+      "asset:read",
+      "asset:write",
+      "design:content:read",
+      "design:content:write",
+      "design:meta:read",
+      "folder:read",
+      "folder:write",
+    ],
   },
   calendly: {
     clientId: process.env.CALENDLY_OAUTH_CLIENT_ID || "",

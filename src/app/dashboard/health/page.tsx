@@ -33,7 +33,7 @@ export default async function HealthPage() {
         .order("requested_at", { ascending: false }),
     ]);
 
-  const connectionMap = new Map(
+  const connectionMap = new Map<string, Connection>(
     (connections ?? []).map((connection) => [connection.provider, connection] as const)
   );
   const healthRows = (workflows ?? []).map((workflow) =>
@@ -50,75 +50,75 @@ export default async function HealthPage() {
   const accountRiskCount = (connections ?? []).filter((connection) => !isConnectionOperational(connection)).length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-4">
       <section className="card">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Workflow health</div>
-            <h1 className="mt-2 font-display text-4xl font-bold tracking-tight text-text">
-              See what needs attention before it becomes urgent.
+            <div className="text-[10px] uppercase tracking-[0.24em] text-text-dim">Health</div>
+            <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-text">
+              System status
             </h1>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-text-muted">
-              This view is based on real run history, pending approvals, and connection readiness so Dobly stays honest about what is healthy and what is at risk.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
+              Based on runs, approvals, and access.
             </p>
           </div>
-          <div className="badge-green">
-            <Activity className="h-3.5 w-3.5" />
-            Runtime-backed
+          <div className="badge-green text-xs">
+            <Activity className="h-3 w-3" />
+            Runtime
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-2 md:grid-cols-3">
         <MetricCard label="Healthy" value={healthyCount} tone="good" />
-        <MetricCard label="Attention needed" value={attentionCount} tone="warn" />
+        <MetricCard label="Needs attention" value={attentionCount} tone="warn" />
         <MetricCard label="Account risk" value={accountRiskCount} tone="bad" />
       </section>
 
       <section className="card">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="font-display text-2xl font-semibold text-text">Recovery controls</h2>
-            <p className="mt-2 text-sm leading-7 text-text-muted">
-              When a connection expires, a setup is incomplete, or a workflow needs human attention, Dobly should route you directly to the fix instead of leaving a dead end.
+            <h2 className="font-display text-base font-semibold text-text">Recovery</h2>
+            <p className="mt-1 text-xs leading-5 text-text-muted">
+              Direct routes to fixes.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/dashboard/settings?tab=connections" className="btn-secondary">
-              Open connections
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/settings?tab=connections" className="btn-secondary text-xs">
+              Access
             </Link>
-            <Link href="/dashboard/approvals" className="btn-ghost">
-              Open approvals
+            <Link href="/dashboard/approvals" className="btn-ghost text-xs">
+              Approvals
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4">
+      <section className="grid gap-3">
         {healthRows.length === 0 ? (
-          <div className="rounded-[1.2rem] border border-dashed border-border p-6 text-sm text-text-muted">
-            No automations yet. Build one first, then Dobly will surface run reliability and recovery state here.
+          <div className="rounded-lg border border-dashed border-border p-4 text-xs text-text-muted">
+            No live setups yet.
           </div>
         ) : (
           healthRows.map((row) => (
             <div key={row.workflow.id} className="card-hover">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <div className="font-display text-2xl font-semibold text-text">{row.workflow.title}</div>
-                  <p className="mt-2 text-sm leading-6 text-text-muted">{row.workflow.description}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="badge-muted">{row.lastRunLabel}</span>
-                    <span className="badge-muted">{row.successRateLabel}</span>
+                  <div className="font-display text-base font-semibold text-text">{row.workflow.title}</div>
+                  <p className="mt-1 text-xs leading-4 text-text-muted">{row.workflow.description}</p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    <span className="badge-muted text-xs">{row.lastRunLabel}</span>
+                    <span className="badge-muted text-xs">{row.successRateLabel}</span>
                     {row.pendingApprovals > 0 ? (
-                      <span className="badge-muted">{row.pendingApprovals} approval pending</span>
+                      <span className="badge-muted text-xs">{row.pendingApprovals} pending</span>
                     ) : null}
                     {row.atRiskProviders.length > 0 ? (
-                      <span className="badge-muted">Reconnect: {row.atRiskProviders.join(", ")}</span>
+                      <span className="badge-muted text-xs">Reconnect: {row.atRiskProviders.join(", ")}</span>
                     ) : null}
                   </div>
                 </div>
-                <div className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm ${row.tone}`}>
-                  <row.Icon className="h-4 w-4" />
+                <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${row.tone}`}>
+                  <row.Icon className="h-3 w-3" />
                   {row.label}
                 </div>
               </div>
@@ -199,8 +199,8 @@ function MetricCard({
 
   return (
     <div className="premium-tile">
-      <div className="text-xs uppercase tracking-[0.24em] text-text-dim">{label}</div>
-      <div className={`mt-3 font-display text-4xl font-bold ${className}`}>{value}</div>
+      <div className="text-[10px] uppercase tracking-[0.24em] text-text-dim">{label}</div>
+      <div className={`mt-2 font-display text-2xl font-bold ${className}`}>{value}</div>
     </div>
   );
 }

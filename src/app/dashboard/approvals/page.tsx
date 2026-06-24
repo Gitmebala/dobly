@@ -1,8 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BellRing, CheckCircle2, MessageCircleWarning } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, Clock3 } from "lucide-react";
+import OfficeTaskDecisionButtons from "@/components/dashboard/OfficeTaskDecisionButtons";
+import ApprovalDecisionButtons from "@/components/dashboard/ApprovalDecisionButtons";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import ApprovalActions from "@/components/dashboard/ApprovalActions";
+import { buildHomebaseDashboardData } from "@/lib/office/homebase";
+import { listRuntimeApprovals } from "@/lib/runtime/approvals";
 
 export default async function ApprovalsPage() {
   const supabase = await createServerSupabaseClient();
@@ -11,70 +13,136 @@ export default async function ApprovalsPage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/auth/login");
+  const userId = user.id;
 
-  const { data: approvals } = await supabase
-    .from("approvals")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("requested_at", { ascending: false });
+  const office = (await buildHomebaseDashboardData({ userId }).catch(() => null)) ?? ({
+    departments: [],
+    tasks: [],
+  } as unknown as Awaited<ReturnType<typeof buildHomebaseDashboardData>>);
+  const decisions = office.tasks.filter((task) => task.status === "waiting_approval");
+  const runtimeApprovals = await listRuntimeApprovals({ userId, status: "pending" }).catch(() => []);
+  const waitingCount = decisions.length + runtimeApprovals.length;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <section className="card">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Approvals</div>
-            <h1 className="mt-2 font-display text-4xl font-bold tracking-tight text-text">High-risk actions wait here until you say yes.</h1>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-text-muted">
-              Dobly routes approvals to the right channel so sensitive actions can pause cleanly instead of failing silently.
-            </p>
-          </div>
-          <div className="badge-green">
-            <BellRing className="h-3.5 w-3.5" />
-            Approval center
-          </div>
+    <div className="approvals-workspace">
+      <header className="approvals-workspace-header">
+        <div>
+          <div className="workspace-kicker">Approvals</div>
+          <h1>Review queue</h1>
+          <p>Decide what can continue before it reaches customers, money, publishing, or connected systems.</p>
         </div>
-      </section>
+        <div className="approval-queue-count" aria-label={`${waitingCount} approvals waiting`}>
+          <Clock3 aria-hidden="true" />
+          <strong>{waitingCount}</strong>
+          <span>waiting</span>
+        </div>
+      </header>
 
-      {(approvals ?? []).length === 0 ? (
-        <section className="card text-center">
-          <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-dim text-accent">
-            <CheckCircle2 className="h-6 w-6" />
+      {waitingCount === 0 ? (
+        <section className="approval-empty-state">
+          <div className="approval-empty-icon">
+            <CheckCircle2 className="h-5 w-5" />
           </div>
-          <h2 className="font-display text-2xl font-semibold text-text">No pending approvals</h2>
-          <p className="mx-auto mt-3 max-w-md text-text-muted">
-            Your active automations are currently running without manual intervention.
-          </p>
+          <h2>Nothing needs your decision</h2>
+          <p>The office is continuing within the rules you have already approved.</p>
         </section>
       ) : (
-        <section className="grid gap-4">
-          {(approvals ?? []).map((item) => (
-            <div key={item.id} className="card-hover">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(255,211,106,0.12)] text-yellow-300">
-                    <MessageCircleWarning className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="font-display text-xl font-semibold text-text">{item.title}</div>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">{item.message}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <div className="badge-muted">{item.channel} approval route</div>
-                      <div className="badge-muted">risk: {item.risk_level}</div>
+        <section className="approval-queue" aria-label="Items waiting for approval">
+          {runtimeApprovals.map((approval) => {
+            const metadata = (approval.metadata ?? {}) as Record<string, any>;
+            const resume = (metadata.resume ?? {}) as Record<string, any>;
+            const path = (metadata.path ?? {}) as Record<string, any>;
+            const releaseGate = metadata.releaseGate as Record<string, any> | undefined;
+            const reviewPacket = releaseGate?.packet as Record<string, any> | undefined;
+            const contextUsed = Array.isArray(reviewPacket?.contextUsed) ? reviewPacket.contextUsed.slice(0, 4) : [];
+            const standards = Array.isArray(reviewPacket?.standardChecked) ? reviewPacket.standardChecked.slice(0, 4) : [];
+            const remainingRisk = Array.isArray(reviewPacket?.remainingRisk) ? reviewPacket.remainingRisk.slice(0, 3) : [];
+            const examplesCompared = Array.isArray(reviewPacket?.examplesCompared) ? reviewPacket.examplesCompared.slice(0, 3) : [];
+            return (
+              <article key={approval.id} className="approval-queue-item approval-queue-item-runtime">
+                <div className="approval-decision-row">
+                  <div className="approval-item-summary">
+                    <div className="approval-item-icon">
+                      <AlertTriangle className="h-4 w-4" />
+                    </div>
+                    <div className="approval-item-copy">
+                      <div className="approval-item-title">{approval.title}</div>
+                      <p>{approval.message}</p>
+                      <div className="approval-item-badges">
+                        <span className="badge-muted text-xs">runtime</span>
+                        <span className="badge-muted text-xs">{approval.risk_level} risk</span>
+                        {approval.run_id ? <span className="badge-muted text-xs">run attached</span> : null}
+                      </div>
                     </div>
                   </div>
+                  <div className="approval-item-actions"><ApprovalDecisionButtons approvalId={approval.id} /></div>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  {item.status === "pending" ? <ApprovalActions approvalId={item.id} /> : <div className="badge-green capitalize">{item.status}</div>}
-                  <Link href={`/dashboard/approvals/${item.id}`} className="btn-ghost">
-                    Review
-                  </Link>
+
+                <details className="approval-evidence">
+                  <summary><ChevronDown aria-hidden="true" /> Review evidence and release path</summary>
+                  <div className="approval-evidence-grid">
+                    <EvidenceBlock title="Decision path">
+                      <p><strong>After approval</strong>{approval.action_label ?? resume.type ?? "Resume the queued coworker run."}</p>
+                      <p><strong>Tool path</strong>{String(path.label ?? path.connection?.label ?? metadata.provider ?? "Dobly runtime")}</p>
+                      {releaseGate?.decision ? <p><strong>Release decision</strong>{String(releaseGate.decision).replace(/_/g, " ")}</p> : null}
+                      {reviewPacket?.confidence ? <p><strong>Confidence</strong>{String(reviewPacket.confidence)}</p> : null}
+                    </EvidenceBlock>
+                    {contextUsed.length > 0 ? <EvidenceList title="Context used" items={contextUsed.map(String)} /> : null}
+                    {standards.length > 0 ? <EvidenceList title="Standards checked" items={standards.map(String)} /> : null}
+                    {examplesCompared.length > 0 ? (
+                      <EvidenceList title="Reference examples" items={examplesCompared.map((item) => `${String(item.qualityLevel ?? "reference")} · ${String(item.title ?? "Stored example")}`)} />
+                    ) : null}
+                    {remainingRisk.length > 0 ? <EvidenceList title="Remaining risk" items={remainingRisk.map(String)} /> : null}
+                  </div>
+                </details>
+              </article>
+            );
+          })}
+
+          {decisions.map((task) => {
+            const room = office.departments.find((department) => department.id === task.departmentId);
+            return (
+              <article key={task.id} className="approval-queue-item">
+                <div className="approval-decision-row">
+                  <div className="approval-item-summary">
+                    <div className="approval-item-icon">
+                      <AlertTriangle className="h-4 w-4" />
+                    </div>
+                    <div className="approval-item-copy">
+                      <div className="approval-item-title">{task.title}</div>
+                      <p>{task.summary}</p>
+                      <div className="approval-item-badges">
+                        <span className="badge-muted text-xs">{room?.name ?? task.departmentId}</span>
+                        <span className="badge-muted text-xs">{task.runtimeKind}</span>
+                        <span className="badge-muted text-xs">{task.riskLevel}</span>
+                        {task.toolName ? <span className="badge-muted text-xs">via {task.toolName}</span> : null}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="approval-item-actions"><OfficeTaskDecisionButtons taskId={task.id} /></div>
                 </div>
-              </div>
-            </div>
-          ))}
+              </article>
+            );
+          })}
         </section>
       )}
     </div>
+  );
+}
+
+function EvidenceBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="approval-evidence-block">
+      <h3>{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function EvidenceList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <EvidenceBlock title={title}>
+      <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul>
+    </EvidenceBlock>
   );
 }

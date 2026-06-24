@@ -1,25 +1,42 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
-interface BasicInfoForm {
-  role: string;
-  industry: string;
+import type { AgentDepartment, AgentConfig } from "@/types";
+
+type BasicInfoForm = AgentConfig["profile"];
+
+const DEPARTMENTS: Array<{
+  id: AgentDepartment;
+  label: string;
   description: string;
-}
-
-const ROLES = [
-  "Sales Representative",
-  "Support Agent",
-  "Receptionist",
-  "HR Assistant",
-  "Lead Qualifier",
-  "Customer Service",
-  "Appointment Scheduler",
-  "Billing Agent",
-  "Compliance Officer",
-  "Other",
+}> = [
+  {
+    id: "front_desk",
+    label: "Front Desk",
+    description: "Reception, routing, booking, and first-call handling.",
+  },
+  {
+    id: "support_desk",
+    label: "Support Desk",
+    description: "Issue intake, triage, troubleshooting, and escalation.",
+  },
+  {
+    id: "sales_desk",
+    label: "Sales Desk",
+    description: "Lead capture, qualification, and booking the next step.",
+  },
+  {
+    id: "finance_desk",
+    label: "Finance Desk",
+    description: "Invoice, payment, collections, and billing follow-up.",
+  },
+  {
+    id: "custom",
+    label: "Custom",
+    description: "A custom role when none of the desk presets fit cleanly.",
+  },
 ];
 
 const INDUSTRIES = [
@@ -36,30 +53,31 @@ const INDUSTRIES = [
   "Other",
 ];
 
+const EMPTY_FORM: BasicInfoForm = {
+  department: "front_desk",
+  role: "",
+  industry: "",
+  businessName: "",
+  description: "",
+  firstMessage: "",
+  successSignal: "",
+};
+
 export default function BasicInfoPage() {
   const params = useParams();
   const workflowId = String(params?.id ?? "");
-  const [form, setForm] = useState<BasicInfoForm>({
-    role: "",
-    industry: "",
-    description: "",
-  });
+  const [form, setForm] = useState<BasicInfoForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Load current config
   useEffect(() => {
     async function loadConfig() {
       try {
         const response = await fetch(`/api/workflows/${workflowId}/agent-config`);
         if (response.ok) {
           const { agentConfig } = await response.json();
-          if (agentConfig) {
-            setForm({
-              role: agentConfig.role || "",
-              industry: agentConfig.industry || "",
-              description: agentConfig.description || "",
-            });
+          if (agentConfig?.profile) {
+            setForm(agentConfig.profile);
           }
         }
       } catch (error) {
@@ -82,13 +100,10 @@ export default function BasicInfoPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          blueprint: {
-            definition: {
-              operator: {
-                agentConfig: form,
-              },
-            },
+          agentConfig: {
+            profile: form,
           },
+          resetFromDepartmentPreset: true,
         }),
       });
 
@@ -101,38 +116,64 @@ export default function BasicInfoPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-8 text-text-muted">Loading configuration...</div>;
+    return <div className="py-8 text-center text-text-muted">Loading configuration...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-2xl font-semibold text-text">Basic Information</h2>
+        <h2 className="font-display text-2xl font-semibold text-text">Role Foundation</h2>
         <p className="mt-2 text-text-muted">
-          Define the role and industry for your agent to set expectations and defaults
+          Choose the desk this setup belongs to.
         </p>
       </div>
 
       <div className="space-y-6">
-        {/* Role */}
         <div>
-          <label className="block text-sm font-medium text-text">Agent Role</label>
-          <select
-            value={form.role}
-            onChange={(e) => updateField("role", e.target.value)}
-            className="input mt-2"
-          >
-            <option value="">Select a role...</option>
-            {ROLES.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
+          <label className="mb-3 block text-sm font-medium text-text">Desk Type</label>
+          <div className="grid gap-3 md:grid-cols-2">
+            {DEPARTMENTS.map((department) => (
+              <button
+                key={department.id}
+                onClick={() => updateField("department", department.id)}
+                className={`rounded-2xl border-2 p-4 text-left transition-all ${
+                  form.department === department.id
+                    ? "border-accent bg-accent/10"
+                    : "border-border bg-[rgba(255,255,255,0.02)] hover:border-accent/50"
+                }`}
+              >
+                <div className="font-medium text-text">{department.label}</div>
+                <div className="mt-1 text-xs text-text-muted">{department.description}</div>
+              </button>
             ))}
-          </select>
-          <p className="mt-1 text-xs text-text-muted">What will this agent do?</p>
+          </div>
         </div>
 
-        {/* Industry */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-text">Role Title</label>
+            <input
+              value={form.role}
+              onChange={(e) => updateField("role", e.target.value)}
+              placeholder="Front Desk Coordinator"
+              className="input mt-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text">Business Name</label>
+            <input
+              value={form.businessName}
+              onChange={(e) => updateField("businessName", e.target.value)}
+              placeholder="Dobly Dental"
+              className="input mt-2"
+            />
+            <p className="mt-1 text-xs text-text-muted">
+              Used in greetings, confirmations, and routing language.
+            </p>
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-text">Industry</label>
           <select
@@ -147,28 +188,45 @@ export default function BasicInfoPage() {
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-text-muted">What industry are you in?</p>
         </div>
 
-        {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-text">Description</label>
+          <label className="block text-sm font-medium text-text">What this desk owns</label>
           <textarea
             value={form.description}
             onChange={(e) => updateField("description", e.target.value)}
-            placeholder="Describe what this agent should do..."
+            placeholder="Explain the kinds of calls this desk should handle and where it should stop."
             className="input mt-2 min-h-[120px]"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-text">First line on the call</label>
+          <textarea
+            value={form.firstMessage}
+            onChange={(e) => updateField("firstMessage", e.target.value)}
+            placeholder="Thanks for calling. How can I help you today?"
+            className="input mt-2 min-h-[90px]"
+          />
           <p className="mt-1 text-xs text-text-muted">
-            Add context about this agent's specific responsibilities
+            This is the first thing callers hear once the line is answered.
           </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-text">What success looks like</label>
+          <textarea
+            value={form.successSignal}
+            onChange={(e) => updateField("successSignal", e.target.value)}
+            placeholder="The caller is routed correctly, the next step is clear, and the team has context."
+            className="input mt-2 min-h-[90px]"
+          />
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div className="flex gap-3 border-t border-border pt-6">
         <button onClick={handleSave} disabled={saving} className="btn-primary">
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? "Saving..." : "Save Foundation"}
         </button>
         <button className="btn-ghost">Cancel</button>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
 import { CalendarClock, CreditCard, FileText, MessagesSquare, ShoppingBag, Users } from "lucide-react";
 
 const sourceTiles = [
@@ -28,6 +28,28 @@ const destinationTiles = [
   },
 ];
 
+const topBaseY = [-20, 14, 42, 70, 98, 126];
+const endX = [28, 64, 102, 34, 74, 112];
+const endY = [218, 218, 218, 334, 334, 334];
+
+function SourceTile({ tile, index, smooth }: { tile: (typeof sourceTiles)[number]; index: number; smooth: MotionValue<number> }) {
+  const Icon = tile.icon;
+  const progressStart = 0.04 + index * 0.05;
+  const progressMid = 0.36 + index * 0.03;
+  const progressEnd = 0.8 + index * 0.02;
+  const x = useTransform(smooth, [0, progressMid, progressEnd], [index * 82, endX[index] ?? 0, endX[index] ?? 0]);
+  const y = useTransform(smooth, [0, progressMid, progressEnd], [topBaseY[index] ?? 0, endY[index] ?? 0, endY[index] ?? 0]);
+  const scale = useTransform(smooth, [progressStart, progressMid, progressEnd], [1, 0.94, 0.9]);
+  const opacity = useTransform(smooth, [0, progressMid, progressEnd], [1, 1, 0.82]);
+
+  return (
+    <motion.div style={{ x, y, scale, opacity }} className="absolute left-10 top-16 w-[7.4rem] rounded-[1.25rem] border border-border bg-surface px-3 py-3 shadow-[0_16px_40px_rgba(5,7,12,0.18)]">
+      <div className="mb-3 inline-flex rounded-[0.9rem] bg-accent-dim px-3 py-3 text-accent"><Icon className="h-4 w-4" /></div>
+      <div className="text-sm font-semibold text-text">{tile.label}</div>
+    </motion.div>
+  );
+}
+
 export default function ImmersiveStory() {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -40,10 +62,6 @@ export default function ImmersiveStory() {
   const stageRotateY = useTransform(smooth, [0, 1], [-10, 10]);
   const stageScale = useTransform(smooth, [0, 0.5, 1], [0.94, 1, 1.02]);
   const destinationOpacity = useTransform(smooth, [0.2, 0.55, 0.9], [0.2, 0.8, 1]);
-
-  const topBaseY = [-20, 14, 42, 70, 98, 126];
-  const endX = [28, 64, 102, 34, 74, 112];
-  const endY = [218, 218, 218, 334, 334, 334];
 
   return (
     <section id="assembly" ref={ref} className="relative h-[185vh] py-10">
@@ -77,29 +95,7 @@ export default function ImmersiveStory() {
                   Dobly workflows
                 </div>
 
-                {sourceTiles.map((tile, index) => {
-                  const Icon = tile.icon;
-                  const progressStart = 0.04 + index * 0.05;
-                  const progressMid = 0.36 + index * 0.03;
-                  const progressEnd = 0.8 + index * 0.02;
-                  const x = useTransform(smooth, [0, progressMid, progressEnd], [index * 82, endX[index] ?? 0, endX[index] ?? 0]);
-                  const y = useTransform(smooth, [0, progressMid, progressEnd], [topBaseY[index] ?? 0, endY[index] ?? 0, endY[index] ?? 0]);
-                  const scale = useTransform(smooth, [progressStart, progressMid, progressEnd], [1, 0.94, 0.9]);
-                  const opacity = useTransform(smooth, [0, progressMid, progressEnd], [1, 1, 0.82]);
-
-                  return (
-                    <motion.div
-                      key={tile.label}
-                      style={{ x, y, scale, opacity }}
-                      className="absolute left-10 top-16 w-[7.4rem] rounded-[1.25rem] border border-border bg-surface px-3 py-3 shadow-[0_16px_40px_rgba(5,7,12,0.18)]"
-                    >
-                      <div className="mb-3 inline-flex rounded-[0.9rem] bg-accent-dim px-3 py-3 text-accent">
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div className="text-sm font-semibold text-text">{tile.label}</div>
-                    </motion.div>
-                  );
-                })}
+                {sourceTiles.map((tile, index) => <SourceTile key={tile.label} tile={tile} index={index} smooth={smooth} />)}
 
                 <motion.div style={{ opacity: destinationOpacity }} className="absolute inset-x-10 bottom-8 grid gap-3">
                   {destinationTiles.map((tile, index) => (

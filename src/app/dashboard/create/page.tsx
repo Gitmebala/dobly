@@ -1,195 +1,182 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  ArrowRight,
-  Bot,
-  BriefcaseBusiness,
-  Building2,
-  GitBranch,
-  Network,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, Bot, ShieldCheck, Sparkles, Waves } from "lucide-react";
+import { BUSINESS_STARTER_TEMPLATES, PERSONAL_STARTER_TEMPLATES } from "@/lib/starter-templates";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-
-const BUSINESS_LANES = [
-  {
-    label: "Sales and intake",
-    copy: "Lead capture, qualification, follow-up, meeting booking, CRM routing.",
-  },
-  {
-    label: "Support and service",
-    copy: "Answers, triage, escalation, reminders, issue follow-through.",
-  },
-  {
-    label: "Operations and admin",
-    copy: "Approvals, handoffs, reporting, internal workflows, repetitive requests.",
-  },
-  {
-    label: "Commerce and billing",
-    copy: "Orders, invoices, payment nudges, status updates, customer notifications.",
-  },
-];
+import { DOBLY_DEEP_VERTICALS, DOBLY_VERTICAL_FAMILY_LABELS } from "@/lib/verticals";
 
 export default async function CreatePage({
   searchParams,
 }: {
-  searchParams?: { kind?: string };
+  searchParams?: Promise<{ kind?: string }>;
 }) {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   if (!user) redirect("/auth/login");
 
-  const params = searchParams ?? {};
-  const kind = params.kind === "agent" || params.kind === "automation" ? params.kind : null;
+  const resolvedSearchParams = await searchParams;
+  const kind = resolvedSearchParams?.kind === "agent" || resolvedSearchParams?.kind === "automation" ? resolvedSearchParams.kind : null;
+  const promptSeed =
+    kind === "agent"
+      ? "Review new customer conversations, draft replies, and only escalate the ones that need my approval."
+      : kind === "automation"
+        ? "When a payment is overdue, send the reminder, update the record, and notify me only if the invoice still stalls."
+        : "Build me a system that turns inbound demand into the right follow-up, tracks what happened, and only asks me to step in when the case is high-risk or genuinely unclear.";
+  const familyGroups = Object.entries(DOBLY_VERTICAL_FAMILY_LABELS).map(([familyId, label]) => ({
+    label,
+    items: DOBLY_DEEP_VERTICALS.filter((vertical) => vertical.family === familyId),
+  }));
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <section className="card relative overflow-hidden">
-        <div className="absolute inset-y-0 right-0 hidden w-[36%] bg-[radial-gradient(circle_at_top_right,rgba(77,122,255,0.16),transparent_52%)] lg:block" />
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6 lg:px-0">
+      <section className="rounded-[1.3rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(16,18,23,0.96)] p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Create</div>
-            <h1 className="mt-2 font-display text-4xl font-bold tracking-tight text-text">
-              Start with the outcome.
-            </h1>
-            <p className="mt-3 max-w-3xl text-base leading-7 text-text-muted">
-              Dobly should shape the system first and ask for live connections only when launch truly needs them.
+            <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Coworker builder</div>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text">Describe the coworker you want Dobly to deliver</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-text-muted">
+              Start with the role, responsibility, and standard. Dobly will turn that into a bounded coworker package with playbooks, approvals, memory, and launch readiness.
             </p>
           </div>
-          <Link href="/dashboard/business" className="btn-secondary">
-            <Building2 className="h-4 w-4" />
-            Update business context
-          </Link>
+          {kind ? <span className="badge-muted capitalize">{kind}</span> : null}
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <div className="premium-tile">
-            <div className="badge-green">
-              <BriefcaseBusiness className="h-3.5 w-3.5" />
-              Step 1
-            </div>
-            <p className="mt-4 font-display text-xl font-semibold text-text">Pick the business job</p>
-            <p className="mt-2 text-sm text-text-muted">
-              Choose the real job, not the apps.
-            </p>
-          </div>
-          <div className="premium-tile">
-            <div className="badge-muted">
-              <Network className="h-3.5 w-3.5" />
-              Step 2
-            </div>
-            <p className="mt-4 font-display text-xl font-semibold text-text">Let Dobly draft the system</p>
-            <p className="mt-2 text-sm text-text-muted">
-              Prompts, structure, guardrails, and logic first.
-            </p>
-          </div>
-          <div className="premium-tile">
-            <div className="badge-muted">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Step 3
-            </div>
-            <p className="mt-4 font-display text-xl font-semibold text-text">Connect only what is truly live</p>
-            <p className="mt-2 text-sm text-text-muted">
-              Connect only what must act in the customer&apos;s own system.
-            </p>
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <LaunchPillar
+            icon={<Bot className="h-4 w-4" />}
+            title="Coworker package"
+            body="Every build should ship with a role, mission, tools, escalation boundaries, and measurable success."
+          />
+          <LaunchPillar
+            icon={<ShieldCheck className="h-4 w-4" />}
+            title="Trust-ready"
+            body="Dobly should start supervised, earn authority, and keep a clear approval contract from day one."
+          />
+          <LaunchPillar
+            icon={<Waves className="h-4 w-4" />}
+            title="Persistent delivery"
+            body="The goal is not one-time automation. The goal is a coworker that keeps the function running permanently."
+          />
+        </div>
+
+        <div className="mt-6 rounded-[1.2rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-3">
+          <textarea
+            readOnly
+            value={promptSeed}
+            className="min-h-[180px] w-full resize-none border-0 bg-transparent px-2 py-2 text-sm leading-8 text-text outline-none"
+          />
+          <div className="mt-3 flex items-center justify-end border-t border-[rgba(255,255,255,0.08)] pt-3">
+            <Link
+              href={`/dashboard/generate${kind ? `?kind=${kind}&prompt=${encodeURIComponent(promptSeed)}` : `?prompt=${encodeURIComponent(promptSeed)}`}`}
+              className="btn-primary px-4 py-2.5"
+            >
+              Continue to coworker builder
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-2">
-        <Link
-          href="/dashboard/generate?kind=agent"
-          className={`card-hover ${kind === "agent" ? "border-accent/30" : ""}`}
-        >
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-dim text-accent">
-            <Bot className="h-6 w-6" />
-          </div>
-          <h2 className="mt-5 font-display text-2xl font-semibold text-text">Build an agent</h2>
-          <p className="mt-3 text-sm leading-7 text-text-muted">
-            Best when the work is conversational: lead qualification, support, scheduling,
-            escalation, intake, operator assistance, and bounded decision support.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <span className="badge-muted">Role and tone</span>
-            <span className="badge-muted">Guardrails</span>
-            <span className="badge-muted">Escalation</span>
-            <span className="badge-muted">Channels later</span>
-          </div>
-          <div className="mt-6 inline-flex items-center gap-2 text-sm text-accent">
-            Start guided agent setup
-            <ArrowRight className="h-4 w-4" />
-          </div>
-        </Link>
-
-        <Link
-          href="/dashboard/generate?kind=automation"
-          className={`card-hover ${kind === "automation" ? "border-accent/30" : ""}`}
-        >
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-dim text-accent">
-            <GitBranch className="h-6 w-6" />
-          </div>
-          <h2 className="mt-5 font-display text-2xl font-semibold text-text">
-            Build an automation
-          </h2>
-          <p className="mt-3 text-sm leading-7 text-text-muted">
-            Best when the work is repeatable: triggers, schedules, updates, reminders, reporting,
-            handoffs, fulfillment, billing, and multi-step operational flows.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <span className="badge-muted">Triggers</span>
-            <span className="badge-muted">Steps and paths</span>
-            <span className="badge-muted">Outputs</span>
-            <span className="badge-muted">Live connections only if needed</span>
-          </div>
-          <div className="mt-6 inline-flex items-center gap-2 text-sm text-accent">
-            Start guided automation setup
-            <ArrowRight className="h-4 w-4" />
-          </div>
-        </Link>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <div className="card">
-          <div className="badge-muted mb-4">
-            <Sparkles className="h-3.5 w-3.5" />
-            Concrete builder flow
+        <TemplatePanel title="Business starters" items={BUSINESS_STARTER_TEMPLATES.slice(0, 5)} />
+        <TemplatePanel title="Personal starters" items={PERSONAL_STARTER_TEMPLATES.slice(0, 5)} />
+      </section>
+
+      <section className="card">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Dobly deep verticals</div>
+            <h2 className="mt-2 text-2xl font-semibold text-text">The use cases Dobly is tuning hardest</h2>
           </div>
-          <h2 className="font-display text-2xl font-semibold text-text">
-            The builder should ask these first
-          </h2>
-          <div className="mt-4 space-y-3 text-sm text-text-muted">
-            <div>1. What exact business outcome are we trying to automate or delegate?</div>
-            <div>2. Is this better handled as an agent, an automation, or a combined system?</div>
-            <div>3. What information does Dobly already have from business context?</div>
-            <div>4. What external actions truly need to happen in the customer&apos;s own tools?</div>
-            <div>5. What should happen after launch: run review, connection recovery, activation, and monitoring?</div>
-          </div>
+          <span className="badge-muted">{DOBLY_DEEP_VERTICALS.length} verticals</span>
         </div>
 
-        <div className="card">
-          <div className="badge-muted mb-4">
-            <Network className="h-3.5 w-3.5" />
-            Common business lanes
-          </div>
-          <h2 className="font-display text-2xl font-semibold text-text">
-            Tailor the system to the business
-          </h2>
-          <div className="mt-4 grid gap-3">
-            {BUSINESS_LANES.map((lane) => (
-              <div
-                key={lane.label}
-                className="rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-3"
-              >
-                <div className="font-display text-lg font-medium text-text">{lane.label}</div>
-                <p className="mt-1 text-sm text-text-muted">{lane.copy}</p>
+        <div className="mt-5 space-y-6">
+          {familyGroups.map((group) => (
+            <div key={group.label}>
+              <div className="mb-3 text-xs uppercase tracking-[0.18em] text-text-dim">{group.label}</div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                {group.items.map((vertical) => (
+                  <div key={vertical.id} className="rounded-[1.1rem] border border-border bg-[rgba(255,255,255,0.03)] p-4">
+                    <div className="text-sm font-medium text-text">{vertical.title}</div>
+                    <p className="mt-2 text-sm leading-7 text-text-muted">{vertical.tagline}</p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <MiniList title="Toolkit" items={vertical.toolkit.slice(0, 3)} />
+                      <MiniList title="Talents" items={vertical.talents.slice(0, 3).map((item) => item.replace(/-/g, " "))} />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function TemplatePanel({
+  title,
+  items,
+}: {
+  title: string;
+  items: Array<{ id: string; title: string; prompt: string; type: "agent" | "automation" }>;
+}) {
+  return (
+    <div className="card">
+      <div className="flex items-center gap-2 text-sm font-medium text-text">
+        <Sparkles className="h-4 w-4 text-text-dim" />
+        {title}
+      </div>
+      <div className="mt-4 grid gap-3">
+        {items.map((item) => (
+          <Link
+            key={item.id}
+            href={`/dashboard/generate?kind=${item.type}&prompt=${encodeURIComponent(item.prompt)}`}
+            className="rounded-[1rem] border border-border bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-text-muted transition hover:bg-[rgba(255,255,255,0.05)] hover:text-text"
+          >
+            {item.title}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MiniList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-[0.18em] text-text-dim">{title}</div>
+      <div className="mt-2 space-y-2">
+        {items.map((item) => (
+          <div key={item} className="text-sm text-text-muted">
+            {item}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LaunchPillar({
+  icon,
+  title,
+  body,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="rounded-[1rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
+      <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-text-dim">
+        <span className="text-accent">{icon}</span>
+        {title}
+      </div>
+      <p className="mt-3 text-sm leading-7 text-text-muted">{body}</p>
     </div>
   );
 }

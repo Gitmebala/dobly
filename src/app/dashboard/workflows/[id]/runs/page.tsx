@@ -46,7 +46,7 @@ export default async function WorkflowRunsPage({
       {(normalizedRuns ?? []).length === 0 ? (
         <section className="card">
           <p className="text-sm leading-7 text-text-muted">
-            No runs yet. Trigger the workflow once from the editor or activation path and Dobly will start building history here.
+            No runs yet. Trigger the workflow to start building history.
           </p>
         </section>
       ) : null}

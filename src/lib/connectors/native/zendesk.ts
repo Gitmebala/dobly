@@ -5,6 +5,11 @@ import {
 } from "@/lib/connections";
 import type { ConnectorExecutor } from "@/lib/connectors/sdk";
 
+function zendeskHost(subdomain: string) {
+  if (!/^[a-z0-9][a-z0-9-]{1,62}$/i.test(subdomain)) throw new Error("Zendesk subdomain is invalid.");
+  return `${subdomain.toLowerCase()}.zendesk.com`;
+}
+
 async function getZendeskConnection(userId: string, connectionId?: string) {
   const connection = connectionId
     ? await getConnectionById(connectionId, userId)
@@ -36,7 +41,7 @@ export const zendeskCreateTicketExecutor: ConnectorExecutor = {
       throw new Error("Zendesk create ticket requires subdomain, subject, and description.");
     }
 
-    const response = await fetch(`https://${subdomain}.zendesk.com/api/v2/tickets`, {
+    const response = await fetch(`https://${zendeskHost(subdomain)}/api/v2/tickets`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -51,6 +56,7 @@ export const zendeskCreateTicketExecutor: ConnectorExecutor = {
           tags: Array.isArray(context.config.tags) ? context.config.tags : [],
         },
       }),
+      signal: AbortSignal.timeout(20_000),
     });
 
     const data = await response.json().catch(() => ({}));
@@ -91,13 +97,14 @@ export const zendeskUpdateTicketExecutor: ConnectorExecutor = {
     if (context.config.comment) updatePayload.comment = { body: context.config.comment };
     if (context.config.assigneeId) updatePayload.assignee_id = context.config.assigneeId;
 
-    const response = await fetch(`https://${subdomain}.zendesk.com/api/v2/tickets/${ticketId}`, {
+    const response = await fetch(`https://${zendeskHost(subdomain)}/api/v2/tickets/${encodeURIComponent(ticketId)}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ ticket: updatePayload }),
+      signal: AbortSignal.timeout(20_000),
     });
 
     const data = await response.json().catch(() => ({}));

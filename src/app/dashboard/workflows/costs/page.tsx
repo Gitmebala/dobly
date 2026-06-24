@@ -1,372 +1,77 @@
-"use client";
+import { redirect } from "next/navigation";
+import { AlertCircle, BarChart3, Clock3, DollarSign, TrendingUp } from "lucide-react";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getWorkflowCostInsights } from "@/lib/workflow-dashboard";
 
-import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
-import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  BarChart3,
-  Zap,
-  Clock,
-  AlertCircle,
-  Download,
-  Filter,
-  Calendar,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+export default async function CostDashboardPage() {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-interface WorkflowCost {
-  id: string;
-  name: string;
-  totalExecutions: number;
-  successfulExecutions: number;
-  failedExecutions: number;
-  totalCost: number;
-  averageCostPerExecution: number;
-  timeSaved: number; // in hours
-  estimatedCost: number; // cost if done manually
-}
+  if (!user) redirect("/auth/login");
 
-interface CostTrend {
-  date: string;
-  cost: number;
-  executions: number;
-}
-
-const MOCK_WORKFLOW_COSTS: WorkflowCost[] = [
-  {
-    id: "wf-001",
-    name: "Daily Email Report",
-    totalExecutions: 365,
-    successfulExecutions: 362,
-    failedExecutions: 3,
-    totalCost: 18.50,
-    averageCostPerExecution: 0.051,
-    timeSaved: 120,
-    estimatedCost: 1200,
-  },
-  {
-    id: "wf-002",
-    name: "Lead Qualification",
-    totalExecutions: 1230,
-    successfulExecutions: 1198,
-    failedExecutions: 32,
-    totalCost: 245.60,
-    averageCostPerExecution: 0.199,
-    timeSaved: 205,
-    estimatedCost: 4100,
-  },
-  {
-    id: "wf-003",
-    name: "Invoice Processing",
-    totalExecutions: 450,
-    successfulExecutions: 445,
-    failedExecutions: 5,
-    totalCost: 112.50,
-    averageCostPerExecution: 0.25,
-    timeSaved: 90,
-    estimatedCost: 1800,
-  },
-  {
-    id: "wf-004",
-    name: "Slack Notifications",
-    totalExecutions: 2145,
-    successfulExecutions: 2140,
-    failedExecutions: 5,
-    totalCost: 32.18,
-    averageCostPerExecution: 0.015,
-    timeSaved: 35,
-    estimatedCost: 700,
-  },
-  {
-    id: "wf-005",
-    name: "Follow-up Sequence",
-    totalExecutions: 890,
-    successfulExecutions: 856,
-    failedExecutions: 34,
-    totalCost: 267.99,
-    averageCostPerExecution: 0.301,
-    timeSaved: 150,
-    estimatedCost: 3000,
-  },
-];
-
-const MOCK_COST_TRENDS: CostTrend[] = [
-  { date: "Jan 1", cost: 45.67, executions: 234 },
-  { date: "Jan 8", cost: 52.34, executions: 289 },
-  { date: "Jan 15", cost: 48.90, executions: 267 },
-  { date: "Jan 22", cost: 61.45, executions: 334 },
-  { date: "Jan 29", cost: 58.23, executions: 312 },
-  { date: "Feb 5", cost: 72.18, executions: 389 },
-  { date: "Feb 12", cost: 68.90, executions: 367 },
-];
-
-function WorkflowCostCard({ workflow, index }: { workflow: WorkflowCost; index: number }) {
-  const successRate = ((workflow.successfulExecutions / workflow.totalExecutions) * 100).toFixed(1);
-  const roi = ((workflow.estimatedCost - workflow.totalCost) / workflow.estimatedCost * 100).toFixed(0);
+  const insights = await getWorkflowCostInsights(user.id);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className="p-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h4 className="text-lg font-semibold text-white">{workflow.name}</h4>
-          <p className="text-sm text-white/50 mt-1">{workflow.totalExecutions.toLocaleString()} total executions</p>
-        </div>
-        <div className="text-right">
-          <p className="text-2xl font-bold text-emerald-400">${workflow.totalCost.toFixed(2)}</p>
-          <p className="text-xs text-white/50 mt-1">Total cost</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
-          <p className="text-xs text-white/50 mb-1">Success Rate</p>
-          <p className="text-lg font-bold text-white">{successRate}%</p>
-        </div>
-        <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
-          <p className="text-xs text-white/50 mb-1">Avg Cost/Run</p>
-          <p className="text-lg font-bold text-white">${workflow.averageCostPerExecution.toFixed(3)}</p>
-        </div>
-        <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
-          <p className="text-xs text-white/50 mb-1">Time Saved</p>
-          <p className="text-lg font-bold text-white">{workflow.timeSaved}h</p>
-        </div>
-      </div>
-
-      <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-emerald-300 font-medium mb-1">Estimated ROI</p>
-          <p className="text-sm text-emerald-400 font-bold">
-            You save ${(workflow.estimatedCost - workflow.totalCost).toFixed(2)} ({roi}%)
-          </p>
-        </div>
-        <TrendingUp className="w-5 h-5 text-emerald-400" />
-      </div>
-    </motion.div>
-  );
-}
-
-export default function CostDashboardPage() {
-  const [period, setPeriod] = useState<"month" | "quarter" | "year">("month");
-
-  const stats = useMemo(() => {
-    const totalCost = MOCK_WORKFLOW_COSTS.reduce((sum, w) => sum + w.totalCost, 0);
-    const totalExecutions = MOCK_WORKFLOW_COSTS.reduce((sum, w) => sum + w.totalExecutions, 0);
-    const successfulExecutions = MOCK_WORKFLOW_COSTS.reduce((sum, w) => sum + w.successfulExecutions, 0);
-    const totalTimeSaved = MOCK_WORKFLOW_COSTS.reduce((sum, w) => sum + w.timeSaved, 0);
-    const totalEstimatedCost = MOCK_WORKFLOW_COSTS.reduce((sum, w) => sum + w.estimatedCost, 0);
-    const totalROI = ((totalEstimatedCost - totalCost) / totalEstimatedCost * 100).toFixed(0);
-
-    const successRate = ((successfulExecutions / totalExecutions) * 100).toFixed(1);
-
-    return {
-      totalCost,
-      totalExecutions,
-      timeSaved: totalTimeSaved,
-      roi: totalROI,
-      successRate,
-      savings: totalEstimatedCost - totalCost,
-    };
-  }, []);
-
-  const costByWorkflow = useMemo(() => {
-    return MOCK_WORKFLOW_COSTS.sort((a, b) => b.totalCost - a.totalCost).slice(0, 5);
-  }, []);
-
-  const topROI = useMemo(() => {
-    return MOCK_WORKFLOW_COSTS.sort((a, b) => {
-      const roiA = (b.estimatedCost - b.totalCost) / b.estimatedCost;
-      const roiB = (a.estimatedCost - a.totalCost) / a.estimatedCost;
-      return roiB - roiA;
-    }).slice(0, 3);
-  }, []);
-
-  return (
-    <div className="min-h-screen bg-[rgba(8,8,16,0.5)] p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between">
+    <div className="mx-auto max-w-6xl space-y-6">
+      <section className="card">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-3">Cost & ROI Dashboard</h1>
-            <p className="text-white/50">
-              Track automation costs, executions, and return on investment across all workflows.
+            <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Run economics</div>
+            <h1 className="mt-2 font-display text-4xl font-bold tracking-tight text-text">Live workflow cost and ROI signals</h1>
+            <p className="mt-3 max-w-3xl text-base leading-7 text-text-muted">
+              This page is now grounded in real workflow runs. Estimated spend is derived from live execution volume and intelligence-heavy steps until full provider-level billing attribution lands.
             </p>
           </div>
-
-          <div className="flex gap-2">
-            {(["month", "quarter", "year"] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={cn(
-                  "px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200",
-                  period === p
-                    ? "bg-violet-600 text-white"
-                    : "bg-white/[0.05] text-white/70 hover:bg-white/[0.1]"
-                )}
-              >
-                {p.charAt(0).toUpperCase() + p.slice(1)}
-              </button>
-            ))}
-          </div>
         </div>
+      </section>
 
-        {/* Main Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-6 rounded-2xl border border-white/[0.08] bg-white/[0.02]"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-white/50">Total Cost</p>
-              <Zap className="w-5 h-5 text-cyan-400 opacity-40" />
+      <section className="grid gap-4 md:grid-cols-4">
+        <div className="premium-tile"><div className="flex items-center gap-2 text-text-dim"><DollarSign className="h-4 w-4 text-accent" />Estimated spend</div><div className="mt-3 font-display text-3xl text-text">${insights.summary.totalEstimatedSpend.toFixed(2)}</div></div>
+        <div className="premium-tile"><div className="flex items-center gap-2 text-text-dim"><BarChart3 className="h-4 w-4 text-accent" />Executions</div><div className="mt-3 font-display text-3xl text-text">{insights.summary.totalExecutions}</div></div>
+        <div className="premium-tile"><div className="flex items-center gap-2 text-text-dim"><Clock3 className="h-4 w-4 text-accent" />Time saved</div><div className="mt-3 font-display text-3xl text-text">{insights.summary.totalTimeSavedHours.toFixed(1)}h</div></div>
+        <div className="premium-tile"><div className="flex items-center gap-2 text-text-dim"><TrendingUp className="h-4 w-4 text-accent" />Estimated ROI</div><div className="mt-3 font-display text-3xl text-green-400">{insights.summary.roiPercent}%</div></div>
+      </section>
+
+      <section className="card">
+        <div className="mb-4 font-display text-2xl font-semibold text-text">Workflow breakdown</div>
+        <div className="space-y-3">
+          {insights.workflows.length === 0 ? (
+            <div className="rounded-[1rem] border border-dashed border-border p-5 text-sm text-text-muted">
+              No run data yet.
             </div>
-            <p className="text-3xl font-bold text-white mb-2">${stats.totalCost.toFixed(2)}</p>
-            <p className="text-xs text-cyan-400">This month</p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="p-6 rounded-2xl border border-white/[0.08] bg-white/[0.02]"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-white/50">Total Executions</p>
-              <BarChart3 className="w-5 h-5 text-blue-400 opacity-40" />
-            </div>
-            <p className="text-3xl font-bold text-white mb-2">{stats.totalExecutions.toLocaleString()}</p>
-            <p className="text-xs text-blue-400">Success rate: {stats.successRate}%</p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="p-6 rounded-2xl border border-white/[0.08] bg-white/[0.02]"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-white/50">Time Saved</p>
-              <Clock className="w-5 h-5 text-orange-400 opacity-40" />
-            </div>
-            <p className="text-3xl font-bold text-white mb-2">{stats.timeSaved}h</p>
-            <p className="text-xs text-orange-400">Equivalent to {(stats.timeSaved / 40).toFixed(1)} work weeks</p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="p-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-emerald-300">ROI & Savings</p>
-              <TrendingUp className="w-5 h-5 text-emerald-400" />
-            </div>
-            <p className="text-3xl font-bold text-emerald-400 mb-2">{stats.roi}% ROI</p>
-            <p className="text-xs text-emerald-300">${stats.savings.toFixed(2)} savings</p>
-          </motion.div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Cost Trend Chart */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="lg:col-span-2 p-6 rounded-2xl border border-white/[0.08] bg-white/[0.02]"
-          >
-            <h3 className="text-lg font-semibold text-white mb-6">Cost Trend</h3>
-
-            {/* Simple Bar Chart */}
-            <div className="space-y-4">
-              {MOCK_COST_TRENDS.map((trend, idx) => {
-                const maxCost = Math.max(...MOCK_COST_TRENDS.map((t) => t.cost));
-                const percentage = (trend.cost / maxCost) * 100;
-
-                return (
-                  <div key={idx}>
-                    <div className="flex items-center justify-between mb-1 text-xs">
-                      <span className="text-white/70 font-medium">{trend.date}</span>
-                      <span className="text-white">
-                        ${trend.cost.toFixed(2)} • {trend.executions} executions
-                      </span>
+          ) : (
+            insights.workflows.map((workflow) => (
+              <div key={workflow.workflowId} className="rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <div className="font-display text-lg font-semibold text-text">{workflow.workflowName}</div>
+                    <div className="mt-1 text-sm text-text-muted">
+                      {workflow.totalExecutions} executions • {workflow.successfulExecutions} succeeded • {workflow.failedExecutions} failed
                     </div>
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${percentage}%` }}
-                      transition={{ delay: idx * 0.05, duration: 0.8 }}
-                      className="h-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600"
-                    />
                   </div>
-                );
-              })}
-            </div>
-          </motion.div>
-
-          {/* Top ROI Workflows */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="p-6 rounded-2xl border border-white/[0.08] bg-white/[0.02]"
-          >
-            <h3 className="text-lg font-semibold text-white mb-4">Top ROI</h3>
-
-            <div className="space-y-3">
-              {topROI.map((workflow, idx) => {
-                const roi = ((workflow.estimatedCost - workflow.totalCost) / workflow.estimatedCost * 100).toFixed(0);
-                return (
-                  <motion.div
-                    key={workflow.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.1 }}
-                    className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]"
-                  >
-                    <p className="text-xs font-medium text-white mb-1 truncate">{workflow.name}</p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-white/60">
-                        Save ${(workflow.estimatedCost - workflow.totalCost).toFixed(0)}
-                      </p>
-                      <p className="text-sm font-bold text-emerald-400">{roi}%</p>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
+                  <div className="grid gap-2 text-sm text-text-muted sm:grid-cols-4">
+                    <div>Avg run: <span className="text-text">{(workflow.averageDurationMs / 1000).toFixed(1)}s</span></div>
+                    <div>Spend: <span className="text-text">${workflow.estimatedSpend.toFixed(2)}</span></div>
+                    <div>Saved: <span className="text-text">{workflow.timeSavedHours.toFixed(1)}h</span></div>
+                    <div>Manual value: <span className="text-text">${workflow.manualCostEstimate.toFixed(2)}</span></div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
+      </section>
 
-        {/* Workflows Cost Breakdown */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white mb-4">Workflow Cost Breakdown</h2>
-          <div className="grid grid-cols-1 gap-4">
-            {MOCK_WORKFLOW_COSTS.map((workflow, index) => (
-              <WorkflowCostCard key={workflow.id} workflow={workflow} index={index} />
-            ))}
+      <section className="card">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="mt-0.5 h-5 w-5 text-accent" />
+          <div className="text-sm text-text-muted">
+            Estimated spend currently uses live execution counts plus intelligence-step density as a conservative operational proxy. This removes the old mock dashboard while keeping the UI honest until exact per-provider billing lands.
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="p-6 rounded-2xl border border-white/[0.08] bg-white/[0.02]">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-sm text-white font-medium mb-1">Cost calculation details</p>
-              <p className="text-sm text-white/60">
-                Costs are calculated based on execution counts, API calls, and integration usage. Time savings are estimated based on average manual task duration. ROI compares total automation costs to estimated cost of manual execution.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

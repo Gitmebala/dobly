@@ -190,17 +190,17 @@ export default function ProviderConnectClient({
     <div className="mx-auto max-w-3xl space-y-6">
       <Link href="/dashboard/connections" className="btn-ghost inline-flex">
         <ArrowLeft className="h-4 w-4" />
-        Back to connections
+        Back to access
       </Link>
 
       <section className="card">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="badge-green mb-5">Connect {provider.label}</div>
+            <div className="badge-green mb-5">Use {provider.label}</div>
             <h1 className="font-display text-4xl font-bold tracking-tight text-text">{flow.title}</h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-text-muted">{flow.description}</p>
           </div>
-          <div className="badge-muted capitalize">{planId === "free" ? "Starter-style setup" : `${planId} mode`}</div>
+          <div className="badge-muted capitalize">{planId === "free" ? "Simple setup" : `${planId} mode`}</div>
         </div>
 
         <div className="mt-6 flex flex-wrap gap-2">
@@ -222,6 +222,13 @@ export default function ProviderConnectClient({
             </p>
           </div>
         ) : null}
+
+        <div className="mt-4 rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-4 text-sm text-text-muted">
+          <div className="text-text">Not using {provider.label}?</div>
+          <p className="mt-2">
+            That is okay. Dobly should adapt to the tools you already have. Go back and choose another option or keep building the setup first.
+          </p>
+        </div>
       </section>
 
       <form onSubmit={handleSubmit} className="card space-y-5">
@@ -286,7 +293,7 @@ export default function ProviderConnectClient({
               {showAdvanced ? "Hide advanced setup" : "Use advanced setup instead"}
             </button>
             <p className="mt-3 text-xs text-text-muted">
-              Pro and Agency can still use manual credentials when guided setup is not enough.
+              Higher-volume plans can still use manual credentials when guided setup is not enough.
             </p>
           </div>
         ) : null}

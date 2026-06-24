@@ -2,7 +2,14 @@
 
 import { useMemo } from "react";
 import { CONNECTION_PROVIDERS } from "@/lib/connection-catalog";
-import type { ConnectorDefinition } from "@/lib/connectors/sdk";
+
+type ConnectorAction = {
+  id: string;
+  label: string;
+  executor: string;
+};
+
+type ProviderDefinition = (typeof CONNECTION_PROVIDERS)[number];
 
 /**
  * Get available automation actions for a provider
@@ -13,7 +20,7 @@ export function getConnectorActionsForProvider(providerId: string) {
   if (!provider) return [];
 
   // Map provider to connector definitions
-  const actionMap: Record<string, any[]> = {
+  const actionMap: Record<string, ConnectorAction[]> = {
     mailchimp: [
       { id: "add_subscriber", label: "Add Subscriber", executor: "native.mailchimp.add-subscriber" },
       { id: "send_campaign", label: "Send Campaign", executor: "native.mailchimp.send-campaign" },
@@ -30,6 +37,9 @@ export function getConnectorActionsForProvider(providerId: string) {
     docusign: [
       { id: "create_envelope", label: "Create Envelope", executor: "native.docusign.create-envelope" },
       { id: "get_status", label: "Get Envelope Status", executor: "native.docusign.get-envelope-status" },
+    ],
+    paystack: [
+      { id: "payment_link", label: "Create Payment Link", executor: "native.paystack.payment-link" },
     ],
     stripe: [
       { id: "create_customer", label: "Create Customer", executor: "native.stripe.create-customer" },
@@ -126,7 +136,7 @@ export function getConnectorActionsForProvider(providerId: string) {
  */
 export function AutomationActionsGrid() {
   const allActions = useMemo(() => {
-    const actions = [];
+    const actions: Array<ConnectorAction & { provider: ProviderDefinition }> = [];
     for (const provider of CONNECTION_PROVIDERS) {
       const providerActions = getConnectorActionsForProvider(provider.id);
       for (const action of providerActions) {
@@ -144,11 +154,11 @@ export function AutomationActionsGrid() {
       {allActions.map((action) => (
         <button
           key={`${action.provider.id}:${action.id}`}
-          className="p-4 border rounded-lg hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition"
+          className="p-4 border border-[rgba(245,237,228,0.08)] rounded-lg hover:border-[var(--dobly-accent)] hover:bg-[rgba(196,80,26,0.08)] cursor-pointer transition"
           title={action.provider.description}
         >
-          <div className="text-sm font-medium">{action.label}</div>
-          <div className="text-xs text-gray-500 mt-1">{action.provider.label}</div>
+          <div className="text-sm font-medium text-[var(--dobly-text)]">{action.label}</div>
+          <div className="text-xs text-[var(--dobly-text-muted)] mt-1">{action.provider.label}</div>
         </button>
       ))}
     </div>

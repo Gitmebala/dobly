@@ -15,6 +15,7 @@ dist/
 .env.development.local
 .env.test.local
 .env.production.local
+.dobly/
 
 # Logs
 npm-debug.log*
@@ -38,3 +39,25 @@ next-env.d.ts
 
 # Vercel
 .vercel
+
+# Local browser and agent workspaces
+.chrome-*/
+.edge-*/
+.claude/
+.codex/
+.codex-*
+.mcp.json
+tmpclaude-*
+
+# Local visual verification captures
+/*.png
+
+# Expo generated state and native build output
+mobile/.expo/
+mobile/android/
+
+# Stray Android runtime crash markers
+java.util.concurrent.ThreadPoolExecutor
+okhttp3.internal.connection.RealCall$AsyncCall
+mobile/java.util.concurrent.ThreadPoolExecutor
+mobile/okhttp3.internal.connection.RealCall$AsyncCall

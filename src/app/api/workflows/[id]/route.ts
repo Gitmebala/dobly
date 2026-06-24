@@ -7,6 +7,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { validateWorkflowBlueprintForActivation } from "@/lib/workflow-definition";
 import { createWorkflowVersion } from "@/lib/versioning";
 import { updateWorkflowSchema } from "@/lib/validations";
+import { syncWorkflowRuntimeRecords } from "@/lib/runtime/records";
 import type { ApiError, Connection, WorkflowBlueprint } from "@/types";
 
 export async function PATCH(
@@ -114,6 +115,8 @@ export async function PATCH(
     return NextResponse.json<ApiError>({ error: "Failed to update workflow" }, { status: 500 });
   }
 
+  const runtimeBlueprint = (blueprint ?? (data.blueprint as WorkflowBlueprint)) as WorkflowBlueprint;
+
   if (blueprint) {
     await createWorkflowVersion({
       workflowId: data.id,
@@ -125,7 +128,19 @@ export async function PATCH(
     }).catch(() => {
       // Keep the update successful even if versioning storage fails.
     });
+
   }
+
+  await syncWorkflowRuntimeRecords({
+    workflowId: data.id,
+    userId: user.id,
+    workflowTitle: data.title,
+    prompt: existingWorkflow.prompt,
+    status: data.status,
+    blueprint: runtimeBlueprint,
+  }).catch(() => {
+    // Keep the workflow update successful even if runtime sync fails.
+  });
 
   return NextResponse.json({ workflow: data });
 }

@@ -29,7 +29,10 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to load business profile." }, { status: 500 });
   }
 
-  return NextResponse.json({ businessProfile: data ?? null });
+  return NextResponse.json(
+    { businessProfile: data ?? null },
+    { headers: { "Cache-Control": "no-store, max-age=0", Pragma: "no-cache" } }
+  );
 }
 
 export async function PUT(req: NextRequest) {
@@ -85,5 +88,8 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Failed to save business profile." }, { status: 500 });
   }
 
-  return NextResponse.json({ businessProfile: data });
+  return NextResponse.json(
+    { businessProfile: data },
+    { headers: { "Cache-Control": "no-store, max-age=0", Pragma: "no-cache" } }
+  );
 }

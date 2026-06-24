@@ -171,6 +171,30 @@ export const CONNECTOR_CATALOG: ConnectorCatalogItem[] = [
     ],
   },
   {
+    id: "paystack",
+    label: "Paystack",
+    provider: "paystack",
+    lane: "native",
+    connectionRequired: true,
+    description: "Create Paystack payment links for cards and M-PESA-first checkout.",
+    actions: [
+      {
+        id: "payment_link",
+        label: "Create payment link",
+        description: "Initialize a Paystack checkout link for a customer.",
+        lane: "native",
+        runtimeAction: "webhook_request",
+        connectorId: "paystack",
+        connectorActionId: "payment_link",
+        defaultConfig: {
+          email: "{{trigger.email}}",
+          amount: "{{trigger.amount}}",
+          currency: "KES",
+        },
+      },
+    ],
+  },
+  {
     id: "mpesa",
     label: "M-PESA",
     provider: "mpesa",

@@ -50,7 +50,7 @@ export default function NavBar() {
 
         <Link
           href="/auth/signup"
-          className="rounded-full border border-[var(--green)] px-4 py-2 text-[12px] text-[var(--green)] transition-all duration-200 hover:bg-[var(--green)] hover:text-[#08080e]"
+          className="rounded-full border border-[var(--rust)] px-4 py-2 text-[12px] text-[var(--rust)] transition-all duration-200 hover:bg-[var(--rust)] hover:text-[var(--clay)]"
           data-cursor="hover"
         >
           Get started

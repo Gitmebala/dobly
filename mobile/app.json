@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Dobly",
+    "slug": "dobly-mobile",
+    "scheme": "dobly",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#fff8f1"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dobly.app",
+      "usesAppleSignIn": false,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Dobly uses the microphone when you choose to speak to a coworker."
+      }
+    },
+    "android": {
+      "package": "com.dobly.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#fff8f1"
+      },
+      "permissions": ["RECORD_AUDIO"]
+    },
+    "plugins": ["expo-secure-store"]
+  }
+}

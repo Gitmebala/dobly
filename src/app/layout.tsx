@@ -1,16 +1,20 @@
 import type { Metadata } from "next";
-import { Public_Sans, Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Instrument_Sans, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import AppChrome from "@/components/shared/AppChrome";
+import PostHogRouteTracker from "@/components/analytics/PostHogRouteTracker";
+import PostHogSnippet from "@/components/analytics/PostHogSnippet";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import WebVitalsReporter from "@/components/analytics/WebVitalsReporter";
 
-const spaceGrotesk = Space_Grotesk({
+const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
   variable: "--font-display",
-  weight: ["400", "500", "600", "700"],
+  weight: ["400"],
 });
 
-const publicSans = Public_Sans({
+const instrumentSans = Instrument_Sans({
   subsets: ["latin"],
   variable: "--font-body",
   weight: ["400", "500", "600", "700"],
@@ -23,28 +27,37 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "dobly | handled.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://dobly.io"),
+  title: "Dobly | Your business runs. You direct it.",
   description:
-    "Describe what needs doing. Connect your tools. Dobly handles the rest.",
-  keywords: ["automation", "workflow", "AI", "operations", "personal productivity", "business systems"],
+    "Dobly is the operating layer between owner intent and company execution. Set the standard. Dobly runs departments, work types, systems, outputs, and follow-through with trust built in.",
+  keywords: ["AI operations", "business operating system", "workflow automation", "small business OS", "autonomous operations", "business systems"],
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "dobly | handled.",
-    description: "People shouldn't have to think about work that can run itself.",
+    title: "Dobly | Your business runs. You direct it.",
+    description: "The operating system for businesses that need departments, outputs, and trust to move in sync.",
     url: "https://dobly.io",
     siteName: "Dobly",
     type: "website",
+    images: [{ url: "/dobly-generated-light.png", alt: "Dobly workspace" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "dobly | handled.",
-    description: "What needs to happen, happens.",
+    title: "Dobly | Your business runs. You direct it.",
+    description: "The operating layer between owner intent and company-wide execution.",
     creator: "@doblyhq",
+    images: ["/dobly-generated-light.png"],
   },
   robots: { index: true, follow: true },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Dobly",
+  },
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
   },
 };
 
@@ -57,20 +70,37 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn(spaceGrotesk.variable, publicSans.variable, jetBrainsMono.variable)}
+      className={cn(instrumentSerif.variable, instrumentSans.variable, jetBrainsMono.variable)}
     >
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              name: "Dobly",
+              applicationCategory: "BusinessApplication",
+              operatingSystem: "Web, iOS, Android",
+              url: process.env.NEXT_PUBLIC_APP_URL || "https://dobly.io",
+              description: "A workspace where businesses create and direct AI coworkers for customer, operations, finance, research, creative, and administrative work.",
+              offers: { "@type": "Offer", price: "0", priceCurrency: "KES" },
+            }).replace(/</g, "\\u003c"),
+          }}
+        />
+        <PostHogSnippet />
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  var stored = localStorage.getItem('dobly-theme') || 'system';
-                  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  var resolved = stored === 'system' ? (prefersDark ? 'dark' : 'light') : stored;
-                  document.documentElement.dataset.theme = stored;
-                  document.documentElement.classList.add(resolved);
-                  document.documentElement.style.colorScheme = resolved;
+                  var stored = localStorage.getItem('dobly-theme') || 'light';
+                  var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  var theme = stored === 'system' ? system : stored;
+                  document.documentElement.dataset.theme = theme;
+                  document.documentElement.classList.remove('light', 'dark');
+                  document.documentElement.classList.add(theme);
+                  document.documentElement.style.colorScheme = theme;
                 } catch (e) {}
               })();
             `,
@@ -78,9 +108,13 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`font-body bg-[var(--bg)] text-[var(--text)] antialiased`}
+        className={`font-body bg-[var(--dobly-bg)] text-[var(--dobly-text)] antialiased`}
       >
-        <AppChrome>{children}</AppChrome>
+        <ThemeProvider defaultTheme="light">
+          <PostHogRouteTracker />
+          <WebVitalsReporter />
+          <AppChrome>{children}</AppChrome>
+        </ThemeProvider>
       </body>
     </html>
   );

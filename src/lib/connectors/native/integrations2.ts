@@ -5,6 +5,16 @@ import {
 } from "@/lib/connections";
 import type { ConnectorExecutor } from "@/lib/connectors/sdk";
 
+function salesforceOrigin(value: string) {
+  const url = new URL(value);
+  const host = url.hostname.toLowerCase();
+  if (url.protocol !== "https:" || url.username || url.password ||
+    !(/\.salesforce\.com$/.test(host) || /\.my\.salesforce\.com$/.test(host) || /\.force\.com$/.test(host))) {
+    throw new Error("Salesforce instance URL is not valid.");
+  }
+  return url.origin;
+}
+
 // ==================== META/INSTAGRAM ====================
 async function getMetaConnection(userId: string, connectionId?: string) {
   const connection = connectionId
@@ -58,7 +68,7 @@ export const salesforceCreateLeadExecutor: ConnectorExecutor = {
     const company = String(context.config.company ?? "").trim();
     if (!instanceUrl || !lastName || !company) throw new Error("Salesforce requires instance URL, last name, and company");
 
-    const response = await fetch(`${instanceUrl}/services/data/v57.0/sobjects/Lead`, {
+    const response = await fetch(`${salesforceOrigin(instanceUrl)}/services/data/v57.0/sobjects/Lead`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
@@ -71,6 +81,7 @@ export const salesforceCreateLeadExecutor: ConnectorExecutor = {
         Email: context.config.email || "",
         Phone: context.config.phone || "",
       }),
+      signal: AbortSignal.timeout(20_000),
     });
 
     const data = await response.json();
@@ -88,7 +99,7 @@ export const salesforceCreateOpportunityExecutor: ConnectorExecutor = {
     const closeDate = String(context.config.closeDate ?? "").trim();
     if (!instanceUrl || !name || !closeDate) throw new Error("Salesforce requires instance URL, name, and closeDate");
 
-    const response = await fetch(`${instanceUrl}/services/data/v57.0/sobjects/Opportunity`, {
+    const response = await fetch(`${salesforceOrigin(instanceUrl)}/services/data/v57.0/sobjects/Opportunity`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
@@ -101,6 +112,7 @@ export const salesforceCreateOpportunityExecutor: ConnectorExecutor = {
         Amount: context.config.amount,
         AccountId: context.config.accountId,
       }),
+      signal: AbortSignal.timeout(20_000),
     });
 
     const data = await response.json();

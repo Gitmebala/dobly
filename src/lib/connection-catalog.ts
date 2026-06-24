@@ -1,4 +1,5 @@
 import type { PlanId } from "@/types";
+import { getIntegrationContract, isProviderVerifiedLive } from "@/lib/integration-contract";
 
 export type ConnectionCategory =
   | "communication"
@@ -41,6 +42,24 @@ export interface ConnectionProviderDefinition {
   proFlow: ConnectionFlowDefinition;
   advancedFields?: ConnectionFieldDefinition[];
 }
+
+export const KENYA_BUDGET_LAUNCH_PROVIDER_IDS = [
+  "paystack",
+  "mpesa",
+  "whatsapp",
+  "kenya_local_comms",
+] as const;
+
+export const OPTIONAL_LAUNCH_PROVIDER_IDS = [
+  "google",
+  "slack",
+  "hubspot",
+  "canva",
+  "webhook",
+] as const;
+
+const KENYA_BUDGET_LAUNCH_PROVIDER_SET = new Set<string>(KENYA_BUDGET_LAUNCH_PROVIDER_IDS);
+const OPTIONAL_LAUNCH_PROVIDER_SET = new Set<string>(OPTIONAL_LAUNCH_PROVIDER_IDS);
 
 const secureFields = {
   token: { key: "accessToken", label: "Access token", placeholder: "Paste access token", secret: true },
@@ -131,8 +150,8 @@ export const CONNECTION_PROVIDERS: ConnectionProviderDefinition[] = [
     label: "WhatsApp Business",
     category: "communication",
     launchReady: true,
-    description: "Use your business number for reminders, confirmations, alerts, and approval requests.",
-    useCases: ["Customer messages", "Approval alerts", "Operational reminders"],
+    description: "Use the customer channel Kenyans already answer for reminders, confirmations, payment nudges, approvals, and support handoffs.",
+    useCases: ["Customer messages", "Payment nudges", "Approval alerts", "Operational reminders"],
     starterFlow: {
       method: "otp",
       title: "Verify your WhatsApp number",
@@ -183,12 +202,72 @@ export const CONNECTION_PROVIDERS: ConnectionProviderDefinition[] = [
     },
   },
   {
+    id: "microsoft-teams",
+    label: "Microsoft Teams",
+    category: "communication",
+    launchReady: true,
+    description: "Route alerts, approvals, and internal updates into the Teams channels your business already uses.",
+    useCases: ["Internal alerts", "Approval routing", "Team updates"],
+    starterFlow: {
+      method: "oauth",
+      title: "Connect Microsoft Teams",
+      description: "Sign in with Microsoft once so Dobly can post updates and route approvals into Teams.",
+      ctaLabel: "Continue with Microsoft",
+      oauthHref: "/api/oauth/microsoft/start",
+    },
+    proFlow: {
+      method: "oauth",
+      title: "Connect Microsoft Teams workspace",
+      description: "Use Microsoft sign-in first. Pro and Agency can later map specific teams and channels.",
+      ctaLabel: "Continue with Microsoft",
+      oauthHref: "/api/oauth/microsoft/start",
+    },
+    advancedFields: [
+      { key: "accountIdentifier", label: "Workspace label", placeholder: "Main company Teams workspace" },
+      secureFields.token,
+      secureFields.refresh,
+    ],
+  },
+  {
+    id: "kenya_local_comms",
+    label: "Kenya Calls & SMS",
+    category: "communication",
+    launchReady: true,
+    description: "Use the lowest-cost local phone and SMS path first for Reception, reminders, missed-call recovery, bookings, and customer replies.",
+    useCases: ["AI receptionist", "Local SMS", "Missed-call recovery", "Booking replies"],
+    starterFlow: {
+      method: "guided",
+      title: "Activate Kenya calls and SMS",
+      description: "Choose whether to keep your current business number or get a Dobly number. Dobly handles verification, routing, and testing.",
+      ctaLabel: "Start Kenya setup",
+      fields: [
+        { key: "accountIdentifier", label: "Business number", placeholder: "+254 7XX XXX XXX" },
+        { key: "businessName", label: "Business name", placeholder: "Dobly Flowers" },
+      ],
+    },
+    proFlow: {
+      method: "guided",
+      title: "Activate Kenya calls and SMS",
+      description: "Use local SMS first, Africa's Talking for Kenya voice, and Twilio only when Dobly needs an international route.",
+      ctaLabel: "Start Kenya setup",
+      fields: [
+        { key: "accountIdentifier", label: "Business number", placeholder: "+254 7XX XXX XXX" },
+        { key: "businessName", label: "Business name", placeholder: "Dobly Flowers" },
+      ],
+    },
+    advancedFields: [
+      { key: "accountIdentifier", label: "Business number", placeholder: "+254 7XX XXX XXX" },
+      { key: "accessToken", label: "Local SMS API key", placeholder: "Paste local SMS API key", secret: true },
+      { key: "secret", label: "Africa's Talking API key", placeholder: "Paste Africa's Talking API key", secret: true },
+    ],
+  },
+  {
     id: "twilio",
     label: "Twilio",
     category: "communication",
-    launchReady: true,
-    description: "Power SMS, voice alerts, and programmable messaging from a verified business number.",
-    useCases: ["SMS reminders", "Voice alerts", "Programmatic messaging"],
+    launchReady: false,
+    description: "International fallback for SMS, voice alerts, and programmable messaging outside Dobly's Kenya-first routing.",
+    useCases: ["International SMS", "International voice alerts", "Programmatic messaging"],
     starterFlow: {
       method: "guided",
       title: "Connect Twilio",
@@ -334,6 +413,39 @@ export const CONNECTION_PROVIDERS: ConnectionProviderDefinition[] = [
     },
   },
   {
+    id: "paystack",
+    label: "Paystack",
+    category: "commerce",
+    launchReady: true,
+    description: "Use one checkout path for Kenya launch: M-PESA, cards, international cards, plan billing, and payment-triggered workflows.",
+    useCases: ["M-PESA checkout", "Card payments", "Subscriptions", "Payment triggers"],
+    starterFlow: {
+      method: "guided",
+      title: "Connect Paystack",
+      description: "Create live Paystack keys and add the webhook URL once. Dobly uses Paystack first for checkout.",
+      ctaLabel: "Add Paystack keys",
+      fields: [
+        { key: "accountIdentifier", label: "Account label", placeholder: "Main Paystack account" },
+        { key: "accessToken", label: "Public key", placeholder: "pk_live_...", secret: true },
+        { key: "secret", label: "Secret key", placeholder: "sk_live_...", secret: true },
+      ],
+    },
+    proFlow: {
+      method: "guided",
+      title: "Connect Paystack",
+      description: "Use Paystack for M-PESA and cards. Add plan codes for recurring subscriptions when ready.",
+      ctaLabel: "Add Paystack keys",
+      fields: [
+        { key: "accountIdentifier", label: "Account label", placeholder: "Main Paystack account" },
+        { key: "accessToken", label: "Public key", placeholder: "pk_live_...", secret: true },
+        { key: "secret", label: "Secret key", placeholder: "sk_live_...", secret: true },
+      ],
+    },
+    advancedFields: [
+      { key: "webhookSecret", label: "Webhook secret", placeholder: "Same value used to sign Paystack webhooks", secret: true },
+    ],
+  },
+  {
     id: "stripe",
     label: "Stripe",
     category: "commerce",
@@ -385,8 +497,8 @@ export const CONNECTION_PROVIDERS: ConnectionProviderDefinition[] = [
     label: "M-PESA",
     category: "commerce",
     launchReady: true,
-    description: "Connect Safaricom Daraja so Dobly can use supported M-PESA payment actions and callback-aware flows.",
-    useCases: ["STK push", "Collections", "Payment-aware flows"],
+    description: "Connect Safaricom Daraja for direct STK push, payment confirmation, and callback-aware flows when Paystack is not the right rail.",
+    useCases: ["STK push", "Collections", "Payment confirmation", "Callback-aware flows"],
     starterFlow: {
       method: "guided",
       title: "Set up M-PESA with Daraja",
@@ -723,6 +835,82 @@ export const CONNECTION_PROVIDERS: ConnectionProviderDefinition[] = [
     },
   },
   {
+    id: "google-drive",
+    label: "Google Drive",
+    category: "documents",
+    launchReady: true,
+    description: "Work with shared files, folders, and document handoffs in the Google Drive structure businesses already run on.",
+    useCases: ["File storage", "Document handoff", "Shared-drive workflows"],
+    starterFlow: {
+      method: "oauth",
+      title: "Connect Google Drive",
+      description: "Sign in with Google so Dobly can read from and organize the Drive files your team already uses.",
+      ctaLabel: "Continue with Google",
+      oauthHref: "/api/oauth/google/start",
+    },
+    proFlow: {
+      method: "oauth",
+      title: "Connect Google Drive workspace",
+      description: "Use Google sign-in first. Pro and Agency can later map shared drives and folder policies.",
+      ctaLabel: "Continue with Google",
+      oauthHref: "/api/oauth/google/start",
+    },
+  },
+  {
+    id: "onedrive",
+    label: "OneDrive",
+    category: "documents",
+    launchReady: true,
+    description: "Use OneDrive and Microsoft file storage as part of approvals, document workflows, and team operations.",
+    useCases: ["File storage", "Document review", "Microsoft document workflows"],
+    starterFlow: {
+      method: "oauth",
+      title: "Connect OneDrive",
+      description: "Sign in with Microsoft so Dobly can work with the OneDrive files your business already stores.",
+      ctaLabel: "Continue with Microsoft",
+      oauthHref: "/api/oauth/microsoft/start",
+    },
+    proFlow: {
+      method: "oauth",
+      title: "Connect OneDrive workspace",
+      description: "Use Microsoft sign-in first. Pro and Agency can later map folders and team storage rules.",
+      ctaLabel: "Continue with Microsoft",
+      oauthHref: "/api/oauth/microsoft/start",
+    },
+    advancedFields: [
+      { key: "accountIdentifier", label: "Workspace label", placeholder: "Main company OneDrive" },
+      secureFields.token,
+      secureFields.refresh,
+    ],
+  },
+  {
+    id: "dropbox",
+    label: "Dropbox",
+    category: "documents",
+    launchReady: true,
+    description: "Bring Dropbox folders into operational workflows for agencies, service teams, and client delivery.",
+    useCases: ["Shared files", "Client delivery", "Folder-based operations"],
+    starterFlow: {
+      method: "oauth",
+      title: "Connect Dropbox",
+      description: "Sign in with Dropbox so Dobly can use the files and folders your business already shares.",
+      ctaLabel: "Continue with Dropbox",
+      oauthHref: "/api/oauth/dropbox/start",
+    },
+    proFlow: {
+      method: "oauth",
+      title: "Connect Dropbox workspace",
+      description: "Use Dropbox sign-in first. Pro and Agency can later map team folders and delivery flows.",
+      ctaLabel: "Continue with Dropbox",
+      oauthHref: "/api/oauth/dropbox/start",
+    },
+    advancedFields: [
+      { key: "accountIdentifier", label: "Workspace label", placeholder: "Client delivery Dropbox" },
+      secureFields.token,
+      secureFields.refresh,
+    ],
+  },
+  {
     id: "notion",
     label: "Notion",
     category: "documents",
@@ -770,6 +958,124 @@ export const CONNECTION_PROVIDERS: ConnectionProviderDefinition[] = [
     advancedFields: [
       { key: "accountIdentifier", label: "Base label", placeholder: "Main sales base" },
       { key: "accessToken", label: "Personal access token", placeholder: "Paste Airtable token", secret: true },
+    ],
+  },
+  {
+    id: "canva",
+    label: "Canva",
+    category: "documents",
+    launchReady: true,
+    description: "Create, organize, and publish design assets, briefs, and branded creative work.",
+    useCases: ["Creative workflows", "Brand assets", "Marketing design handoff"],
+    starterFlow: {
+      method: "oauth",
+      title: "Connect Canva",
+      description: "Sign in with Canva so Dobly can help with creative briefs, assets, and publishing workflows.",
+      ctaLabel: "Continue with Canva",
+      oauthHref: "/api/oauth/canva/start",
+    },
+    proFlow: {
+      method: "oauth",
+      title: "Connect Canva workspace",
+      description: "Use Canva sign-in first. Pro and Agency can later map multiple brands and design flows.",
+      ctaLabel: "Continue with Canva",
+      oauthHref: "/api/oauth/canva/start",
+    },
+  },
+  {
+    id: "github",
+    label: "GitHub",
+    category: "operations",
+    launchReady: true,
+    description: "Track issues, pull requests, repositories, and engineering workflows.",
+    useCases: ["Issue tracking", "PR alerts", "Engineering summaries"],
+    starterFlow: {
+      method: "oauth",
+      title: "Connect GitHub",
+      description: "Sign in with GitHub so Dobly can monitor repos, engineering work, and release activity.",
+      ctaLabel: "Continue with GitHub",
+      oauthHref: "/api/oauth/github/start",
+    },
+    proFlow: {
+      method: "oauth",
+      title: "Connect GitHub organization",
+      description: "Use GitHub sign-in first. Advanced teams can map multiple repos and orgs later.",
+      ctaLabel: "Continue with GitHub",
+      oauthHref: "/api/oauth/github/start",
+    },
+  },
+  {
+    id: "figma",
+    label: "Figma",
+    category: "documents",
+    launchReady: true,
+    description: "Bring design files, feedback, and handoff context into Dobly workflows.",
+    useCases: ["Design reviews", "Creative handoff", "Asset coordination"],
+    starterFlow: {
+      method: "oauth",
+      title: "Connect Figma",
+      description: "Sign in with Figma to let Dobly work with files, projects, and creative handoff information.",
+      ctaLabel: "Continue with Figma",
+      oauthHref: "/api/oauth/figma/start",
+    },
+    proFlow: {
+      method: "oauth",
+      title: "Connect Figma workspace",
+      description: "Use Figma sign-in first. Pro and Agency can map team libraries and review workflows later.",
+      ctaLabel: "Continue with Figma",
+      oauthHref: "/api/oauth/figma/start",
+    },
+  },
+  {
+    id: "telegram",
+    label: "Telegram",
+    category: "communication",
+    launchReady: true,
+    description: "Send alerts, reminders, and updates into Telegram chats and bots.",
+    useCases: ["Personal alerts", "Ops updates", "Community messaging"],
+    starterFlow: {
+      method: "guided",
+      title: "Connect Telegram",
+      description: "Start with the chat or bot you want Dobly to post into, then finish secure setup only if needed.",
+      ctaLabel: "Start Telegram setup",
+      fields: [{ key: "accountIdentifier", label: "Chat or bot label", placeholder: "Main alerts bot" }],
+    },
+    proFlow: {
+      method: "guided",
+      title: "Connect Telegram bot",
+      description: "Start guided. Pro and Agency can reveal token details only when needed.",
+      ctaLabel: "Start Telegram setup",
+      fields: [{ key: "accountIdentifier", label: "Chat or bot label", placeholder: "Main alerts bot" }],
+    },
+    advancedFields: [
+      { key: "accountIdentifier", label: "Bot or chat label", placeholder: "Main alerts bot" },
+      { key: "accessToken", label: "Bot token", placeholder: "Telegram bot token", secret: true },
+    ],
+  },
+  {
+    id: "discord",
+    label: "Discord",
+    category: "communication",
+    launchReady: true,
+    description: "Post updates, alerts, and reports into Discord servers and channels.",
+    useCases: ["Community updates", "Internal ops alerts", "Status reporting"],
+    starterFlow: {
+      method: "guided",
+      title: "Connect Discord",
+      description: "Start with the channel or server you want Dobly to post into, then finish secure setup only if needed.",
+      ctaLabel: "Start Discord setup",
+      fields: [{ key: "accountIdentifier", label: "Server or channel label", placeholder: "Ops server" }],
+    },
+    proFlow: {
+      method: "guided",
+      title: "Connect Discord workspace",
+      description: "Use guided setup first. Advanced users can add webhook credentials only when necessary.",
+      ctaLabel: "Start Discord setup",
+      fields: [{ key: "accountIdentifier", label: "Server or channel label", placeholder: "Ops server" }],
+    },
+    advancedFields: [
+      { key: "accountIdentifier", label: "Server or channel label", placeholder: "Ops server" },
+      { key: "secret", label: "Webhook URL", placeholder: "Discord webhook URL", secret: true },
     ],
   },
   {
@@ -969,6 +1275,59 @@ export const CONNECTION_PROVIDERS: ConnectionProviderDefinition[] = [
       { key: "accessToken", label: "Personal access token", placeholder: "Asana PAT", secret: true },
     ],
   },
+  {
+    id: "jira",
+    label: "Jira",
+    category: "operations",
+    launchReady: true,
+    description: "Track engineering, operations, and service work in Jira projects that already exist inside the business.",
+    useCases: ["Issue tracking", "Ops workflows", "Engineering coordination"],
+    starterFlow: {
+      method: "guided",
+      title: "Connect Jira",
+      description: "Start with the Jira site or project your team already uses, then finish secure setup only if needed.",
+      ctaLabel: "Start Jira setup",
+      fields: [{ key: "accountIdentifier", label: "Site or project", placeholder: "operations.atlassian.net" }],
+    },
+    proFlow: {
+      method: "guided",
+      title: "Connect Jira workspace",
+      description: "Use a guided setup first. Pro and Agency can later add advanced project or token details.",
+      ctaLabel: "Start Jira setup",
+      fields: [{ key: "accountIdentifier", label: "Site or project", placeholder: "operations.atlassian.net" }],
+    },
+    advancedFields: [
+      { key: "accountIdentifier", label: "Site or project", placeholder: "operations.atlassian.net" },
+      secureFields.token,
+      secureFields.refresh,
+    ],
+  },
+  {
+    id: "linear",
+    label: "Linear",
+    category: "operations",
+    launchReady: true,
+    description: "Use Linear for internal ops, product, and engineering execution without leaving Dobly blind to team work.",
+    useCases: ["Issue tracking", "Product ops", "Team coordination"],
+    starterFlow: {
+      method: "oauth",
+      title: "Connect Linear",
+      description: "Sign in with Linear so Dobly can route work and monitor issue movement in the workspace your team already uses.",
+      ctaLabel: "Continue with Linear",
+      oauthHref: "/api/oauth/linear/start",
+    },
+    proFlow: {
+      method: "oauth",
+      title: "Connect Linear workspace",
+      description: "Use Linear sign-in first. Pro and Agency can later map teams, projects, and issue routing rules.",
+      ctaLabel: "Continue with Linear",
+      oauthHref: "/api/oauth/linear/start",
+    },
+    advancedFields: [
+      { key: "accountIdentifier", label: "Workspace label", placeholder: "Main Linear workspace" },
+      secureFields.token,
+    ],
+  },
 
   // ==================== CUSTOM / ADVANCED ====================
   {
@@ -1001,14 +1360,14 @@ export const CONNECTION_PROVIDERS: ConnectionProviderDefinition[] = [
 ];
 
 export const CONNECTION_GROUPS: Array<{ id: ConnectionCategory; label: string; copy: string }> = [
-  { id: "communication", label: "Communication & Messaging", copy: "Email, SMS, chat, video, and customer messaging for outreach and alerts." },
-  { id: "commerce", label: "Commerce & Payments", copy: "E-commerce stores, payments, invoicing, subscriptions, and accounting." },
+  { id: "communication", label: "Kenya Communication", copy: "WhatsApp plus the cheapest local calls and SMS path for customer work, reminders, and approvals." },
+  { id: "commerce", label: "Kenya Payments", copy: "Paystack-first checkout with direct M-PESA/Daraja when a workflow needs native payment control." },
   { id: "sales-crm", label: "CRM & Sales", copy: "Lead management, deal tracking, customer databases, and sales workflows." },
   { id: "support", label: "Support & Service", copy: "Ticketing, help desks, and customer support automation." },
-  { id: "documents", label: "Documents & Compliance", copy: "E-signatures, forms, surveys, databases, and document storage." },
+  { id: "documents", label: "Documents & Creative", copy: "Optional creative, document, and file workflows after the launch stack is live." },
   { id: "marketing", label: "Marketing & Analytics", copy: "Email campaigns, social media, analytics, and audience insights." },
   { id: "operations", label: "Operations & Scheduling", copy: "Project management, scheduling, task tracking, and team workflows." },
-  { id: "custom", label: "Custom & Advanced", copy: "Custom APIs, webhooks, and internal tool integrations for advanced users." },
+  { id: "custom", label: "Optional Custom", copy: "Custom APIs, webhooks, and internal tools only when the workflow earns the extra setup." },
 ];
 
 export function getConnectionProvider(providerId: string) {
@@ -1016,7 +1375,7 @@ export function getConnectionProvider(providerId: string) {
 }
 
 export function getProviderFlow(provider: ConnectionProviderDefinition, planId: PlanId) {
-  if (planId === "pro" || planId === "agency") {
+  if (planId === "operator" || planId === "business" || planId === "command") {
     return { flow: provider.proFlow, advancedAllowed: Boolean(provider.advancedFields?.length) };
   }
 
@@ -1024,9 +1383,39 @@ export function getProviderFlow(provider: ConnectionProviderDefinition, planId: 
 }
 
 export function isConnectionProviderLaunchReady(providerId: string) {
-  return CONNECTION_PROVIDERS.some((provider) => provider.id === providerId && provider.launchReady);
+  return CONNECTION_PROVIDERS.some((provider) => provider.id === providerId && provider.launchReady) && isProviderVerifiedLive(providerId);
 }
 
 export function getLaunchReadyConnectionProviders() {
-  return CONNECTION_PROVIDERS.filter((provider) => provider.launchReady);
+  return CONNECTION_PROVIDERS.filter(
+    (provider) =>
+      KENYA_BUDGET_LAUNCH_PROVIDER_SET.has(provider.id) &&
+      provider.launchReady &&
+      isProviderVerifiedLive(provider.id),
+  );
+}
+
+export function getOptionalLaunchConnectionProviders() {
+  return CONNECTION_PROVIDERS.filter(
+    (provider) =>
+      OPTIONAL_LAUNCH_PROVIDER_SET.has(provider.id) &&
+      provider.launchReady &&
+      isProviderVerifiedLive(provider.id),
+  );
+}
+
+export function getHiddenByDefaultConnectionProviders() {
+  return CONNECTION_PROVIDERS.filter(
+    (provider) =>
+      !KENYA_BUDGET_LAUNCH_PROVIDER_SET.has(provider.id) &&
+      !OPTIONAL_LAUNCH_PROVIDER_SET.has(provider.id),
+  );
+}
+
+export function isKenyaBudgetLaunchProvider(providerId: string) {
+  return KENYA_BUDGET_LAUNCH_PROVIDER_SET.has(providerId);
+}
+
+export function getConnectionProviderRuntimeContract(providerId: string) {
+  return getIntegrationContract(providerId);
 }

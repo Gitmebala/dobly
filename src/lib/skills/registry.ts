@@ -1,5 +1,5 @@
 import { DOBLY_SKILL_MANIFESTS } from "@/lib/skills/manifests";
-import { anthropic } from "@/lib/anthropic";
+import { optimizedAICompletion } from "@/lib/cost-optimizer";
 import { googleSheetsReadExecutor } from "@/lib/connectors/native/google";
 import type { DoblySkill, DoblySkillContext, DoblySkillManifest } from "@/lib/skills/types";
 
@@ -30,6 +30,32 @@ function createSkill(manifest: DoblySkillManifest, run: (context: DoblySkillCont
 const manifestsByKey = new Map(DOBLY_SKILL_MANIFESTS.map((manifest) => [manifest.key, manifest]));
 
 export const DOBLY_SKILLS: DoblySkill[] = [
+  createSkill(manifestsByKey.get("plan_task_breakdown")!, async ({ config }) => {
+    const taskDescription = getString(config.task_description, "Complete the requested work.");
+    const objective = getString(config.objective, "Handle the work safely and clearly.");
+    const trigger = getObject(config.trigger);
+    const memory = getObject(config.memory);
+
+    const { content: text } = await optimizedAICompletion(
+      `Task: ${taskDescription}\nObjective: ${objective}\nTrigger: ${JSON.stringify(trigger)}\nMemory: ${JSON.stringify(memory)}`,
+      { taskType: "skill_task", cacheable: true }
+    );
+    try {
+      const parsed = JSON.parse(text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
+      return intelligenceResult(parsed);
+    } catch {
+      return intelligenceResult({
+        focus: objective,
+        next_actions: [
+          "Review the current trigger",
+          "Execute the enabled steps in order",
+          "Summarize what changed and what needs attention",
+        ],
+        risk_flags: ["Confirm external actions before sending if the result is sensitive."],
+        confidence: 0.62,
+      });
+    }
+  }),
   createSkill(manifestsByKey.get("send_whatsapp_confirmation")!, async ({ config }) => {
     const details = getObject(config.details);
     const message = `Thanks - your request has been handled. ${getString(details.reference, "")}`.trim();
@@ -58,19 +84,10 @@ export const DOBLY_SKILLS: DoblySkill[] = [
     const objective = getString(config.objective, "Complete this task safely and report the next recommended action.");
     const context = config.context && typeof config.context === "object" ? JSON.stringify(config.context) : getString(config.context, "");
 
-    const message = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 900,
-      system: "You are Dobly's bounded business agent. Provide a concise recommended action and a short explanation based on the task, role, and objective.",
-      messages: [
-        {
-          role: "user",
-          content: `Task: ${taskDescription}\nRole: ${role}\nObjective: ${objective}\nContext: ${context}`,
-        },
-      ],
-    });
-
-    const response = message.content[0]?.type === "text" ? message.content[0].text : "Unable to generate an agent response.";
+    const { content: response } = await optimizedAICompletion(
+      `Task: ${taskDescription}\nRole: ${role}\nObjective: ${objective}\nContext: ${context}`,
+      { taskType: "skill_task", cacheable: true }
+    );
     const summary = response.split("\n").slice(0, 2).join(" ").slice(0, 240);
 
     return intelligenceResult({ response, summary });
@@ -109,22 +126,10 @@ export const DOBLY_SKILLS: DoblySkill[] = [
     const values = Array.isArray(sheetResult.values) ? sheetResult.values : [];
     const rowsString = JSON.stringify(values.slice(0, 100));
 
-    const analysisMessage = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 1000,
-      system: "You are an expert data analyst. Analyze the spreadsheet rows and answer the prompt clearly.",
-      messages: [
-        {
-          role: "user",
-          content: `${prompt}\n\nSpreadsheet rows:\n${rowsString}`,
-        },
-      ],
-    });
-
-    const analysis =
-      analysisMessage.content[0]?.type === "text"
-        ? analysisMessage.content[0].text
-        : "Unable to analyze sheet data.";
+    const { content: analysis } = await optimizedAICompletion(
+      `${prompt}\n\nSpreadsheet rows:\n${rowsString}`,
+      { taskType: "skill_task" }
+    );
 
     return intelligenceResult({ analysis });
   }),
@@ -196,6 +201,29 @@ export const DOBLY_SKILLS: DoblySkill[] = [
     return intelligenceResult({
       report: `Handled ${metrics.length} tracked metrics this week. What needed to happen, happened.`,
     });
+  }),
+  createSkill(manifestsByKey.get("synthesize_work_report")!, async ({ config, stepOutputs }) => {
+    const workflowTitle = getString(config.workflow_title, "Dobly run");
+    const workflowDescription = getString(config.workflow_description);
+    const objective = getString(config.objective, workflowDescription);
+    const reportStyle = getString(config.report_style, "standard");
+
+    const { content: text } = await optimizedAICompletion(
+      `Workflow: ${workflowTitle}\nObjective: ${objective}\nStyle: ${reportStyle}\nStep outputs: ${JSON.stringify(stepOutputs)}\nMemory: ${JSON.stringify(getObject(config.memory))}`,
+      { taskType: "skill_task", cacheable: true }
+    );
+    try {
+      const parsed = JSON.parse(text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
+      return intelligenceResult(parsed);
+    } catch {
+      const stepKeys = Object.keys(stepOutputs);
+      return intelligenceResult({
+        title: `${workflowTitle} report`,
+        summary: `${workflowTitle} completed ${stepKeys.length} tracked step${stepKeys.length === 1 ? "" : "s"}. Dobly kept the work moving and packaged the outcome for review.`,
+        changes_detected: stepKeys.length > 0,
+        next_attention: "Review the latest run outputs if this workflow touches customer-facing or financial actions.",
+      });
+    }
   }),
   createSkill(manifestsByKey.get("extract_structured_lead")!, async ({ config }) => {
     const rawText = getString(config.raw_text);

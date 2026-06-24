@@ -80,7 +80,7 @@ function buildSimplePdf(text: string) {
     .split("\n")
     .flatMap((line) => {
       if (line.length <= 90) return [line];
-      const chunks = [];
+      const chunks: string[] = [];
       for (let index = 0; index < line.length; index += 90) {
         chunks.push(line.slice(index, index + 90));
       }

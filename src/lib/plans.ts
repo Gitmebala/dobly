@@ -7,7 +7,8 @@ function monthStartIso() {
 }
 
 export function getPlanConfig(planId: PlanId): Plan {
-  return PLANS.find((plan) => plan.id === planId) ?? PLANS[0]!;
+  const normalizedPlanId = planId === "business" ? "command" : planId;
+  return PLANS.find((plan) => plan.id === normalizedPlanId) ?? PLANS[0]!;
 }
 
 export async function getPlanUsageSnapshot(userId: string, planId: PlanId): Promise<PlanUsageSnapshot> {

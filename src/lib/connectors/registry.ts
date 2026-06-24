@@ -2,18 +2,19 @@ import type { ConnectorDefinition, ConnectorExecutor } from "@/lib/connectors/sd
 import { emailConnectorExecutor } from "@/lib/connectors/generic/email";
 import { fileConnectorExecutor } from "@/lib/connectors/generic/file";
 import { httpConnectorExecutor } from "@/lib/connectors/generic/http";
-import { googleGmailSendExecutor, googleSheetsAppendExecutor, googleSheetsReadExecutor, googleSheetsAnalyzeExecutor } from "@/lib/connectors/native/google";
+import { googleGmailSendExecutor, googleDocsCreateExecutor, googleSheetsAppendExecutor, googleSheetsReadExecutor, googleSheetsAnalyzeExecutor, googleCalendarCreateEventExecutor } from "@/lib/connectors/native/google";
 import { mpesaStkPushExecutor } from "@/lib/connectors/native/mpesa";
 import { orchestratorDocumentExecutor } from "@/lib/connectors/native/orchestrator";
 import { slackSendMessageExecutor } from "@/lib/connectors/native/slack";
-import { shopifyTagCustomerExecutor } from "@/lib/connectors/native/shopify";
+import { shopifyTagCustomerExecutor, shopifyCreateDraftOrderExecutor } from "@/lib/connectors/native/shopify";
 import { whatsappSendMessageExecutor } from "@/lib/connectors/native/whatsapp";
 import { mailchimpAddSubscriberExecutor, mailchimpSendCampaignExecutor } from "@/lib/connectors/native/mailchimp";
 import { zendeskCreateTicketExecutor, zendeskUpdateTicketExecutor } from "@/lib/connectors/native/zendesk";
 import { klaviyoSubscribeExecutor, klaviyoTrackEventExecutor, klaviyoSendCampaignExecutor } from "@/lib/connectors/native/klaviyo";
 import { docusignCreateEnvelopeExecutor, docusignGetEnvelopeStatusExecutor } from "@/lib/connectors/native/docusign";
+import { paystackPaymentLinkExecutor } from "@/lib/connectors/native/paystack";
 import { stripeCreateCustomerExecutor, stripeCreateInvoiceExecutor, stripeRefundChargeExecutor } from "@/lib/connectors/native/stripe";
-import { hubspotCreateContactExecutor, hubspotUpdateDealExecutor, hubspotCreateTaskExecutor } from "@/lib/connectors/native/hubspot";
+import { hubspotCreateContactExecutor, hubspotUpdateDealExecutor, hubspotCreateTaskExecutor, hubspotCreateNoteExecutor } from "@/lib/connectors/native/hubspot";
 import {
   pipedriveCreateLeadExecutor, pipedriveCreateDealExecutor,
   notionCreatePageExecutor, notionAppendDatabaseExecutor,
@@ -61,6 +62,13 @@ export const CONNECTOR_DEFINITIONS: ConnectorDefinition[] = [
     actions: [{ id: "stk_push", label: "Send STK push", lane: "native", executor: "native.mpesa.stk-push" }],
   },
   {
+    id: "paystack",
+    label: "Paystack",
+    lane: "native",
+    provider: "paystack",
+    actions: [{ id: "payment_link", label: "Create payment link", lane: "native", executor: "native.paystack.payment-link" }],
+  },
+  {
     id: "generic-file",
     label: "File",
     lane: "generic",
@@ -76,9 +84,11 @@ const EXECUTORS = new Map<string, ConnectorExecutor>([
   [fileConnectorExecutor.id, fileConnectorExecutor],
   // Google
   [googleGmailSendExecutor.id, googleGmailSendExecutor],
+  [googleDocsCreateExecutor.id, googleDocsCreateExecutor],
   [googleSheetsAppendExecutor.id, googleSheetsAppendExecutor],
   [googleSheetsReadExecutor.id, googleSheetsReadExecutor],
   [googleSheetsAnalyzeExecutor.id, googleSheetsAnalyzeExecutor],
+  [googleCalendarCreateEventExecutor.id, googleCalendarCreateEventExecutor],
   // M-PESA
   [mpesaStkPushExecutor.id, mpesaStkPushExecutor],
   // Orchestrator
@@ -87,6 +97,7 @@ const EXECUTORS = new Map<string, ConnectorExecutor>([
   [slackSendMessageExecutor.id, slackSendMessageExecutor],
   // Shopify
   [shopifyTagCustomerExecutor.id, shopifyTagCustomerExecutor],
+  [shopifyCreateDraftOrderExecutor.id, shopifyCreateDraftOrderExecutor],
   // WhatsApp
   [whatsappSendMessageExecutor.id, whatsappSendMessageExecutor],
   // Mailchimp
@@ -102,6 +113,8 @@ const EXECUTORS = new Map<string, ConnectorExecutor>([
   // DocuSign
   [docusignCreateEnvelopeExecutor.id, docusignCreateEnvelopeExecutor],
   [docusignGetEnvelopeStatusExecutor.id, docusignGetEnvelopeStatusExecutor],
+  // Paystack
+  [paystackPaymentLinkExecutor.id, paystackPaymentLinkExecutor],
   // Stripe
   [stripeCreateCustomerExecutor.id, stripeCreateCustomerExecutor],
   [stripeCreateInvoiceExecutor.id, stripeCreateInvoiceExecutor],
@@ -110,6 +123,7 @@ const EXECUTORS = new Map<string, ConnectorExecutor>([
   [hubspotCreateContactExecutor.id, hubspotCreateContactExecutor],
   [hubspotUpdateDealExecutor.id, hubspotUpdateDealExecutor],
   [hubspotCreateTaskExecutor.id, hubspotCreateTaskExecutor],
+  [hubspotCreateNoteExecutor.id, hubspotCreateNoteExecutor],
   // Integrations
   [pipedriveCreateLeadExecutor.id, pipedriveCreateLeadExecutor],
   [pipedriveCreateDealExecutor.id, pipedriveCreateDealExecutor],
@@ -139,21 +153,36 @@ const EXECUTORS = new Map<string, ConnectorExecutor>([
 const STEP_EXECUTOR_MAP = new Map<string, string>([
   // Generic
   ["webhook:request", httpConnectorExecutor.id],
+  ["generic-http:request", httpConnectorExecutor.id],
   ["email:send", emailConnectorExecutor.id],
+  ["generic-email:send", emailConnectorExecutor.id],
   ["file:write_file", fileConnectorExecutor.id],
+  ["generic-file:write_file", fileConnectorExecutor.id],
   // Google
   ["gmail:send_email", googleGmailSendExecutor.id],
+  ["google:send_email", googleGmailSendExecutor.id],
+  ["google-gmail:send_email", googleGmailSendExecutor.id],
+  ["google_docs:create_document", googleDocsCreateExecutor.id],
+  ["google-docs:create_document", googleDocsCreateExecutor.id],
   ["google_sheets:append_row", googleSheetsAppendExecutor.id],
+  ["google-sheets:append_row", googleSheetsAppendExecutor.id],
   ["google_sheets:read_range", googleSheetsReadExecutor.id],
+  ["google-sheets:read_range", googleSheetsReadExecutor.id],
   ["google_sheets:analyze_data", googleSheetsAnalyzeExecutor.id],
+  ["google-sheets:analyze_data", googleSheetsAnalyzeExecutor.id],
+  ["google_calendar:create_event", googleCalendarCreateEventExecutor.id],
+  ["google-calendar:create_event", googleCalendarCreateEventExecutor.id],
   // M-PESA
   ["mpesa:stk_push", mpesaStkPushExecutor.id],
+  ["m-pesa:stk_push", mpesaStkPushExecutor.id],
+  ["mpesa-daraja:stk_push", mpesaStkPushExecutor.id],
   // Orchestrator
   ["orchestrator:assemble_report", orchestratorDocumentExecutor.id],
   // Slack
   ["slack:send_message", slackSendMessageExecutor.id],
   // Shopify
   ["shopify:tag_customer", shopifyTagCustomerExecutor.id],
+  ["shopify:create_draft_order", shopifyCreateDraftOrderExecutor.id],
   // WhatsApp
   ["whatsapp:send_message", whatsappSendMessageExecutor.id],
   // Mailchimp
@@ -169,6 +198,8 @@ const STEP_EXECUTOR_MAP = new Map<string, string>([
   // DocuSign
   ["docusign:create_envelope", docusignCreateEnvelopeExecutor.id],
   ["docusign:get_envelope_status", docusignGetEnvelopeStatusExecutor.id],
+  // Paystack
+  ["paystack:payment_link", paystackPaymentLinkExecutor.id],
   // Stripe
   ["stripe:create_customer", stripeCreateCustomerExecutor.id],
   ["stripe:create_invoice", stripeCreateInvoiceExecutor.id],
@@ -177,6 +208,7 @@ const STEP_EXECUTOR_MAP = new Map<string, string>([
   ["hubspot:create_contact", hubspotCreateContactExecutor.id],
   ["hubspot:update_deal", hubspotUpdateDealExecutor.id],
   ["hubspot:create_task", hubspotCreateTaskExecutor.id],
+  ["hubspot:create_note", hubspotCreateNoteExecutor.id],
   // Integrations
   ["pipedrive:create_lead", pipedriveCreateLeadExecutor.id],
   ["pipedrive:create_deal", pipedriveCreateDealExecutor.id],
@@ -201,17 +233,75 @@ const STEP_EXECUTOR_MAP = new Map<string, string>([
   ["clickup:create_task", clickupCreateTaskExecutor.id],
   ["xero:create_invoice", xeroCreateInvoiceExecutor.id],
   ["zoho:create_lead", zohoCrmCreateLeadExecutor.id],
+  ["zoho-crm:create_lead", zohoCrmCreateLeadExecutor.id],
 ]);
+
+const APP_KEY_ALIASES = new Map<string, string>([
+  ["email", "email"],
+  ["google", "google"],
+  ["gmail", "gmail"],
+  ["google docs", "google_docs"],
+  ["google document", "google_docs"],
+  ["google sheets", "google_sheets"],
+  ["google calendar", "google_calendar"],
+  ["m-pesa", "mpesa"],
+  ["mpesa", "mpesa"],
+  ["dobly orchestrator", "orchestrator"],
+  ["webhook", "webhook"],
+  ["webhook / api", "webhook"],
+  ["file", "file"],
+  ["hubspot", "hubspot"],
+  ["salesforce", "salesforce"],
+  ["pipedrive", "pipedrive"],
+  ["zoho crm", "zoho"],
+  ["zendesk", "zendesk"],
+  ["freshdesk", "freshdesk"],
+  ["shopify", "shopify"],
+  ["paystack", "paystack"],
+  ["stripe", "stripe"],
+  ["slack", "slack"],
+  ["whatsapp", "whatsapp"],
+  ["mailchimp", "mailchimp"],
+  ["klaviyo", "klaviyo"],
+  ["docusign", "docusign"],
+  ["notion", "notion"],
+  ["airtable", "airtable"],
+  ["linkedin", "linkedin"],
+  ["zoom", "zoom"],
+  ["intercom", "intercom"],
+  ["square", "square"],
+  ["meta", "meta"],
+  ["typeform", "typeform"],
+  ["calendly", "calendly"],
+  ["trello", "trello"],
+  ["asana", "asana"],
+  ["monday.com", "monday"],
+  ["clickup", "clickup"],
+  ["xero", "xero"],
+]);
+
+function normalizeKey(value: unknown) {
+  const raw = String(value ?? "").trim().toLowerCase();
+  return APP_KEY_ALIASES.get(raw) ?? raw.replace(/\s+/g, "_");
+}
 
 export function getConnectorExecutor(executorId: string) {
   return EXECUTORS.get(executorId) ?? null;
 }
 
 export function getExecutorForStep(step: WorkflowActionStep) {
-  const key = `${step.app}:${step.connectorActionId ?? ""}`;
-  const mapped = STEP_EXECUTOR_MAP.get(key);
-  if (mapped) {
-    return getConnectorExecutor(mapped);
+  const action = step.connectorActionId ?? "";
+  const candidates = [
+    `${step.connectorId ?? ""}:${action}`,
+    `${normalizeKey(step.app)}:${action}`,
+    `${String(step.app ?? "")}:${action}`,
+  ].filter((key) => !key.startsWith(":") && !key.endsWith(":"));
+
+  for (const key of candidates) {
+    const mapped = STEP_EXECUTOR_MAP.get(key);
+    if (mapped) {
+      return getConnectorExecutor(mapped);
+    }
   }
   return null;
 }

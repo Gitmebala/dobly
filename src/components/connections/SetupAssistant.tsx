@@ -16,7 +16,8 @@ interface SetupAssistantProps {
  * Abstracts away technical details and presents human-friendly setup flows.
  */
 export function SetupAssistant({ provider, planId, onComplete, onCancel }: SetupAssistantProps) {
-  const flow = planId === "pro" || planId === "agency" ? provider.proFlow : provider.starterFlow;
+  const isAdvancedPlan = planId === "operator" || planId === "command" || planId === "business";
+  const flow = isAdvancedPlan ? provider.proFlow : provider.starterFlow;
   const [step, setStep] = useState<"start" | "fields" | "advanced" | "complete">("start");
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -113,7 +114,7 @@ export function SetupAssistant({ provider, planId, onComplete, onCancel }: Setup
       // Guided/Store: collect initial fields and optionally ask for advanced
       if (!validateFields(flow.fields)) return;
 
-      if (provider.advancedFields?.length && (planId === "pro" || planId === "agency")) {
+      if (provider.advancedFields?.length && isAdvancedPlan) {
         setStep("advanced");
       } else {
         onComplete(formData);
@@ -183,7 +184,7 @@ export function SetupAssistant({ provider, planId, onComplete, onCancel }: Setup
         </div>
       )}
 
-      {/* Advanced fields for Pro/Agency */}
+      {/* Advanced fields for higher-volume plans */}
       {step === "advanced" && provider.advancedFields && (
         <div className="space-y-4">
           <p className="text-sm text-gray-600">Optional: Add advanced credentials for enhanced functionality</p>

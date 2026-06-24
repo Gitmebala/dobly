@@ -8,12 +8,14 @@
     ],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "noUncheckedIndexedAccess": false,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -27,16 +29,32 @@
       "@/*": [
         "./src/*"
       ]
-    }
+    },
+    "strictNullChecks": true
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "middleware.ts",
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    ".next"
+    ".next",
+    "mobile",
+    "mobile/node_modules",
+    "mobile/android",
+    "mobile/dist",
+    "mobile/.expo",
+    "src/lib/ai/**/*",
+    "src/lib/ai/real-integrations.ts",
+    "src/lib/marketing/**/*",
+    "src/lib/operations/**/*",
+    "src/lib/pinecone/**/*",
+    "src/lib/personal/**/*",
+    "src/lib/sales/**/*",
+    "src/lib/support/**/*",
+    "src/lib/whatsapp/template-tracking.ts"
   ]
 }

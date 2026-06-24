@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
-import { createClient } from "@/lib/supabase/client";
+import GoogleLogo from "@/components/GoogleLogo";
+import "../reference-auth.css";
 
 export default function SignupPage() {
+  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,216 +18,132 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const passwordStrength = (() => {
-    if (password.length === 0) return 0;
-    let score = 0;
-    if (password.length >= 8) score++;
-    if (/[A-Z]/.test(password)) score++;
-    if (/[0-9]/.test(password)) score++;
-    if (/[^A-Za-z0-9]/.test(password)) score++;
-    return score;
-  })();
+  const next = searchParams?.get("next");
+  const safeNext = next?.startsWith("/") ? next : "/dashboard/onboarding";
 
-  const strengthLabels = ["", "Weak", "Fair", "Good", "Strong"];
-  const strengthColors = ["", "bg-red-500", "bg-yellow-500", "bg-blue-500", "bg-accent"];
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
     setError("");
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (!name.trim()) {
+      setError("Enter your full name.");
+      return;
+    }
+    if (password.length < 10 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      setError("Use 10+ characters with upper and lowercase letters, a number, and a symbol.");
       return;
     }
 
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: name },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: name.trim(),
+          email: email.trim().toLowerCase(),
+          password,
+        }),
       });
+      const result = await response.json().catch(() => ({}));
 
-      if (error) {
-        if (error.message.toLowerCase().includes("already")) {
-          setError("An account with this email already exists.");
-        } else {
-          setError("Failed to create account. Please try again.");
-        }
+      if (!response.ok) {
+        setError(result?.error || "Failed to create account. Please try again.");
         return;
       }
-
-      setSuccess(true);
+      window.location.assign(safeNext);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Authentication service unavailable. Please try again shortly.");
     } finally {
       setLoading(false);
     }
   }
 
+  async function handleGoogleSignUp() {
+    setError("Google sign-up will be enabled when the production auth project is connected. Use email for this local build.");
+  }
+
   if (success) {
     return (
-      <div className="auth-shell min-h-screen bg-surface flex items-center justify-center p-4">
-        <div className="fixed inset-0 bg-glow-gradient opacity-50" />
-        <div className="relative text-center max-w-md">
-          <div className="w-16 h-16 bg-accent-dim rounded-full flex items-center justify-center mx-auto mb-6 border border-accent/30">
-            <CheckCircle2 className="w-8 h-8 text-accent" />
-          </div>
-          <h1 className="font-display font-bold text-2xl text-text mb-3">
-            Check your email
-          </h1>
-          <p className="text-text-muted mb-6">
-            We sent a confirmation link to{" "}
-            <span className="text-accent">{email}</span>. Click it to activate
-            your account and start automating.
-          </p>
-          <Link href="/auth/login" className="btn-secondary">
-            Back to sign in
-          </Link>
+      <main className="reference-auth">
+        <div className="reference-auth__frame">
+          <header className="reference-auth__header">
+            <BrandLogo href="/" className="reference-auth__logo" markClassName="h-10 w-10" wordmarkClassName="text-2xl" />
+          </header>
+          <section className="reference-auth__panel">
+            <div className="reference-auth__card reference-auth__success">
+              <CheckCircle2 size={50} />
+              <h1>Check your email</h1>
+              <p>We sent a confirmation link to <strong>{email}</strong>. Open it to activate your workspace.</p>
+              <Link href={`/auth/login?redirect=${encodeURIComponent(safeNext)}`} className="reference-auth__submit">Back to sign in</Link>
+            </div>
+          </section>
+          <AuthFooter />
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="auth-shell min-h-screen bg-surface flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-grid-pattern bg-grid opacity-40" />
-      <div className="fixed inset-0 bg-glow-gradient opacity-50" />
+    <main className="reference-auth">
+      <div className="reference-auth__frame">
+        <header className="reference-auth__header">
+          <BrandLogo href="/" className="reference-auth__logo" markClassName="h-10 w-10" wordmarkClassName="text-2xl" />
+          <Link href="/" className="reference-auth__back"><ArrowLeft size={16} /> Back to home</Link>
+        </header>
 
-      <div className="relative w-full max-w-md">
-        <div className="text-center mb-8">
-          <BrandLogo
-            className="justify-center"
-            markClassName="h-10 w-10 drop-shadow-[0_0_20px_rgba(79,70,229,0.35)]"
-            wordmarkClassName="text-xl"
-          />
-        </div>
-
-        <div className="bg-surface-1 border border-border rounded-2xl p-8 shadow-2xl">
-          <h1 className="font-display font-bold text-2xl text-text mb-1">
-            Start automating free
-          </h1>
-          <p className="text-text-muted text-sm mb-8">
-            3 workflows free · No credit card · Setup in 2 minutes
-          </p>
-
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            <div>
-              <label className="block text-xs font-display font-medium text-text-muted mb-1.5">
-                Full name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="input"
-                placeholder="Amina Oduya"
-                autoComplete="name"
-              />
+        <section className="reference-auth__panel">
+          <div className="reference-auth__card">
+            <div className="reference-auth__intro">
+              <span>Start free</span>
+              <h1>Create your Dobly account</h1>
+              <p>Set up your workspace, then tell Dobly what outcome to own first.</p>
             </div>
 
-            <div>
-              <label className="block text-xs font-display font-medium text-text-muted mb-1.5">
-                Email address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input"
-                placeholder="you@example.com"
-                autoComplete="email"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-display font-medium text-text-muted mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input pr-10"
-                  placeholder="At least 8 characters"
-                  autoComplete="new-password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim hover:text-text-muted transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-
-              {password.length > 0 && (
-                <div className="mt-2">
-                  <div className="flex gap-1 mb-1">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div
-                        key={i}
-                        className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                          i <= passwordStrength
-                            ? (strengthColors[passwordStrength] ?? "bg-border")
-                            : "bg-border"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-xs text-text-dim">
-                    {strengthLabels[passwordStrength]}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
-                <p className="text-sm text-red-400">{error}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || !email || !password}
-              className="btn-primary w-full justify-center mt-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                "Create free account"
-              )}
+            <button type="button" onClick={handleGoogleSignUp} disabled={loading} className="reference-auth__oauth">
+              <GoogleLogo className="h-5 w-5" /> Continue with Google
             </button>
-          </form>
+            <div className="reference-auth__divider">or</div>
 
-          <p className="text-center text-xs text-text-dim mt-6">
-            By signing up, you agree to our{" "}
-            <Link href="/terms" className="text-text-muted hover:text-text">Terms</Link>
-            {" "}and{" "}
-            <Link href="/privacy" className="text-text-muted hover:text-text">Privacy Policy</Link>
-            {" "}, plus our{" "}
-            <Link href="/cookies" className="text-text-muted hover:text-text">Cookie Notice</Link>.
-          </p>
+            <form onSubmit={handleSubmit} noValidate>
+              <AuthField label="Full name" icon={<UserRound />}>
+                <input className="reference-auth__input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Enter your full name" autoComplete="name" required />
+              </AuthField>
+              <AuthField label="Work email" icon={<Mail />}>
+                <input className="reference-auth__input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} onBlur={() => setEmail((value) => value.trim().toLowerCase())} placeholder="you@company.com" autoComplete="email" required />
+              </AuthField>
+              <AuthField label="Password" icon={<LockKeyhole />}>
+                <input className="reference-auth__input" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Create a strong password" autoComplete="new-password" required />
+                <button type="button" onClick={() => setShowPassword((value) => !value)} className="reference-auth__eye" aria-label={showPassword ? "Hide password" : "Show password"}>
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </AuthField>
+              <div className="reference-auth__requirements">
+                <span><CheckCircle2 size={12} /> 10+ characters with mixed case, a number, and a symbol</span>
+                <span><CheckCircle2 size={12} /> 1 number</span>
+                <span><CheckCircle2 size={12} /> 1 special character</span>
+              </div>
+              {error ? <div className="reference-auth__error" role="alert">{error}</div> : null}
+              <button type="submit" disabled={loading || !name || !email || !password} className="reference-auth__submit">
+                {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating account...</> : "Create workspace"}
+              </button>
+            </form>
 
-          <p className="text-center text-sm text-text-muted mt-4">
-            Already have an account?{" "}
-            <Link href="/auth/login" className="text-accent hover:text-accent-hover transition-colors font-medium">
-              Sign in
-            </Link>
-          </p>
-        </div>
+            <p className="reference-auth__switch">Already have an account? <Link href={`/auth/login?redirect=${encodeURIComponent(safeNext)}`}>Sign in</Link></p>
+            <div className="reference-auth__secure"><ShieldCheck size={15} /> By continuing, you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link>.</div>
+          </div>
+        </section>
+
+        <AuthFooter />
       </div>
-    </div>
+    </main>
   );
+}
+
+function AuthField({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return <div className="reference-auth__field"><label>{label}</label><div className="reference-auth__input-wrap">{icon}{children}</div></div>;
+}
+
+function AuthFooter() {
+  return <footer className="reference-auth__footer"><span>© 2026 Dobly</span><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link></footer>;
 }

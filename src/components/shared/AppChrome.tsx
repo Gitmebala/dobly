@@ -8,16 +8,19 @@ import Lenis from "lenis";
 import GlobalStarfield from "@/components/GlobalStarfield";
 import MotionLayer from "@/components/MotionLayer";
 import PageTransitionShell from "@/components/PageTransitionShell";
-import PageLoader from "@/components/shared/PageLoader";
 import Starfield from "@/components/shared/Starfield";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isLanding = pathname === "/";
+  const isProduct = pathname?.startsWith("/dashboard") || pathname?.startsWith("/auth");
+  const showWebglStars = pathname === "/pricing" || pathname?.startsWith("/auth");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (isProduct) return;
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) return;
@@ -31,7 +34,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
       duration: 1.4,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
-      syncTouch: false,
+      syncTouch: true,
     });
 
     const update = (time: number) => {
@@ -46,14 +49,13 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
       gsap.ticker.remove(update);
       lenis.destroy();
     };
-  }, []);
+  }, [isProduct]);
 
   return (
     <>
-      <GlobalStarfield />
-      <Starfield />
-      {pathname === "/" ? null : <PageLoader />}
-      <MotionLayer />
+      {!isLanding && !isProduct ? <GlobalStarfield /> : null}
+      {showWebglStars && !isProduct ? <Starfield /> : null}
+      {!isLanding && !isProduct ? <MotionLayer /> : null}
       <PageTransitionShell>{children}</PageTransitionShell>
     </>
   );

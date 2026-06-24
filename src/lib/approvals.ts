@@ -60,48 +60,17 @@ export async function decideApproval(input: {
   note?: string;
 }) {
   const admin = createAdminSupabaseClient();
-  const { data, error } = await admin
-    .from("approvals")
-    .update({
-      status: input.decision,
-      decided_at: new Date().toISOString(),
-      decision_note: input.note ?? null,
-    })
-    .eq("id", input.approvalId)
-    .eq("user_id", input.userId)
-    .eq("status", "pending")
-    .select("*")
-    .single();
+  const { data, error } = await admin.rpc("dobly_decide_workflow_approval", {
+    p_approval_id: input.approvalId,
+    p_user_id: input.userId,
+    p_decision: input.decision,
+    p_note: input.note ?? null,
+  }).single();
 
   if (error || !data) {
     throw new Error("Failed to update approval.");
   }
 
   const approval = data as Approval;
-  const resume = (approval.metadata?.resume ?? {}) as { workflowId?: string; runId?: string };
-
-  if (input.decision === "approved" && resume.workflowId) {
-    await admin.from("job_queue").insert({
-      type: "approval.resume",
-      workflow_id: resume.workflowId,
-      user_id: approval.user_id,
-      payload: {
-        approvalId: approval.id,
-      },
-      priority: 40,
-    });
-  }
-
-  if (input.decision === "rejected" && resume.runId) {
-    await admin
-      .from("workflow_runs")
-      .update({
-        status: "failed",
-        finished_at: new Date().toISOString(),
-        error_message: "Approval rejected. Dobly stopped this operator before the guarded step ran.",
-      })
-      .eq("id", resume.runId);
-  }
-
   return approval;
 }

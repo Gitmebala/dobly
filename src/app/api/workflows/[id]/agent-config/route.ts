@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { updateWorkflowSchema } from "@/lib/validations";
+import { buildOperatorDefaults, createDefaultAgentConfig, mergeAgentConfig } from "@/lib/agent-config";
+import { partialAgentConfigSchema } from "@/lib/validations";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const supabase = await createServerSupabaseClient();
@@ -22,7 +23,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return new Response(JSON.stringify({ error: "Workflow not found" }), { status: 404 });
   }
 
-  const agentConfig = workflow.blueprint?.definition?.operator?.agentConfig;
+  const existingAgentConfig = workflow.blueprint?.definition?.operator?.agentConfig;
+  const agentConfig = createDefaultAgentConfig(workflow.blueprint, existingAgentConfig, workflowId);
 
   return new Response(JSON.stringify({ agentConfig }), { status: 200 });
 }
@@ -37,9 +39,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const workflowId = params.id;
   const body = await request.json();
+  const agentConfigPatch = body?.agentConfig ?? body?.blueprint?.definition?.operator?.agentConfig ?? {};
+  const resetFromDepartmentPreset = body?.resetFromDepartmentPreset === true;
 
-  // Validate the update
-  const validation = updateWorkflowSchema.safeParse({ blueprint: body.blueprint });
+  const validation = partialAgentConfigSchema.safeParse(agentConfigPatch);
   if (!validation.success) {
     return new Response(JSON.stringify({ errors: validation.error.flatten() }), {
       status: 400,
@@ -58,15 +61,41 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return new Response(JSON.stringify({ error: "Workflow not found" }), { status: 404 });
   }
 
-  // Update the workflow
+  const existingAgentConfig = workflow.blueprint?.definition?.operator?.agentConfig;
+  const departmentOverride = validation.data.profile?.department;
+  const baseAgentConfig =
+    resetFromDepartmentPreset && departmentOverride
+      ? createDefaultAgentConfig(
+          workflow.blueprint,
+          {
+            profile: {
+              department: departmentOverride,
+              role: validation.data.profile?.role || "",
+              industry: validation.data.profile?.industry || "",
+              businessName: validation.data.profile?.businessName || "",
+              description: validation.data.profile?.description || "",
+              firstMessage: validation.data.profile?.firstMessage || "",
+              successSignal: validation.data.profile?.successSignal || "",
+            },
+          },
+          workflowId
+        )
+      : createDefaultAgentConfig(workflow.blueprint, existingAgentConfig, workflowId);
+  const nextAgentConfig = mergeAgentConfig(baseAgentConfig, validation.data);
+  const existingOperator = workflow.blueprint?.definition?.operator;
+
   const updatedBlueprint = {
     ...workflow.blueprint,
     definition: {
       ...workflow.blueprint?.definition,
-      operator: {
-        ...workflow.blueprint?.definition?.operator,
-        agentConfig: body.blueprint.definition?.operator?.agentConfig,
-      },
+      operator: existingOperator
+        ? {
+            ...existingOperator,
+            role: nextAgentConfig.profile.role || existingOperator.role,
+            objective: workflow.blueprint?.description || existingOperator.objective,
+            agentConfig: nextAgentConfig,
+          }
+        : buildOperatorDefaults(workflow.blueprint, nextAgentConfig),
     },
   };
 

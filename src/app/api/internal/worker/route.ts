@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processQueue } from "@/lib/queue";
 import { rateLimits } from "@/lib/rate-limit";
+import { secureSecretMatches } from "@/lib/security/secrets";
 
 export async function POST(req: NextRequest) {
   if (!process.env.WORKER_SECRET) {
@@ -8,7 +9,7 @@ export async function POST(req: NextRequest) {
   }
 
   const secret = req.headers.get("x-dobly-worker");
-  if (secret !== process.env.WORKER_SECRET) {
+  if (!secureSecretMatches(process.env.WORKER_SECRET, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -26,9 +27,12 @@ export async function POST(req: NextRequest) {
       ? payload.workerId.trim().slice(0, 120)
       : "dobly-http-worker";
 
-  const results = await processQueue(limit, workerId);
+  const summary = await processQueue(limit, workerId);
   return NextResponse.json({
-    processed: results.length,
-    results,
+    processed: summary.results.length,
+    claimed: summary.claimed,
+    recovered: summary.recovered,
+    results: summary.results,
+    health: summary.health,
   });
 }

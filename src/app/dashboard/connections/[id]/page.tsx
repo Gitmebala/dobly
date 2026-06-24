@@ -29,13 +29,13 @@ export default async function ConnectionDetailPage({
     <div className="mx-auto max-w-5xl space-y-6">
       <Link href="/dashboard/settings?tab=connections" className="btn-ghost inline-flex">
         <ArrowLeft className="h-4 w-4" />
-        Back to connections
+        Back to access
       </Link>
 
       <section className="card">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Connection detail</div>
+            <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Access detail</div>
             <h1 className="mt-2 font-display text-4xl font-bold tracking-tight text-text">{connection.label}</h1>
             <p className="mt-3 text-base leading-7 text-text-muted">
               Provider: {connection.provider}. Status: {connection.status}.
@@ -48,7 +48,7 @@ export default async function ConnectionDetailPage({
       </section>
 
       <section className="card">
-        <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Used by workflows</div>
+        <div className="text-xs uppercase tracking-[0.24em] text-text-dim">Used by live setups</div>
         <div className="mt-4 space-y-3">
           {related.map((workflow) => (
             <Link key={workflow.id} href={`/dashboard/workflows/${workflow.id}`} className="premium-tile block">
@@ -57,7 +57,7 @@ export default async function ConnectionDetailPage({
             </Link>
           ))}
           {related.length === 0 ? (
-            <div className="text-sm text-text-muted">No workflows are currently using this connection.</div>
+            <div className="text-sm text-text-muted">No live setups are currently using this access.</div>
           ) : null}
         </div>
       </section>

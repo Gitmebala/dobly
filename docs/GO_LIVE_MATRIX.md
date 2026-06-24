@@ -1,6 +1,6 @@
 # Dobly Go-Live Matrix
 
-Last updated: April 4, 2026
+Last updated: May 21, 2026
 
 Use this document during launch. Every row should be marked complete before calling Dobly production-ready.
 
@@ -77,10 +77,11 @@ Status meanings:
 
 | Surface | Configured | Test step | Pass condition | Blocker |
 |---|---|---|---|---|
-| Stripe checkout API | Partial | Call `/api/checkout` through pricing or settings using a real signed-in user | Checkout session URL is returned for valid plans | Users cannot upgrade |
-| Stripe prices | External | Ensure every paid `stripe_price_id` matches a live Stripe price | Correct plan maps to correct billing amount and currency | Wrong billing or failed checkout |
-| Billing portal API | Partial | Open billing portal from settings on a subscribed user | Stripe portal opens and returns to settings correctly | Users cannot manage subscriptions |
-| Stripe webhook | Partial | Trigger test events from Stripe dashboard or CLI | Profile plan/subscription state updates correctly for completed checkout, updates, cancellations, and payment failures | Billing state drifts from Stripe |
+| Paystack checkout API | Partial | Call `/api/checkout` through pricing or settings using a real signed-in user | Paystack checkout URL is returned for valid plans in KES | Users cannot upgrade |
+| Paystack plans | External | Ensure every paid `PAYSTACK_PLAN_*` matches a live Paystack plan | Correct plan maps to correct billing amount and currency | Wrong billing or failed checkout |
+| M-PESA payment automation | Partial | Send a sandbox STK push and receive callback | Daraja callback reaches `/api/webhooks/mpesa` and payment state is recorded | Kenya payment automation path incomplete |
+| Paystack webhook | Partial | Trigger Paystack subscription/payment events | Profile plan/subscription state updates correctly for successful charges and subscription changes | Billing state drifts from Paystack |
+| Stripe fallback | Optional | Enable only if `BILLING_PROVIDER=stripe` for a supported entity | Stripe checkout/webhooks still work when explicitly configured | International fallback billing unavailable |
 | Payment UI | Partial | Upgrade, downgrade, cancel, and refresh account state | UI reflects current subscription and billing actions without stale state | Billing feels broken or misleading |
 
 ---
@@ -106,12 +107,13 @@ Status meanings:
 | Slack | Partial | Complete OAuth and run a Slack send workflow | OAuth succeeds and message delivery works | Team notification workflows blocked |
 | Shopify | Partial | Complete OAuth with a real store and run Shopify customer tagging path | OAuth succeeds and action works on real store data | Commerce workflows blocked |
 | WhatsApp | Partial | Request OTP, verify number, send a message, test approval reply webhook | Connection activates, outbound delivery works, inbound replies resolve correctly | Messaging and approval loop broken |
+| Kenya Calls & SMS | Partial | Request Kenya phone setup, verify an existing number by SMS OTP, send a test SMS reply | Local SMS is used first, Africa's Talking handles Kenya voice setup, Twilio is not required for Kenya launch | AI receptionist and SMS coworkers cannot launch cheaply |
 | Yahoo Mail | Partial | Request email verification link | Link arrives and activates the connection | Secondary email path incomplete |
 | Notion | Partial | Complete OAuth and verify connection record | OAuth succeeds and account is stored cleanly | Workspace connector incomplete |
 | HubSpot | Partial | Complete OAuth and verify connection record | OAuth succeeds and account is stored cleanly | CRM connector incomplete |
 | Airtable | Partial | Complete OAuth and verify connection record | OAuth succeeds and account is stored cleanly | Data-store connector incomplete |
 | Meta | Partial | Complete OAuth and verify connection record | OAuth succeeds and account is stored cleanly | Social connector incomplete |
-| Stripe Connect | Partial | Complete provider OAuth if exposed for product flows | OAuth succeeds and account is stored cleanly | Connected billing/payment flows incomplete |
+| Stripe Connect | Optional | Complete provider OAuth only for non-Kenya or fallback product flows | OAuth succeeds and account is stored cleanly | Optional fallback payment flows incomplete |
 | M-PESA Daraja | Partial | Connect with sandbox Daraja credentials, verify callback URL, send STK push, receive callback | Daraja credentials validate, connection becomes active, STK push succeeds, callback hits `/api/webhooks/mpesa` | Payment automation path incomplete |
 
 ---
@@ -148,7 +150,7 @@ Dobly is ready for public launch only when:
 - `npm run smoke` passes against the deployed app
 - `npm run typecheck` passes
 - `npm run build` passes in the deployment environment
-- Stripe checkout and webhook delivery are verified with live or sandbox-safe billing data
+- Paystack checkout/webhook and M-PESA callback delivery are verified with live or sandbox-safe billing data
 - All exposed providers have been tested at least once end-to-end
 - WhatsApp and M-PESA paths have real callback verification
 - Legal pages are present and acceptable for your operating jurisdictions

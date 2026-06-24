@@ -2,10 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
-import { BRAND } from "@/lib/brand";
-import { createClient } from "@/lib/supabase/client";
+import { useMemo } from "react";
 
 interface SignalMarkProps {
   className?: string;
@@ -21,153 +18,63 @@ interface Props {
   animatedMark?: boolean;
 }
 
-export function SignalMark({
-  className = "",
-  animated = false,
-}: SignalMarkProps) {
+export function SignalMark({ className = "", animated = false }: SignalMarkProps) {
   return (
-    <motion.svg
-      width="36"
-      height="36"
-      viewBox="0 0 80 80"
-      fill="none"
-      className={className}
-      initial={false}
-      animate={
-        animated
-          ? {
-              rotate: [0, 1.2, -1.2, 0],
-              y: [0, -1.5, 1, 0],
-              scale: [1, 1.015, 0.995, 1],
-            }
-          : undefined
-      }
-      transition={
-        animated
-          ? {
-              duration: 9.2,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "easeInOut",
-            }
-          : undefined
-      }
-      whileHover={animated ? "hover" : undefined}
-    >
-      <motion.path
-        d="M40 6 C60 6,74 20,74 40 C74 58,62 74,40 74 C24 74,8 62,6 44 C4 28,16 6,40 6Z"
-        stroke="#4D7AFF"
-        strokeWidth="3"
-        fill="rgba(77,122,255,0.1)"
-        variants={
-          animated
-            ? { hover: { scale: 1.03, filter: "drop-shadow(0 0 16px rgba(77,122,255,0.3))" } }
-            : undefined
-        }
-      />
-      <motion.path
-        d="M40 16 C55 16,64 26,64 40 C64 53,55 63,40 63 C28 63,18 55,17 43 C15 31,24 16,40 16Z"
-        stroke="rgba(77,122,255,0.22)"
-        strokeWidth="1"
-        fill="none"
-      />
-      <motion.ellipse
-        cx="40"
-        cy="40"
-        rx="23"
-        ry="14.5"
-        stroke="rgba(77,122,255,0.42)"
-        strokeWidth="2.2"
-        fill="none"
-        animate={
-          animated
-            ? {
-                rotate: [0, 360],
-              }
-            : undefined
-        }
-        transition={
-          animated
-            ? {
-                duration: 7.4,
-                repeat: Number.POSITIVE_INFINITY,
-                ease: "linear",
-              }
-            : undefined
-        }
-        variants={
-          animated
-            ? {
-                hover: {
-                  stroke: "rgba(77,122,255,0.55)",
-                },
-              }
-            : undefined
-        }
-      />
-      <motion.circle
-        cx="40"
-        cy="40"
-        r="9.5"
-        fill="rgba(255,176,32,0.18)"
-        animate={animated ? { opacity: [0.18, 0.34, 0.18], scale: [1, 1.08, 1] } : undefined}
-        variants={animated ? { hover: { scale: [1, 1.12, 1] } } : undefined}
-        transition={
-          animated
-            ? { duration: 3.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }
-            : undefined
-        }
-      />
-      <motion.circle
-        cx="40"
-        cy="40"
-        r="5.5"
-        fill="#FFB020"
-        animate={animated ? { scale: [1, 1.07, 1], opacity: [1, 0.88, 1] } : undefined}
-        variants={animated ? { hover: { scale: [1, 1.18, 1] } } : undefined}
-        transition={
-          animated
-            ? { duration: 2.7, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }
-            : undefined
-        }
-      />
-      <motion.circle
-        cx="31"
-        cy="26"
-        r="2.5"
-        fill="white"
-        opacity="0.22"
-        animate={animated ? { opacity: [0.12, 0.9, 0.18], scale: [1, 1.1, 1] } : undefined}
-        variants={animated ? { hover: { opacity: [0.18, 0.34, 0.18] } } : undefined}
-        transition={
-          animated
-            ? { duration: 1.8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }
-            : undefined
-        }
-      />
-      <motion.circle
-        cx="63"
-        cy="40"
-        r="4.2"
-        fill="#D8E7FF"
-        animate={
-          animated
-            ? {
-                rotate: [0, 360],
-                transformOrigin: "40px 40px",
-              }
-            : undefined
-        }
-        transition={
-          animated
-            ? {
-                duration: 7.4,
-                repeat: Number.POSITIVE_INFINITY,
-                ease: "linear",
-              }
-            : undefined
-        }
-      />
-    </motion.svg>
+    <span className={`relative block ${className}`} aria-hidden="true">
+      <svg viewBox="0 0 32 32" fill="none" className="relative h-full w-full">
+        <defs>
+          <linearGradient id="doblyGlassFill" x1="0" y1="4" x2="26" y2="29" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stopColor="rgba(255,255,255,0.92)" />
+            <stop offset="0.18" stopColor="rgba(255,255,255,0.55)" />
+            <stop offset="0.42" stopColor="rgba(255,255,255,0.12)" />
+            <stop offset="1" stopColor="rgba(196,80,26,0.35)" />
+          </linearGradient>
+          <linearGradient id="doblyGlassStroke" x1="0" y1="4" x2="26" y2="29" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stopColor="rgba(255,255,255,0.85)" />
+            <stop offset="1" stopColor="rgba(196,80,26,0.48)" />
+          </linearGradient>
+        </defs>
+        <rect
+          x="0.5"
+          y="4"
+          width="20"
+          height="6.5"
+          rx="2"
+          fill="url(#doblyGlassFill)"
+          stroke="url(#doblyGlassStroke)"
+          strokeWidth="0.55"
+          opacity="var(--bar1-op,0.30)"
+          className={animated ? "animate-[barIn_1.6s_cubic-bezier(0.4,0,0.2,1)_infinite]" : ""}
+          style={{ filter: "drop-shadow(0 2px 8px rgba(196,80,26,0.18))" }}
+        />
+        <rect
+          x="3"
+          y="13"
+          width="20"
+          height="6.5"
+          rx="2"
+          fill="url(#doblyGlassFill)"
+          stroke="url(#doblyGlassStroke)"
+          strokeWidth="0.55"
+          opacity="var(--bar2-op,0.65)"
+          className={animated ? "animate-[barIn_1.6s_cubic-bezier(0.4,0,0.2,1)_infinite]" : ""}
+          style={animated ? { animationDelay: "0.12s", filter: "drop-shadow(0 2px 8px rgba(196,80,26,0.18))" } : { filter: "drop-shadow(0 2px 8px rgba(196,80,26,0.18))" }}
+        />
+        <rect
+          x="6"
+          y="22"
+          width="20"
+          height="6.5"
+          rx="2"
+          fill="url(#doblyGlassFill)"
+          stroke="url(#doblyGlassStroke)"
+          strokeWidth="0.55"
+          opacity="var(--bar3-op,1)"
+          className={animated ? "animate-[barIn_1.6s_cubic-bezier(0.4,0,0.2,1)_infinite]" : ""}
+          style={animated ? { animationDelay: "0.24s", filter: "drop-shadow(0 2px 8px rgba(196,80,26,0.18))" } : { filter: "drop-shadow(0 2px 8px rgba(196,80,26,0.18))" }}
+        />
+      </svg>
+    </span>
   );
 }
 
@@ -181,20 +88,12 @@ export default function BrandLogo({
 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isSignedIn, setIsSignedIn] = useState(false);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setIsSignedIn(Boolean(data.user));
-    });
-  }, []);
 
   const resolvedHref = useMemo(() => {
     if (href) return href;
     if (pathname === "/") return "/";
-    return isSignedIn ? "/dashboard" : "/";
-  }, [href, isSignedIn, pathname]);
+    return pathname?.startsWith("/dashboard") || pathname?.startsWith("/admin") ? "/dashboard" : "/";
+  }, [href, pathname]);
 
   const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (href) return;
@@ -207,12 +106,14 @@ export default function BrandLogo({
 
   return (
     <Link href={resolvedHref} onClick={handleClick} className={`inline-flex items-center gap-3 ${className}`}>
-      <span className={markClassName}>
+      <span className={markClassName || "h-9 w-9"}>
         <SignalMark className="h-full w-full" animated={animatedMark} />
       </span>
       {showWordmark ? (
-        <span className={`font-display text-[1.05em] font-bold tracking-[-0.03em] text-[var(--text)] ${wordmarkClassName}`}>
-          {BRAND.name.toLowerCase()}
+        <span
+          className={`text-[1.06em] font-medium tracking-[-0.04em] text-[var(--dobly-text)] ${wordmarkClassName}`}
+        >
+          Dobly
         </span>
       ) : null}
     </Link>

@@ -3,6 +3,9 @@ import { getRequestIp } from "@/lib/api-security";
 import { rateLimits } from "@/lib/rate-limit";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { connectionCreateSchema } from "@/lib/validations";
+import { isConnectionProviderLaunchReady } from "@/lib/connection-catalog";
+
+const CONNECTION_PUBLIC_COLUMNS = "id,user_id,provider,label,status,account_identifier,scopes,metadata,created_at,updated_at";
 
 export async function GET() {
   const supabase = await createServerSupabaseClient();
@@ -21,7 +24,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("connections")
-    .select("*")
+    .select(CONNECTION_PUBLIC_COLUMNS)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -29,7 +32,10 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to load connections" }, { status: 500 });
   }
 
-  return NextResponse.json({ connections: data ?? [] });
+  return NextResponse.json(
+    { connections: data ?? [] },
+    { headers: { "Cache-Control": "no-store, max-age=0", Pragma: "no-cache" } }
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -52,6 +58,9 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Provider and label are required" }, { status: 400 });
   }
+  if (!isConnectionProviderLaunchReady(parsed.data.provider)) {
+    return NextResponse.json({ error: "This provider is not available in the current Dobly release." }, { status: 404 });
+  }
 
   const { data, error } = await supabase
     .from("connections")
@@ -59,17 +68,20 @@ export async function POST(req: NextRequest) {
       user_id: user.id,
       provider: parsed.data.provider,
       label: parsed.data.label,
-      status: parsed.data.status ?? "pending",
+      status: "pending",
       account_identifier: parsed.data.accountIdentifier ?? null,
       scopes: parsed.data.scopes ?? [],
       metadata: parsed.data.metadata ?? {},
     })
-    .select("*")
+    .select(CONNECTION_PUBLIC_COLUMNS)
     .single();
 
   if (error || !data) {
     return NextResponse.json({ error: "Failed to create connection" }, { status: 500 });
   }
 
-  return NextResponse.json({ connection: data });
+  return NextResponse.json(
+    { connection: data },
+    { headers: { "Cache-Control": "no-store, max-age=0", Pragma: "no-cache" } }
+  );
 }

@@ -166,3 +166,54 @@ export const hubspotCreateTaskExecutor: ConnectorExecutor = {
     };
   },
 };
+
+export const hubspotCreateNoteExecutor: ConnectorExecutor = {
+  id: "native.hubspot.create-note",
+  async execute(context) {
+    const { accessToken } = await getHubSpotConnection(
+      context.workflow.user_id,
+      typeof context.config.connectionId === "string" ? context.config.connectionId : undefined
+    );
+
+    const noteBody = String(context.config.body ?? context.config.note ?? context.step.description).trim();
+    const contactId = String(context.config.contactId ?? "").trim();
+
+    if (!noteBody) {
+      throw new Error("HubSpot create note requires note body.");
+    }
+
+    const response = await fetch("https://api.hubapi.com/crm/v3/objects/notes", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        properties: {
+          hs_note_body: noteBody,
+          hs_timestamp: new Date().toISOString(),
+        },
+        associations: contactId
+          ? [
+              {
+                to: { id: contactId },
+                types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: 202 }],
+              },
+            ]
+          : undefined,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(`HubSpot create note failed: ${JSON.stringify(data)}`);
+    }
+
+    return {
+      provider: "hubspot",
+      service: "note",
+      noteId: data.id ?? null,
+      contactId: contactId || null,
+    };
+  },
+};

@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import ConnectionsTab from "@/components/dashboard/ConnectionsTab";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { PlanId } from "@/types";
@@ -18,7 +18,7 @@ export default async function ConnectionsPage() {
     .single();
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="connections-page mx-auto max-w-6xl">
       <ConnectionsTab planId={(profile?.plan ?? "free") as PlanId} />
     </div>
   );

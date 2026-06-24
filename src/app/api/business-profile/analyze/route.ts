@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
     let draft: Record<string, unknown>;
     try {
       draft = await generateBusinessProfileDraft({
+        userId: user.id,
         websiteUrl: website_url,
         businessName: business_name,
         websiteContent,

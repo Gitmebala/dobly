@@ -75,9 +75,29 @@ export const stripeCreateInvoiceExecutor: ConnectorExecutor = {
     const customerId = String(context.config.customerId ?? "").trim();
     const amount = Number(context.config.amount ?? 0);
     const currency = String(context.config.currency ?? "usd").toLowerCase();
+    const description = String(context.config.description ?? "Dobly invoice").trim();
 
     if (!customerId || !amount) {
       throw new Error("Stripe create invoice requires customerId and amount.");
+    }
+
+    const invoiceItemResponse = await fetch("https://api.stripe.com/v1/invoiceitems", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        customer: customerId,
+        currency,
+        amount: String(Math.round(amount)),
+        description,
+      }).toString(),
+    });
+
+    const invoiceItemData = await invoiceItemResponse.json().catch(() => ({}));
+    if (!invoiceItemResponse.ok) {
+      throw new Error(`Stripe create invoice item failed: ${JSON.stringify(invoiceItemData)}`);
     }
 
     const response = await fetch("https://api.stripe.com/v1/invoices", {
@@ -88,8 +108,12 @@ export const stripeCreateInvoiceExecutor: ConnectorExecutor = {
       },
       body: new URLSearchParams({
         customer: customerId,
-        currency,
-        description: String(context.config.description ?? "Invoice"),
+        auto_advance: String(context.config.autoAdvance ?? true),
+        collection_method:
+          typeof context.config.collectionMethod === "string"
+            ? context.config.collectionMethod
+            : "send_invoice",
+        description,
       }).toString(),
     });
 
@@ -98,12 +122,26 @@ export const stripeCreateInvoiceExecutor: ConnectorExecutor = {
       throw new Error(`Stripe create invoice failed: ${JSON.stringify(data)}`);
     }
 
+    let finalized = data;
+    if (context.config.finalize !== false && data.id) {
+      const finalizeResponse = await fetch(`https://api.stripe.com/v1/invoices/${data.id}/finalize`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${secret}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
+      finalized = await finalizeResponse.json().catch(() => data);
+    }
+
     return {
       provider: "stripe",
       service: "invoice",
-      invoiceId: data.id ?? null,
-      status: data.status ?? null,
-      amount: data.amount_due ?? null,
+      invoiceId: finalized.id ?? data.id ?? null,
+      status: finalized.status ?? data.status ?? null,
+      amount: finalized.amount_due ?? data.amount_due ?? null,
+      hostedInvoiceUrl: finalized.hosted_invoice_url ?? null,
+      invoiceItemId: invoiceItemData.id ?? null,
     };
   },
 };

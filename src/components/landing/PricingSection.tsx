@@ -3,12 +3,13 @@ import GlassCard from "@/components/shared/GlassCard";
 
 const tiers = [
   {
-    title: "Standard Execution",
-    price: "$4 / 1,000 runs",
-    body: "Deterministic automation. No AI involvement at runtime. Fast, reliable, predictable.",
+    title: "Kenya Launch Execution",
+    price: "KES-first",
+    body: "Paystack, M-PESA, WhatsApp, local SMS, and guarded local voice before any expensive provider sprawl.",
     points: [
       "Unlimited workflow creation",
-      "All integrations included",
+      "Paystack checkout and M-PESA paths",
+      "WhatsApp and local SMS routes",
       "Retry logic and failure logs",
       "Plain-English status updates",
       "Approval flows",
@@ -16,12 +17,13 @@ const tiers = [
     featured: false,
   },
   {
-    title: "Intelligence Execution",
-    price: "$6 / 100 intelligence calls",
-    body: "When Dobly needs to make a judgment call mid-run - classify, decide, summarize - this is what runs.",
+    title: "Research + Intelligence",
+    price: "Capped by plan",
+    body: "When Dobly needs to research, classify, decide, summarize, or write the next move, Anthropic does the heavy thinking with usage controls.",
     points: [
-      "Everything in Standard",
+      "Everything in Kenya Launch",
       "AI decision steps in workflow",
+      "Market and customer research",
       "Dynamic branching based on content",
       "Smart retry decisions",
       "Contextual failure explanations",
@@ -35,10 +37,10 @@ export default function PricingSection() {
     <section id="pricing" className="relative z-[1] py-28">
       <div className="mx-auto w-full max-w-[1200px] px-4 text-center sm:px-6 lg:px-8">
         <h2 className="font-display text-[48px] font-bold tracking-[-0.04em] text-white">
-          Simple pricing. Fair by design.
+          Kenya-first pricing. Fair by design.
         </h2>
         <p className="mx-auto mt-4 max-w-[720px] text-[16px] leading-8 text-[var(--text-secondary)]">
-          Most workflows never touch AI mid-run. You pay for what actually happens.
+          Dobly can be wildly capable without wiring every provider on day one. You pay for the stack that actually ships: payments, messaging, voice, email, research, memory, and approvals.
         </p>
 
         <div className="mt-14 grid gap-6 md:grid-cols-2">
@@ -88,7 +90,7 @@ export default function PricingSection() {
 
               {tier.featured ? (
                 <div className="mt-5 text-[13px] text-[rgba(255,255,255,0.35)]">
-                  Intelligence calls are rare. Most workflows never need them.
+                  Intelligence calls are capped by plan. Research-heavy workflows can upgrade before they burn margin.
                 </div>
               ) : null}
             </GlassCard>

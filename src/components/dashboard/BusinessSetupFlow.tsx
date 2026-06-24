@@ -25,9 +25,9 @@ export function BusinessSetupFlow({
         animate={{ opacity: 1, y: 0 }}
         className="text-center"
       >
-        <h1 className="text-3xl font-bold text-white mb-3">Set up your business context</h1>
+        <h1 className="text-3xl font-bold text-white mb-3">Set up Kenya-first business context</h1>
         <p className="text-white/50 max-w-2xl mx-auto">
-          Dobly works best when it understands your business. You can either share your website for instant analysis, or manually add your details.
+          Dobly works best when it understands the offer, market, customers, policies, payment path, and tone. Share your website for research, or add the details manually.
         </p>
       </motion.div>
 
@@ -59,7 +59,7 @@ export function BusinessSetupFlow({
             </div>
 
             <p className="text-white/60 text-sm mb-6">
-              Share your website URL and Dobly will analyze it to automatically populate your business details in seconds.
+              Share your website URL and Dobly will research the business, offer, likely customer questions, payment flow, and launch gaps in seconds.
             </p>
 
             <div className="flex items-center justify-between">
@@ -95,7 +95,7 @@ export function BusinessSetupFlow({
             </div>
 
             <p className="text-white/60 text-sm mb-6">
-              Fill in your business details yourself. You can add everything from your business type to FAQs and policies.
+              Fill in the business details yourself, including FAQs, policies, M-PESA or Paystack payment notes, and the promises Dobly should never make without approval.
             </p>
 
             <div className="flex items-center justify-between">
@@ -122,7 +122,7 @@ export function BusinessSetupFlow({
             <div>
               <p className="text-sm text-white font-medium mb-1">Why this matters</p>
               <p className="text-sm text-white/60">
-                Dobly uses your business context to generate smarter automations, write better copy, and understand your workflows. The more accurate this is, the better your automations will be.
+                Dobly uses this context to research, reply, collect, route, and escalate like someone who knows the business. Better context means fewer generic drafts and safer live automation.
               </p>
             </div>
           </div>

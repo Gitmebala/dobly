@@ -39,7 +39,7 @@ const sectors = [
   {
     icon: Building2,
     title: "Ops teams",
-    summary: "Keep recurring work moving across sales, support, and finance.",
+    summary: "Keep recurring work moving across sales, support, projects, and operations all day.",
     inputs: ["CRM events", "Support", "Reports"],
     outputs: ["Daily summary", "Escalation", "Team view"],
     quote: "Now we can see what is happening.",
@@ -150,7 +150,7 @@ export default function UseCases() {
                     <p className="text-sm leading-6 text-text-muted">{current.summary}</p>
                   </div>
                   <div className="mt-4 rounded-[1.25rem] border border-dashed border-accent/30 bg-accent-dim px-4 py-4 text-sm text-text">
-                    Fast to launch. Easy to trust.
+                    Built to keep moving while the owner is offline.
                   </div>
                 </div>
               </div>

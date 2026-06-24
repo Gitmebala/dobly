@@ -2,6 +2,26 @@ import type { DoblySkillManifest } from "@/lib/skills/types";
 
 export const DOBLY_SKILL_MANIFESTS: DoblySkillManifest[] = [
   {
+    key: "plan_task_breakdown",
+    title: "Plan Task Breakdown",
+    summary: "Turn a goal, trigger, and memory into a concise execution plan.",
+    executionType: "intelligence",
+    riskLevel: "low",
+    requiredConnectors: [],
+    inputSchema: [
+      { key: "task_description", type: "string", required: true, description: "Requested work." },
+      { key: "objective", type: "string", required: false, description: "Desired outcome." },
+      { key: "trigger", type: "object", required: false, description: "Current trigger payload." },
+      { key: "memory", type: "object", required: false, description: "Stored workflow memory." },
+    ],
+    outputSchema: [
+      { key: "focus", type: "string", required: true, description: "Primary focus for this run." },
+      { key: "next_actions", type: "array", required: true, description: "Suggested action sequence." },
+      { key: "risk_flags", type: "array", required: true, description: "Key risks or unknowns." },
+    ],
+    retryable: true,
+  },
+  {
     key: "send_whatsapp_confirmation",
     title: "Send WhatsApp Confirmation",
     summary: "Prepare a structured confirmation message for WhatsApp delivery.",
@@ -47,6 +67,29 @@ export const DOBLY_SKILL_MANIFESTS: DoblySkillManifest[] = [
     ],
     outputSchema: [
       { key: "analysis", type: "string", required: true, description: "AI-generated insight or summary." },
+    ],
+    retryable: true,
+  },
+  {
+    key: "synthesize_work_report",
+    title: "Synthesize Work Report",
+    summary: "Generate a teammate-style report of what changed, what Dobly handled, and what matters next.",
+    executionType: "intelligence",
+    riskLevel: "low",
+    requiredConnectors: [],
+    inputSchema: [
+      { key: "workflow_title", type: "string", required: true, description: "Workflow title." },
+      { key: "workflow_description", type: "string", required: false, description: "Workflow description." },
+      { key: "objective", type: "string", required: false, description: "Operator or automation objective." },
+      { key: "report_style", type: "string", required: false, description: "brief, standard, or executive." },
+      { key: "step_outputs", type: "object", required: false, description: "Structured outputs." },
+      { key: "memory", type: "object", required: false, description: "Stored memory for context." },
+    ],
+    outputSchema: [
+      { key: "title", type: "string", required: true, description: "Report title." },
+      { key: "summary", type: "string", required: true, description: "Human-readable summary." },
+      { key: "changes_detected", type: "boolean", required: true, description: "Whether important change occurred." },
+      { key: "next_attention", type: "string", required: false, description: "Recommended next focus." },
     ],
     retryable: true,
   },

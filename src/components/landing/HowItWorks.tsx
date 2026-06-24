@@ -21,10 +21,10 @@ const steps = [
   },
   {
     id: "02",
-    title: "Dobly builds the flow",
-    body: "It connects the steps for you.",
-    panelTitle: "Dobly builds it",
-    panelItems: ["Message", "Update", "Notify"],
+    title: "Dobly builds the worker system",
+    body: "It maps the departments, tools, memory, and retries for you.",
+    panelTitle: "Dobly orchestrates it",
+    panelItems: ["Plan", "Route", "Retry"],
     icon: Orbit,
   },
   {
@@ -38,9 +38,9 @@ const steps = [
   {
     id: "04",
     title: "Run with confidence",
-    body: "See every run in one place.",
+    body: "See every run, escalation, and boundary in one place.",
     panelTitle: "Dobly keeps watch",
-    panelItems: ["Live status", "History", "Fixes"],
+    panelItems: ["Live status", "History", "Escalations"],
     icon: CheckCheck,
   },
 ];
@@ -74,7 +74,7 @@ export default function HowItWorks() {
           <div className="max-w-2xl">
             <div className="badge-muted mb-4">Command Surface</div>
             <h2 className="font-display text-4xl font-bold tracking-tight text-text sm:text-5xl">
-              From one sentence to a live workflow.
+              From one sentence to an always-on department.
             </h2>
           </div>
           <p className="max-w-xl text-base leading-7 text-text-muted">

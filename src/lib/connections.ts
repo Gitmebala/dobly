@@ -102,6 +102,32 @@ export async function getActiveConnectionForProvider(userId: string, provider: s
   return data as Connection;
 }
 
+export async function getActiveConnectionForAnyProvider(userId: string, providers: string[]) {
+  const admin = createAdminSupabaseClient();
+  const normalized = providers.map((provider) => provider.toLowerCase());
+  const { data, error } = await admin
+    .from("connections")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .order("updated_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    throw new Error("Failed to load active connections.");
+  }
+
+  const match = (data ?? []).find((connection: any) =>
+    normalized.some((provider) => String(connection.provider ?? "").toLowerCase().includes(provider))
+  );
+
+  if (!match) {
+    throw new Error(`No active connection found for ${providers.join(", ")}.`);
+  }
+
+  return match as Connection;
+}
+
 export async function getConnectionById(connectionId: string, userId?: string) {
   const admin = createAdminSupabaseClient();
   let query = admin.from("connections").select("*").eq("id", connectionId);
@@ -115,4 +141,16 @@ export async function getConnectionById(connectionId: string, userId?: string) {
   }
 
   return data as Connection;
+}
+
+export async function getConnectionExecutionAuth(params: {
+  userId: string;
+  providerIds: string[];
+  connectionId?: string | null;
+}) {
+  const connection = params.connectionId
+    ? await getConnectionById(params.connectionId, params.userId)
+    : await getActiveConnectionForAnyProvider(params.userId, params.providerIds);
+  const secrets = await getDecryptedConnectionSecrets(connection.id);
+  return { connection, secrets };
 }

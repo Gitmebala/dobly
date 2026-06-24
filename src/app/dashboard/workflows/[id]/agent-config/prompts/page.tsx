@@ -1,10 +1,15 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
+import type { AgentDepartment } from "@/types";
+
 interface PromptsForm {
+  profile?: {
+    department?: AgentDepartment;
+  };
   systemPrompt: string;
   conversationTone: "professional" | "friendly" | "empathetic" | "formal";
   behaviorRules: string[];
@@ -13,20 +18,70 @@ interface PromptsForm {
 }
 
 const TONE_OPTIONS = [
-  { value: "professional", label: "Professional", description: "Formal and business-like" },
-  { value: "friendly", label: "Friendly", description: "Warm and approachable" },
-  { value: "empathetic", label: "Empathetic", description: "Understanding and compassionate" },
-  { value: "formal", label: "Formal", description: "Strict and protocol-driven" },
-];
+  { value: "professional", label: "Professional", description: "Clear, steady, business-safe" },
+  { value: "friendly", label: "Friendly", description: "Warm, welcoming, and easy to talk to" },
+  { value: "empathetic", label: "Empathetic", description: "Calm, understanding, and reassuring" },
+  { value: "formal", label: "Formal", description: "Strict, careful, and policy-led" },
+] as const;
 
-const PROMPT_TEMPLATES = {
-  receptionist:
-    "You are a friendly and professional receptionist for [Company]. Your role is to greet callers warmly, gather their information, understand their needs, and route them to the appropriate department or person. Be helpful and efficient.",
-  support:
-    "You are a knowledgeable support agent for [Company]. Your role is to help customers troubleshoot issues, answer common questions, and escalate complex problems to specialists. Be patient, clear, and solution-focused.",
-  sales:
-    "You are a sales representative for [Company]. Your role is to qualify leads, understand customer needs, present relevant solutions, and schedule follow-up meetings. Be persuasive but respect customer boundaries.",
-  hr: "You are an HR assistant for [Company]. Your role is to answer employee questions about policies, benefits, time off, and onboarding. Be professional, accurate, and supportive.",
+const PROMPT_TEMPLATES: Record<
+  AgentDepartment,
+  {
+    label: string;
+    prompt: string;
+    rules: string[];
+  }
+> = {
+  front_desk: {
+    label: "Front Desk",
+    prompt:
+      "You are the front desk. Welcome callers warmly, understand why they are calling, capture any missing details, and either route, book, or escalate the next step cleanly. Never guess policies or availability.",
+    rules: [
+      "Keep the caller oriented and tell them what is happening next.",
+      "Confirm names, times, and contact details before routing or booking.",
+      "Escalate urgent, legal, or clearly risky situations immediately.",
+    ],
+  },
+  support_desk: {
+    label: "Support Desk",
+    prompt:
+      "You are the support desk. Clarify the issue, gather the facts, solve what is known and approved, and escalate technical or risky cases with a strong summary.",
+    rules: [
+      "Start by understanding the issue before offering a fix.",
+      "Never invent policy exceptions or refunds.",
+      "End with a clear recap of the next step.",
+    ],
+  },
+  sales_desk: {
+    label: "Sales Desk",
+    prompt:
+      "You are the sales desk. Qualify new inquiries, understand urgency and fit, and guide strong opportunities toward the next step without sounding pushy.",
+    rules: [
+      "Qualify before pitching.",
+      "Capture timing, goals, and seriousness where possible.",
+      "Never promise unapproved pricing, availability, or outcomes.",
+    ],
+  },
+  finance_desk: {
+    label: "Finance Desk",
+    prompt:
+      "You are the finance desk. Help callers with invoice, billing, and payment questions clearly and calmly while keeping the record accurate and escalating disputes fast.",
+    rules: [
+      "Confirm account or invoice details before discussing balances.",
+      "State payment facts clearly without sounding aggressive.",
+      "Escalate disputes, fraud, and policy exceptions immediately.",
+    ],
+  },
+  custom: {
+    label: "Custom",
+    prompt:
+      "Stay within the approved role, collect enough context to move the work forward, and escalate instead of guessing.",
+    rules: [
+      "Be clear about what you can and cannot do.",
+      "Collect the next best detail before acting.",
+      "Escalate when the request is risky, unclear, or out of scope.",
+    ],
+  },
 };
 
 export default function PromptsPage() {
@@ -43,7 +98,6 @@ export default function PromptsPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Load current config
   useEffect(() => {
     async function loadConfig() {
       try {
@@ -52,6 +106,7 @@ export default function PromptsPage() {
           const { agentConfig } = await response.json();
           if (agentConfig) {
             setForm({
+              profile: agentConfig.profile,
               systemPrompt: agentConfig.systemPrompt || "",
               conversationTone: agentConfig.conversationTone || "professional",
               behaviorRules: agentConfig.behaviorRules || [],
@@ -74,26 +129,27 @@ export default function PromptsPage() {
   }
 
   function addRule() {
-    if (newRule.trim()) {
-      setForm((current) => ({
-        ...current,
-        behaviorRules: [...current.behaviorRules, newRule.trim()],
-      }));
-      setNewRule("");
-    }
+    if (!newRule.trim()) return;
+    setForm((current) => ({
+      ...current,
+      behaviorRules: [...current.behaviorRules, newRule.trim()],
+    }));
+    setNewRule("");
   }
 
   function removeRule(index: number) {
     setForm((current) => ({
       ...current,
-      behaviorRules: current.behaviorRules.filter((_, i) => i !== index),
+      behaviorRules: current.behaviorRules.filter((_, currentIndex) => currentIndex !== index),
     }));
   }
 
-  function applyTemplate(template: string) {
+  function applyTemplate(department: AgentDepartment) {
+    const template = PROMPT_TEMPLATES[department];
     setForm((current) => ({
       ...current,
-      systemPrompt: template,
+      systemPrompt: template.prompt,
+      behaviorRules: template.rules,
     }));
   }
 
@@ -104,12 +160,12 @@ export default function PromptsPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          blueprint: {
-            definition: {
-              operator: {
-                agentConfig: form,
-              },
-            },
+          agentConfig: {
+            systemPrompt: form.systemPrompt,
+            conversationTone: form.conversationTone,
+            behaviorRules: form.behaviorRules,
+            maxResponseLength: form.maxResponseLength,
+            knowledgeBase: form.knowledgeBase,
           },
         }),
       });
@@ -123,106 +179,100 @@ export default function PromptsPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-8 text-text-muted">Loading configuration...</div>;
+    return <div className="py-8 text-center text-text-muted">Loading configuration...</div>;
   }
+
+  const department = form.profile?.department || "custom";
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-2xl font-semibold text-text">Prompts & Behavior</h2>
+        <h2 className="font-display text-2xl font-semibold text-text">Prompts & Handling Rules</h2>
         <p className="mt-2 text-text-muted">
-          Configure how your agent thinks, speaks, and behaves during conversations
+          This is where the desk becomes sharp. Shape how Dobly speaks, what it avoids, and how
+          it handles this role under pressure.
         </p>
       </div>
 
       <div className="space-y-6">
-        {/* System Prompt */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-text">System Prompt</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => applyTemplate(PROMPT_TEMPLATES.receptionist)}
-                className="text-xs text-accent hover:text-accent/80"
-              >
-                Receptionist
-              </button>
-              <button
-                onClick={() => applyTemplate(PROMPT_TEMPLATES.support)}
-                className="text-xs text-accent hover:text-accent/80"
-              >
-                Support
-              </button>
-              <button
-                onClick={() => applyTemplate(PROMPT_TEMPLATES.sales)}
-                className="text-xs text-accent hover:text-accent/80"
-              >
-                Sales
-              </button>
-              <button
-                onClick={() => applyTemplate(PROMPT_TEMPLATES.hr)}
-                className="text-xs text-accent hover:text-accent/80"
-              >
-                HR
-              </button>
-            </div>
+          <div className="mb-3 flex items-center justify-between">
+            <label className="block text-sm font-medium text-text">Desk Template</label>
+            <span className="rounded-full border border-border px-3 py-1 text-xs text-text-muted">
+              Current: {PROMPT_TEMPLATES[department].label}
+            </span>
           </div>
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(PROMPT_TEMPLATES) as AgentDepartment[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => applyTemplate(key)}
+                className="rounded-full border border-border px-3 py-2 text-xs text-text-muted transition hover:border-accent/50 hover:text-text"
+              >
+                Use {PROMPT_TEMPLATES[key].label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-text">System Prompt</label>
           <textarea
             value={form.systemPrompt}
             onChange={(e) => updateField("systemPrompt", e.target.value)}
-            placeholder="You are a helpful customer service agent..."
-            className="input min-h-[160px] font-mono text-sm"
+            placeholder="Define the desk role, what it should optimize for, and where it should stop."
+            className="input min-h-[180px] font-mono text-sm"
           />
           <p className="mt-2 text-xs text-text-muted">
-            This prompt defines the agent's personality, role, and constraints.
+            Keep this focused on the job, the boundaries, and the kind of next steps it should
+            prefer.
           </p>
         </div>
 
-        {/* Conversation Tone */}
         <div>
-          <label className="block text-sm font-medium text-text mb-3">Conversation Tone</label>
+          <label className="mb-3 block text-sm font-medium text-text">Conversation Tone</label>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {TONE_OPTIONS.map((option) => (
               <button
                 key={option.value}
-                onClick={() => updateField("conversationTone", option.value as any)}
+                onClick={() => updateField("conversationTone", option.value)}
                 className={`rounded-lg border-2 p-3 text-left transition-all ${
                   form.conversationTone === option.value
                     ? "border-accent bg-accent/10"
                     : "border-border hover:border-accent/50"
                 }`}
               >
-                <div className="font-medium text-sm text-text">{option.label}</div>
+                <div className="text-sm font-medium text-text">{option.label}</div>
                 <div className="mt-1 text-xs text-text-muted">{option.description}</div>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Response Length */}
         <div>
-          <label className="block text-sm font-medium text-text">Max Response Length</label>
+          <label className="block text-sm font-medium text-text">
+            Max Response Length: {form.maxResponseLength} chars
+          </label>
           <input
-            type="number"
+            type="range"
+            min="180"
+            max="1200"
+            step="20"
             value={form.maxResponseLength}
-            onChange={(e) => updateField("maxResponseLength", parseInt(e.target.value))}
-            className="input mt-2"
+            onChange={(e) => updateField("maxResponseLength", parseInt(e.target.value, 10))}
+            className="mt-2 w-full"
           />
-          <p className="mt-1 text-xs text-text-muted">Maximum characters per response</p>
         </div>
 
-        {/* Behavior Rules */}
         <div>
-          <label className="block text-sm font-medium text-text mb-3">Behavior Rules</label>
+          <label className="mb-3 block text-sm font-medium text-text">Behavior Rules</label>
           <div className="space-y-2">
             {form.behaviorRules.map((rule, index) => (
               <div
-                key={index}
+                key={`${rule}-${index}`}
                 className="flex items-center gap-2 rounded-lg border border-border bg-[rgba(255,255,255,0.02)] p-3"
               >
-                <div className="flex-1">
-                  <p className="text-sm text-text">{rule}</p>
-                </div>
+                <div className="flex-1 text-sm text-text">{rule}</div>
                 <button
                   onClick={() => removeRule(index)}
                   className="text-text-muted hover:text-red-400"
@@ -243,7 +293,7 @@ export default function PromptsPage() {
                   addRule();
                 }
               }}
-              placeholder="E.g., Always confirm details before proceeding..."
+              placeholder="Always confirm names and contact details before routing."
               className="input flex-1"
             />
             <button onClick={addRule} className="btn-secondary">
@@ -251,28 +301,22 @@ export default function PromptsPage() {
               Add Rule
             </button>
           </div>
-          <p className="mt-2 text-xs text-text-muted">Add specific behaviors or constraints</p>
         </div>
 
-        {/* Knowledge Base */}
         <div>
           <label className="block text-sm font-medium text-text">Knowledge Base Context</label>
           <textarea
             value={form.knowledgeBase}
             onChange={(e) => updateField("knowledgeBase", e.target.value)}
-            placeholder="Paste relevant company information, FAQs, or documentation..."
-            className="input mt-2 min-h-[120px] font-mono text-sm"
+            placeholder="Paste FAQs, service rules, office hours, product notes, or escalation guidance."
+            className="input mt-2 min-h-[140px] font-mono text-sm"
           />
-          <p className="mt-2 text-xs text-text-muted">
-            Provide reference material the agent can use
-          </p>
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div className="flex gap-3 border-t border-border pt-6">
         <button onClick={handleSave} disabled={saving} className="btn-primary">
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? "Saving..." : "Save Handling Rules"}
         </button>
         <button className="btn-ghost">Cancel</button>
       </div>

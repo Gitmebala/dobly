@@ -1,15 +1,15 @@
 const logos = [
-  "Google",
-  "Shopify",
+  "Paystack",
+  "M-PESA",
   "WhatsApp",
-  "Meta",
-  "Slack",
-  "Stripe",
-  "Notion",
-  "Microsoft",
-  "Airtable",
-  "Twilio",
-  "Zoom",
+  "Kenya SMS",
+  "Local Voice",
+  "Supabase",
+  "Anthropic",
+  "Resend",
+  "Canva",
+  "Google",
+  "Webhooks",
 ];
 
 export default function LogoBar() {
@@ -20,7 +20,7 @@ export default function LogoBar() {
       <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8">
         <div className="h-px bg-[rgba(255,255,255,0.05)]" />
         <div className="py-8 text-center font-mono text-[12px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.3)]">
-          Works with the tools you already use
+          Kenya-first launch stack, optional tools when needed
         </div>
         <div className="overflow-hidden">
           <div className="marquee-track flex min-w-max items-center gap-10">

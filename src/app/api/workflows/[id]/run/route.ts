@@ -79,45 +79,69 @@ export async function POST(
     );
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("plan")
-    .eq("id", user.id)
-    .single();
-
-  const executionAllowance = await canConsumeStandardExecution(
-    user.id,
-    (profile?.plan ?? "free") as "free" | "starter" | "pro" | "agency"
-  );
-
-  if (!executionAllowance.allowed) {
-    return NextResponse.json<ApiError>(
-      {
-        error: `This automation is paused because you've used your ${executionAllowance.usage.standard_executions_limit} standard executions this month. Upgrade to continue and replay immediately.`,
-        code: "EXECUTION_LIMIT_REACHED",
-      },
-      { status: 403 }
-    );
-  }
-
   const rawBody = await req.json().catch(() => ({}));
-  const parsedPayload = triggerPayloadSchema.safeParse(rawBody);
+  const requestMode =
+    rawBody && typeof rawBody === "object" && "mode" in rawBody ? String((rawBody as Record<string, unknown>).mode ?? "") : "";
+  const dryRun = requestMode === "dry_run";
+  const payloadSource =
+    rawBody && typeof rawBody === "object" && "payload" in rawBody
+      ? (rawBody as Record<string, unknown>).payload
+      : rawBody;
+  const parsedPayload = triggerPayloadSchema.safeParse(payloadSource);
 
   if (!parsedPayload.success) {
     return NextResponse.json<ApiError>({ error: "Invalid trigger payload" }, { status: 400 });
   }
 
+  if (!dryRun) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .single();
+
+    const executionAllowance = await canConsumeStandardExecution(
+      user.id,
+        (profile?.plan ?? "free") as "free" | "starter" | "operator" | "command" | "business"
+    );
+
+    if (!executionAllowance.allowed) {
+      return NextResponse.json<ApiError>(
+        {
+          error: `This automation is paused because you've used your ${executionAllowance.usage.standard_executions_limit} standard executions this month. Upgrade to continue and replay immediately.`,
+          code: "EXECUTION_LIMIT_REACHED",
+        },
+        { status: 403 }
+      );
+    }
+  }
+
   try {
     const job = await enqueueWorkflowRun({
       workflow: workflow as Workflow,
-      triggerPayload: parsedPayload.data,
+      triggerPayload: {
+        ...parsedPayload.data,
+        mode: dryRun ? "dry_run" : "live",
+      },
+      dryRun,
     });
 
     const processed = await processQueue(1, "dobly-manual-runner", [job.id]);
+    const { data: latestRun } = await supabase
+      .from("workflow_runs")
+      .select("*")
+      .eq("workflow_id", id)
+      .eq("user_id", user.id)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .single();
+
     return NextResponse.json({
       accepted: true,
       job,
       processed,
+      mode: dryRun ? "dry_run" : "live",
+      run: latestRun ?? null,
     });
   } catch (error) {
     return NextResponse.json<ApiError>(

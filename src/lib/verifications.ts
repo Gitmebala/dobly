@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { Resend } from "resend";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { upsertConnection } from "@/lib/connections";
+import { startDoblyPhoneVerification } from "@/lib/providers/dobly-comms";
 import type { Connection, ConnectionVerification } from "@/types";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -156,6 +157,125 @@ export async function verifyWhatsappOtp(input: {
 
   if (connectionError || !connectionData) {
     throw new Error("Failed to activate WhatsApp connection.");
+  }
+
+  return connectionData as Connection;
+}
+
+export async function requestPhoneOtp(input: {
+  userId: string;
+  provider?: string;
+  label: string;
+  destination: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const provider = input.provider ?? "kenya_local_comms";
+  const code = randomCode();
+  const delivery = await startDoblyPhoneVerification({
+    phoneNumber: input.destination,
+    friendlyName: input.label,
+    code,
+  });
+
+  const connection = await upsertConnection({
+    userId: input.userId,
+    provider,
+    label: input.label,
+    status: "pending",
+    accountIdentifier: input.destination,
+    metadata: {
+      ...(input.metadata ?? {}),
+      verification_channel: "sms",
+      telecom_provider: delivery.provider,
+      verification_method: delivery.method,
+      provider_reference_id: delivery.providerReferenceId,
+    },
+  });
+
+  const verification = await insertVerification({
+    user_id: input.userId,
+    connection_id: connection.id,
+    provider,
+    channel: "sms",
+    verification_type: "otp",
+    destination: input.destination,
+    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    metadata: {
+      ...(input.metadata ?? {}),
+      telecom_provider: delivery.provider,
+      verification_method: delivery.method,
+      provider_reference_id: delivery.providerReferenceId,
+    },
+    code,
+  });
+
+  return {
+    connection,
+    verification,
+    delivery,
+    developmentCodePreview: process.env.NODE_ENV !== "production" ? code : null,
+  };
+}
+
+export async function verifyPhoneOtp(input: {
+  userId: string;
+  verificationId: string;
+  code: string;
+}) {
+  const admin = createAdminSupabaseClient();
+  const { data, error } = await admin
+    .from("connection_verifications")
+    .select("*")
+    .eq("id", input.verificationId)
+    .eq("user_id", input.userId)
+    .single();
+
+  if (error || !data) {
+    throw new Error("Verification not found.");
+  }
+
+  const verification = data as ConnectionVerification;
+  if (verification.status !== "pending") {
+    throw new Error("This verification is no longer active.");
+  }
+  if (new Date(verification.expires_at).getTime() < Date.now()) {
+    await admin.from("connection_verifications").update({ status: "expired" }).eq("id", verification.id);
+    throw new Error("This verification code has expired.");
+  }
+  if ((verification.attempts ?? 0) >= 5) {
+    await admin.from("connection_verifications").update({ status: "cancelled" }).eq("id", verification.id);
+    throw new Error("Too many incorrect attempts. Request a new code.");
+  }
+  if (hashValue(input.code) !== verification.code_hash) {
+    await admin
+      .from("connection_verifications")
+      .update({ attempts: (verification.attempts ?? 0) + 1 })
+      .eq("id", verification.id);
+    throw new Error("That code is not valid.");
+  }
+
+  await admin
+    .from("connection_verifications")
+    .update({ status: "verified", verified_at: new Date().toISOString() })
+    .eq("id", verification.id);
+
+  const { data: connectionData, error: connectionError } = await admin
+    .from("connections")
+    .update({
+      status: "active",
+      metadata: {
+        ...(verification.metadata ?? {}),
+        verification_channel: "sms",
+        verified_at: new Date().toISOString(),
+      },
+    })
+    .eq("id", verification.connection_id)
+    .eq("user_id", input.userId)
+    .select("*")
+    .single();
+
+  if (connectionError || !connectionData) {
+    throw new Error("Failed to activate phone connection.");
   }
 
   return connectionData as Connection;

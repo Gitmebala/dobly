@@ -1,6 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateOAuthUrl, completeOAuthFlow } from "@/lib/oauth-service";
+import { getRequestIp } from "@/lib/api-security";
+import { rateLimits } from "@/lib/rate-limit";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import crypto from "crypto";
+
+const OAUTH_COOKIE_PREFIX = "dobly_oauth_";
+const OAUTH_COOKIE_TTL_SECONDS = 10 * 60;
+
+type OAuthStatePayload = {
+  state: string;
+  userId: string;
+  label: string;
+  codeVerifier?: string;
+};
+
+function getCookieName(provider: string) {
+  return `${OAUTH_COOKIE_PREFIX}${provider}`;
+}
+
+function parseOauthCookie(raw: string | undefined): OAuthStatePayload | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as OAuthStatePayload;
+  } catch {
+    return null;
+  }
+}
+
+function base64Url(buffer: Buffer) {
+  return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function createPkcePair() {
+  const codeVerifier = base64Url(crypto.randomBytes(48));
+  const codeChallenge = base64Url(crypto.createHash("sha256").update(codeVerifier).digest());
+  return { codeVerifier, codeChallenge };
+}
 
 /**
  * POST /api/oauth/[provider]/start
@@ -8,21 +44,58 @@ import crypto from "crypto";
  */
 export async function POST(request: NextRequest, { params }: { params: { provider: string } }) {
   try {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rl = rateLimits.oauth(user.id || getRequestIp(request));
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Too many OAuth attempts." }, { status: 429 });
+    }
+
     const { provider } = params;
-    const { label, redirectUrl } = await request.json();
+    const body = await request.json().catch(() => ({}));
+    const requestedLabel =
+      typeof body?.label === "string" && body.label.trim().length > 0
+        ? body.label.trim().slice(0, 120)
+        : `${provider} Connection`;
 
     // Generate state token
     const state = crypto.randomBytes(32).toString("hex");
 
-    // Store state in session (in production, use Redis or secure session store)
-    // For now, return state to client to send back in callback
-    const oauthUrl = generateOAuthUrl(provider, state);
-
-    return NextResponse.json({
+    const pkce = provider === "canva" ? createPkcePair() : null;
+    const oauthUrl = generateOAuthUrl(
+      provider,
+      state,
+      pkce
+        ? {
+            code_challenge: pkce.codeChallenge,
+            code_challenge_method: "S256",
+          }
+        : undefined,
+    );
+    const response = NextResponse.json({
       oauth_url: oauthUrl,
       state,
       redirect_to: oauthUrl,
     });
+
+    response.cookies.set({
+      name: getCookieName(provider),
+      value: JSON.stringify({ state, userId: user.id, label: requestedLabel, codeVerifier: pkce?.codeVerifier }),
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: OAUTH_COOKIE_TTL_SECONDS,
+    });
+
+    return response;
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "OAuth start failed" },
@@ -55,36 +128,71 @@ export async function GET(request: NextRequest, { params }: { params: { provider
       );
     }
 
-    // In production, verify state matches stored state
-    // Get user ID from session
-    const userId = request.headers.get("x-user-id") || "user_placeholder";
+    const cookieName = getCookieName(provider);
+    const oauthState = parseOauthCookie(request.cookies.get(cookieName)?.value);
+    if (!oauthState || oauthState.state !== state || !oauthState.userId) {
+      const errorUrl = new URL(
+        "/dashboard/connections",
+        process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin
+      );
+      errorUrl.searchParams.set("error", "OAuth session expired or invalid. Please try again.");
+      errorUrl.searchParams.set("provider", provider);
+      const response = NextResponse.redirect(errorUrl.toString());
+      response.cookies.delete(cookieName);
+      return response;
+    }
+
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user || user.id !== oauthState.userId) {
+      const errorUrl = new URL(
+        "/dashboard/connections",
+        process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin
+      );
+      errorUrl.searchParams.set("error", "Sign in with the account that started this connection, then try again.");
+      errorUrl.searchParams.set("provider", provider);
+      const response = NextResponse.redirect(errorUrl.toString());
+      response.cookies.delete(cookieName);
+      return response;
+    }
 
     // Complete OAuth flow
     const result = await completeOAuthFlow({
-      userId,
+      userId: oauthState.userId,
       provider,
       code,
-      label: `${provider} Connection`,
+      label: oauthState.label,
       ipAddress: request.headers.get("x-forwarded-for") || "unknown",
       userAgent: request.headers.get("user-agent") || "",
+      additionalParams: oauthState.codeVerifier ? { code_verifier: oauthState.codeVerifier } : undefined,
     });
 
     // Redirect to success page
-    const redirectUrl = new URL("/dashboard/connections", process.env.NEXT_PUBLIC_APP_URL);
+    const redirectUrl = new URL(
+      "/dashboard/connections",
+      process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin
+    );
     redirectUrl.searchParams.set("connected", provider);
     redirectUrl.searchParams.set("connectionId", result.connectionId);
 
-    return NextResponse.redirect(redirectUrl.toString());
+    const response = NextResponse.redirect(redirectUrl.toString());
+    response.cookies.delete(cookieName);
+    return response;
   } catch (error) {
     console.error(`OAuth callback error for ${params.provider}:`, error);
 
     const errorUrl = new URL(
       "/dashboard/connections",
-      process.env.NEXT_PUBLIC_APP_URL
+      process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin
     );
     errorUrl.searchParams.set("error", error instanceof Error ? error.message : "Authentication failed");
     errorUrl.searchParams.set("provider", params.provider);
 
-    return NextResponse.redirect(errorUrl.toString());
+    const response = NextResponse.redirect(errorUrl.toString());
+    response.cookies.delete(getCookieName(params.provider));
+    return response;
   }
 }
