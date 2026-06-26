@@ -37,7 +37,6 @@
     "@anthropic-ai/sdk": "^0.39.0",
     "@deepgram/sdk": "^5.1.0",
     "@next/swc-wasm-nodejs": "^15.5.19",
-    "@next/swc-win32-x64-msvc": "^15.5.19",
     "@pinecone-database/pinecone": "^7.2.0",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.2",
