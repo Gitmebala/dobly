@@ -72,7 +72,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@remotion/cli": "^4.0.459",
+    "@remotion/cli": "^4.0.484",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
