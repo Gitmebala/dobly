@@ -67,7 +67,7 @@ export default async function ActivityPage() {
           <h1>Activity</h1>
           <p className="ref-subtitle">A readable record of what changed, who moved it, and what deserves attention next.</p>
         </div>
-        <Link href="/dashboard/map" className="ref-button"><Network size={16} /> View on map</Link>
+        <Link href="/dashboard/coworkers" className="ref-button"><Network size={16} /> Open coworkers</Link>
       </header>
 
       <section className="activity-summary">

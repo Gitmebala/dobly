@@ -352,7 +352,7 @@ export default function GeneratePage() {
                 <p className="text-xs uppercase tracking-[0.16em] text-text-dim">Templates</p>
                 <p className="mt-1 text-sm text-text-muted">Fast starts, still editable.</p>
               </div>
-              <Link href="/dashboard/templates" className="text-sm text-text-muted hover:text-text">
+              <Link href="/dashboard/coworkers?create=true" className="text-sm text-text-muted hover:text-text">
                 View all
               </Link>
             </div>

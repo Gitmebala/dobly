@@ -294,6 +294,37 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
   useEffect(() => {
     if (dateFilter) listRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [dateFilter]);
+
+  useEffect(() => {
+    // The tape stays live: while the tab is visible, pull fresh work
+    // every 25s so the coworker's activity appears without a reload.
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible" && !isPending) router.refresh();
+    }, 25000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && !isPending) router.refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [router, isPending]);
+
+  useEffect(() => {
+    // Server refreshes bring new props; fold them into local state —
+    // but never mid-send, or the optimistic message would vanish.
+    if (!isPending) setMessages(props.messages);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.messages]);
+
+  useEffect(() => {
+    setApprovals(props.approvals);
+  }, [props.approvals]);
+
+  useEffect(() => {
+    setArtifacts(props.artifacts);
+  }, [props.artifacts]);
   const handoffTimeline = useMemo(() => {
     const messageEntries = messages
       .filter((message) => message.metadata?.handoff)
@@ -631,6 +662,12 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                 rows={3}
                 placeholder={`Tell ${props.operator.name} what changed…`}
                 className="ledger-composer-input"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    if (!isPending && prompt.trim().length >= 2) sendPrompt();
+                  }
+                }}
               />
               <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
                 <input

@@ -11,20 +11,17 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleHelp,
-  Compass,
   Files,
   FolderKanban,
   Home,
   Inbox,
-  LayoutGrid,
   Link2,
   ListTodo,
   Menu,
   MoreHorizontal,
-  Network,
   RadioTower,
+  Search,
   Settings,
-  Sparkles,
   Users,
   WalletCards,
   Workflow,
@@ -164,6 +161,22 @@ export default function DoblySidebar({
           <span className="dobly-mark" aria-hidden="true">D</span>
           <span className="dobly-brand-name">Dobly</span>
         </Link>
+
+        <button
+          type="button"
+          className="dobly-palette-trigger"
+          onClick={() =>
+            window.dispatchEvent(
+              new KeyboardEvent("keydown", { key: "k", metaKey: true, ctrlKey: true, bubbles: true }),
+            )
+          }
+          aria-label="Search pages and coworkers"
+          title="Search (Ctrl+K)"
+        >
+          <Search className="dobly-nav-icon" />
+          <span className="dobly-nav-label">Search</span>
+          <code>⌘K</code>
+        </button>
 
         <nav className="dobly-nav-scroll" aria-label="Workspace navigation">
           <span className="dobly-nav-eyebrow">Workspace</span>

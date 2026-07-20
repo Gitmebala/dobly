@@ -3,6 +3,9 @@ import { Calendar, TrendingUp, AlertTriangle, CheckCircle2, Clock, ArrowRight } 
 import { getBriefings, getOrCreateLatestBriefing } from "@/lib/briefings/service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+export const metadata = { title: "Briefings" };
+
+
 function displayTitle(item: any, fallback: string) {
   return item?.title || item?.action || item?.type || item?.reason || fallback;
 }

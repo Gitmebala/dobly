@@ -3,6 +3,9 @@ import ConnectionsTab from "@/components/dashboard/ConnectionsTab";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { PlanId } from "@/types";
 
+export const metadata = { title: "Connections" };
+
+
 export default async function ConnectionsPage() {
   const supabase = await createServerSupabaseClient();
   const {

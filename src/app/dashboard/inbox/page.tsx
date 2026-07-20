@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import WorkspaceInboxClient from "@/components/dashboard/WorkspaceInboxClient";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+export const metadata = { title: "Inbox" };
+
+
 export default async function InboxPage() {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();

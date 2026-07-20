@@ -7,6 +7,9 @@ import { listDoblyOperators, type OperatorWithLoops } from "@/lib/dobly-operator
 import { listOperatorChat } from "@/lib/operator-chat";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+export const metadata = { title: "Coworkers" };
+
+
 export default async function CoworkersPage({
   searchParams,
 }: {
@@ -37,7 +40,7 @@ export default async function CoworkersPage({
           <p>{activeOperators.length} active / {operators.length} total</p>
         </div>
         <div className="coworker-console-header-actions">
-          <Link href="/dashboard/departments"><Building2 /> Departments</Link>
+          <Link href="/dashboard/workflows"><Building2 /> Loops</Link>
           <Link href="/dashboard/coworkers?create=true" className="primary"><Plus /> New coworker</Link>
         </div>
       </header>
@@ -57,15 +60,14 @@ export default async function CoworkersPage({
               <div className="coworker-roster-empty">
                 <Bot />
                 <strong>No coworkers yet</strong>
-                <span>Create the first role you want handled.</span>
+                <span>Describe a job — inbound leads, bookkeeping, market watch — and Dobly proposes who to hire.</span>
               </div>
             ) : null}
           </nav>
 
           <footer className="coworker-roster-footer">
-            <Link href="/dashboard/departments"><Building2 /> Departments</Link>
-            <Link href="/dashboard/pods"><Boxes /> Pods</Link>
-            <Link href="/dashboard/team"><Users /> People</Link>
+            <Link href="/dashboard/workflows"><Boxes /> Loops</Link>
+            <Link href="/dashboard/approvals"><Users /> Approvals</Link>
           </footer>
         </aside>
 

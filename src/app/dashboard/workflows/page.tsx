@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { ArrowRight, GitBranch, Plus } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+export const metadata = { title: "Loops" };
+
+
 export default async function WorkflowsPage() {
   const supabase = await createServerSupabaseClient();
   const {

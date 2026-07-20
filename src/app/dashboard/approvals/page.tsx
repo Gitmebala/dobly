@@ -6,6 +6,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { buildHomebaseDashboardData } from "@/lib/office/homebase";
 import { listRuntimeApprovals } from "@/lib/runtime/approvals";
 
+export const metadata = { title: "Approvals" };
+
+
 export default async function ApprovalsPage() {
   const supabase = await createServerSupabaseClient();
   const {

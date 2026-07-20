@@ -264,8 +264,8 @@ export default async function CoworkerPage({
               <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">Room context</div>
               <h2 className="mt-2 font-display text-xl text-[var(--dobly-text)]">{room.name}</h2>
               <p className="mt-3 text-sm leading-7 text-[var(--dobly-text-secondary)]">{room.purpose}</p>
-              <Link href={`/dashboard/departments/${room.id}`} className="mt-4 inline-flex text-sm text-[var(--dobly-accent)]">
-                Open room
+              <Link href="/dashboard/coworkers" className="mt-4 inline-flex text-sm text-[var(--dobly-accent)]">
+                Open the console
               </Link>
             </section>
           ) : null}

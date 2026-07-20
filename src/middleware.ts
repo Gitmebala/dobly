@@ -45,6 +45,7 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set("x-request-id", requestId);
   const publicApiPrefixes = [
     "/api/auth",
+    "/api/health",
     "/api/billing/plans",
     "/api/coverage/use-cases",
     "/api/newsletter",

@@ -15,6 +15,9 @@ import {
 import { isConnectionOperational } from "@/lib/connection-readiness";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+export const metadata = { title: "Get started" };
+
+
 type OnboardingStep = {
   number: number;
   done: boolean;
