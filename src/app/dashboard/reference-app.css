@@ -6521,3 +6521,34 @@ html[data-theme="dark"] .dashboard-shell {
 }
 
 .dobly-sidebar[data-collapsed="true"] .dobly-palette-trigger code { display: none; }
+
+/* ── Guardrail stop: the one thing never hidden ──────────────── */
+.ledger-guardrail-stop {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--text-danger, #b4472e) 34%, var(--app-line));
+  border-left-width: 3px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text-danger, #b4472e) 6%, var(--app-paper));
+}
+
+.ledger-guardrail-stop > code {
+  color: var(--text-danger, #b4472e);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+}
+
+.ledger-guardrail-stop > p {
+  margin: 6px 0 0;
+  color: var(--app-text);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.ledger-guardrail-stop > ul {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  color: var(--app-muted);
+  font-size: 12.5px;
+  line-height: 1.7;
+}

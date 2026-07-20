@@ -17,7 +17,7 @@
     "lint": "eslint .",
     "typecheck": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc --noEmit",
     "typecheck:billing": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc -p tsconfig.billing.json --pretty false",
-    "test": "node --test --experimental-strip-types src/lib/dobly-inference.test.mts src/lib/dobly-operating-system.test.mts src/lib/office/coordination-logic.test.mts src/lib/outcome-contracts-core.test.mts src/lib/runtime/execution-strategy.test.mts src/lib/runtime/artifact-quality.test.mts src/lib/billing/economy-core.test.mts src/lib/security/network-core.test.mts",
+    "test": "node --test --experimental-strip-types src/lib/guardrail-enforcement.test.mts src/lib/dobly-inference.test.mts src/lib/dobly-operating-system.test.mts src/lib/office/coordination-logic.test.mts src/lib/outcome-contracts-core.test.mts src/lib/runtime/execution-strategy.test.mts src/lib/runtime/artifact-quality.test.mts src/lib/billing/economy-core.test.mts src/lib/security/network-core.test.mts",
     "test:dobly-runtime": "node --test --experimental-strip-types src/lib/dobly-inference.test.mts src/lib/dobly-operating-system.test.mts src/lib/office/coordination-logic.test.mts src/lib/outcome-contracts-core.test.mts src/lib/runtime/execution-strategy.test.mts src/lib/runtime/artifact-quality.test.mts",
     "test:billing": "node --test --experimental-strip-types src/lib/billing/economy-core.test.mts",
     "test:security": "node --test --experimental-strip-types src/lib/security/network-core.test.mts",

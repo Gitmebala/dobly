@@ -7,6 +7,7 @@ import { inferCapabilitiesFromText, getCapabilityDefinition, type DoblyCapabilit
 import { resolveUniversalExecutionPaths, type UniversalExecutionPath } from "@/lib/runtime/universal-mcp";
 import { resolveCustomApiExecutionPaths, type CustomApiExecutionPath } from "@/lib/runtime/custom-api";
 import { searchMemoryIntelligence } from "@/lib/runtime/memory-intelligence";
+import { enforceGuardrails } from "@/lib/guardrail-enforcement";
 
 type JsonRecord = Record<string, unknown>;
 type BrainToolKind = UniversalExecutionPath["kind"] | CustomApiExecutionPath["kind"];
@@ -78,6 +79,8 @@ export interface OperatorBrainTrace {
     decision: OperatorBrainDecision;
     reason: string;
     riskLevel: "low" | "medium" | "high";
+    /** Guardrails this request tripped, in the owner's own words. */
+    guardrailsTripped?: string[];
   };
   evaluation: {
     readyForLiveRun: boolean;
@@ -251,6 +254,23 @@ function decideAutonomy(input: {
   const moneyOrExternal = ["pay", "charge", "invoice", "publish", "post", "send", "email", "delete", "book", "buy", "sell"].some((word) => lower.includes(word));
   const missingClarity = input.prompt.trim().length < 20 || ["it", "that thing", "stuff"].some((phrase) => lower.includes(phrase));
 
+  // Guardrails outrank every leash setting, including trusted. A tripped
+  // rule always goes to the owner — that is the whole promise of a rule.
+  const guardrailVerdict = enforceGuardrails(input.operator.guardrails, input.prompt);
+  if (!guardrailVerdict.allowed) {
+    return {
+      decision: "approve" as const,
+      reason: `Guardrail hit: ${guardrailVerdict.reasons[0]}`,
+      riskLevel: "high" as const,
+      guardrailsTripped: guardrailVerdict.tripped,
+    };
+  }
+
+  // The leash, shortest first. "supervised" means writes nothing, so it
+  // can never reach "act" no matter how clear or safe the request looks.
+  if (input.operator.approval_mode === "supervised") {
+    return { decision: "ask" as const, reason: "This coworker is on watch only — it reads and drafts, but never acts.", riskLevel: "low" as const };
+  }
   if (input.operator.approval_mode === "ask_first") {
     return { decision: "ask" as const, reason: "This Operator is configured to ask before acting.", riskLevel: "medium" as const };
   }
@@ -258,7 +278,14 @@ function decideAutonomy(input: {
     return { decision: "ask" as const, reason: input.missingRequired[0] ?? "The request is too ambiguous for a safe run.", riskLevel: "medium" as const };
   }
   if (highRisk || moneyOrExternal || input.riskNeedsApproval) {
-    return { decision: "approve" as const, reason: "The run may affect an external system, money, publishing, booking, or messaging.", riskLevel: "high" as const };
+    // "trusted" is the only leash that carries routine external work on
+    // its own; everything looser still stops for a decision.
+    if (input.operator.approval_mode !== "trusted") {
+      return { decision: "approve" as const, reason: "The run may affect an external system, money, publishing, booking, or messaging.", riskLevel: "high" as const };
+    }
+    if (highRisk || input.riskNeedsApproval) {
+      return { decision: "approve" as const, reason: "Even on a long leash, high-risk actions come to you first.", riskLevel: "high" as const };
+    }
   }
   if (input.selfCheckScore < 0.65) {
     return { decision: "pause" as const, reason: "The Operator Brain did not score the plan high enough to act.", riskLevel: "medium" as const };
@@ -294,8 +321,10 @@ function buildSelfCheck(input: {
     },
     {
       label: "Approval boundary clear",
-      passed: Boolean(input.operator.approval_mode && input.operator.guardrails),
-      reason: "The Operator needs clear rules for acting, asking, pausing, and escalating.",
+      passed:
+        Boolean(input.operator.approval_mode) &&
+        enforceGuardrails(input.operator.guardrails, input.prompt).allowed,
+      reason: "The Operator needs a leash setting, and this request must not trip a guardrail.",
     },
     {
       label: "Recent outcomes healthy",

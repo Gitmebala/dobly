@@ -909,13 +909,27 @@ function MessageBubble({ message, coworkerName }: { message: ChatMessage; cowork
 function OperatorThinking({ message }: { message: ChatMessage }) {
   const metadata = message.metadata ?? {};
   const plan = Array.isArray(metadata.plan) ? metadata.plan : [];
-  const autonomy = metadata.autonomy;
+  const autonomy = metadata.autonomy as JsonRecord | undefined;
   const risk = metadata.riskAssessment;
   const missingInfo = metadata.missingInfo;
+  const tripped = Array.isArray(autonomy?.guardrailsTripped) ? (autonomy.guardrailsTripped as string[]) : [];
   if (!plan.length && !autonomy && !risk && !missingInfo && !message.job_id && !message.brain_trace_id) return null;
 
   return (
-    <details className="ledger-workings">
+    <>
+      {/* A hard rule stopping the work is never hidden behind a disclosure. */}
+      {tripped.length ? (
+        <div className="ledger-guardrail-stop" role="alert">
+          <code>guardrail stop</code>
+          <p>{String(autonomy?.reason ?? "A guardrail stopped this work.")}</p>
+          <ul>
+            {tripped.map((rule) => (
+              <li key={rule}>{rule}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <details className="ledger-workings">
       <summary>How this was worked out</summary>
       <div className="ledger-workings-body">
         {plan.length ? (
@@ -941,7 +955,8 @@ function OperatorThinking({ message }: { message: ChatMessage }) {
           </p>
         ) : null}
       </div>
-    </details>
+      </details>
+    </>
   );
 }
 
