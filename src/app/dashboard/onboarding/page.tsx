@@ -73,21 +73,21 @@ export default async function OnboardingPage() {
       number: 3,
       done: hasWorkflow,
       icon: <WandSparkles />,
-      title: "Give Dobly a real outcome",
-      copy: "Describe what should move forward. Dobly will research, plan, build the right Operator, and show its assumptions.",
-      detail: hasWorkflow ? `${(workflows ?? []).length} system${(workflows ?? []).length === 1 ? "" : "s"} created` : "Use plain language",
-      href: "/dashboard/generate",
-      action: hasWorkflow ? "Create another" : "Build the first Operator",
+      title: "Hire your first coworker",
+      copy: "Describe a job in plain language — inbound leads, bookkeeping, market watch. Dobly proposes the coworker: their mission, the tools they need, and the rules they will work under.",
+      detail: hasWorkflow ? `${(workflows ?? []).length} hired` : "Describe the job, not the software",
+      href: "/dashboard/coworkers?create=true",
+      action: hasWorkflow ? "Hire another" : "Hire a coworker",
     },
     {
       number: 4,
       done: readyToOperate,
       icon: <ShieldCheck />,
-      title: "Review before anything goes live",
-      copy: "Inspect access, approval points, tests, and failure handling before Dobly begins operating.",
-      detail: readyToOperate ? "Ready for review" : "Unlocks after steps 1-3",
-      href: readyToOperate ? "/dashboard/health" : "#onboarding-steps",
-      action: readyToOperate ? "Review readiness" : "Complete setup first",
+      title: "Set the leash and the guardrails",
+      copy: "Every coworker starts on a short leash — watch only, or draft-then-ask. Loosen it as trust builds. Guardrails are the hard rules that always stop them for your decision.",
+      detail: readyToOperate ? "Open the console to adjust" : "Unlocks after steps 1-3",
+      href: readyToOperate ? "/dashboard/coworkers" : "#onboarding-steps",
+      action: readyToOperate ? "Open the console" : "Complete setup first",
     },
   ];
 
@@ -100,7 +100,7 @@ export default async function OnboardingPage() {
       <header className="ref-onboarding-head">
         <div>
           <div className="ref-greeting"><Sparkles size={16} /> Welcome to Dobly, {firstName}</div>
-          <h1>Put your first operation in motion.</h1>
+          <h1>Hire your first coworker.</h1>
           <p>Dobly only needs enough context and access to handle one real outcome. Start narrow, verify it, then expand.</p>
         </div>
         <Link href={nextStep.href} className="ref-button primary">

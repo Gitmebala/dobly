@@ -67,3 +67,7 @@ mobile/okhttp3.internal.connection.RealCall$AsyncCall
 /.chrome-shot-profile/
 *.out.log
 *.err.log
+
+# local agent skill installs
+.agents/
+skills-lock.json

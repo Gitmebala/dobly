@@ -3897,3 +3897,2432 @@ html[data-theme="dark"] .dashboard-shell.app-shell {
     min-width: max-content;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM POLISH LAYER
+   Motion language, depth, and interaction feel for the workspace.
+   Every transition is physics-based; nothing is decorative.
+   ═══════════════════════════════════════════════════════════════ */
+
+.dashboard-shell.app-shell {
+  --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --dur-micro: 150ms;
+  --dur-std: 200ms;
+  --dur-sig: 300ms;
+  --app-rust-glow: color-mix(in srgb, var(--app-rust) 14%, transparent);
+}
+
+/* ── Interaction feel: every button and link responds ─────────── */
+.dashboard-shell button,
+.dashboard-shell a {
+  transition:
+    background var(--dur-std) var(--ease-premium),
+    border-color var(--dur-std) var(--ease-premium),
+    color var(--dur-std) var(--ease-premium),
+    box-shadow var(--dur-std) var(--ease-premium),
+    transform var(--dur-std) var(--ease-premium),
+    opacity var(--dur-std) var(--ease-premium);
+}
+
+.dashboard-shell button:active:not(:disabled) {
+  transform: scale(0.985);
+  transition-duration: var(--dur-micro);
+}
+
+.dashboard-shell :is(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--app-rust) 55%, transparent);
+  box-shadow: 0 0 0 3px var(--app-rust-glow);
+}
+
+/* Primary actions lift on hover */
+.dashboard-shell :is(.coworker-console-header-actions a.primary, .btn-primary, .operator-details-button):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--app-rust) 22%, transparent);
+}
+
+/* ── Chat thread: messages arrive like presence, not data ─────── */
+.operator-thread-day > *,
+.operator-chat-thread > .operator-typing,
+.operator-chat-thread > .operator-thread-empty {
+  animation: dobly-rise-in var(--dur-sig) var(--ease-premium) both;
+}
+
+.operator-chat-thread [class*="max-w-"] {
+  box-shadow: 0 1px 2px rgba(40, 31, 24, 0.05);
+  transition: box-shadow var(--dur-std) var(--ease-premium);
+}
+
+.operator-chat-thread [class*="max-w-"]:hover {
+  box-shadow: 0 3px 12px rgba(40, 31, 24, 0.08);
+}
+
+/* ── Composer: focused writing feels supported ────────────────── */
+.operator-chat-composer textarea,
+.operator-chat-composer input {
+  transition:
+    border-color var(--dur-std) var(--ease-premium),
+    box-shadow var(--dur-std) var(--ease-premium),
+    background var(--dur-std) var(--ease-premium);
+}
+
+.operator-chat-composer textarea:focus,
+.operator-chat-composer input:focus {
+  border-color: color-mix(in srgb, var(--app-rust) 50%, transparent) !important;
+  box-shadow: 0 0 0 3px var(--app-rust-glow);
+}
+
+.operator-quick-directions button:hover {
+  border-color: color-mix(in srgb, var(--app-rust) 45%, var(--app-line));
+  color: var(--app-rust-dark);
+  background: color-mix(in srgb, var(--app-rust) 6%, var(--app-paper));
+}
+
+.operator-feedback-row button:hover {
+  border-color: color-mix(in srgb, var(--app-rust) 45%, var(--app-line-strong));
+  color: var(--app-rust-dark);
+}
+
+/* ── Roster: coworkers feel present, not listed ───────────────── */
+.coworker-roster-list {
+  scroll-behavior: smooth;
+}
+
+.coworker-roster-item {
+  transition:
+    background var(--dur-std) var(--ease-premium),
+    box-shadow var(--dur-sig) var(--ease-premium),
+    transform var(--dur-std) var(--ease-premium);
+}
+
+.coworker-roster-item:hover {
+  transform: translateX(2px);
+}
+
+.coworker-roster-item[data-active="true"] {
+  box-shadow: inset 3px 0 var(--app-rust), 0 1px 4px rgba(40, 31, 24, 0.06);
+}
+
+.coworker-roster-item > i[data-status="active"] {
+  animation: dobly-live-dot 2.2s ease-in-out infinite;
+}
+
+.coworker-roster-avatar {
+  transition: border-color var(--dur-std) var(--ease-premium), color var(--dur-std) var(--ease-premium);
+}
+
+.coworker-roster-item:hover .coworker-roster-avatar,
+.coworker-roster-item[data-active="true"] .coworker-roster-avatar {
+  border-color: color-mix(in srgb, var(--app-rust) 40%, var(--app-line));
+}
+
+/* ── Inspector drawer: opens like a drawer, not a popup ───────── */
+.operator-chat-inspector.operator-inspector-drawer {
+  transition: transform 340ms var(--ease-premium), visibility 340ms var(--ease-premium);
+}
+
+.operator-inspector-scrim {
+  animation: dobly-fade-in var(--dur-std) var(--ease-premium) both;
+}
+
+.operator-chat-inspector > nav button {
+  position: relative;
+}
+
+.operator-chat-inspector > nav button::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--app-rust);
+  transform: scaleX(0);
+  transition: transform var(--dur-std) var(--ease-premium);
+}
+
+.operator-chat-inspector > nav button[data-active="true"]::after {
+  transform: scaleX(1);
+}
+
+/* ── Console header entrance ──────────────────────────────────── */
+.coworker-console-page {
+  animation: dobly-fade-in var(--dur-sig) var(--ease-premium) both;
+}
+
+/* ── Cards & panels across the workspace ──────────────────────── */
+.dashboard-shell :is(.approval-queue-item, .dobly-approval-row, .dobly-briefing-row, .dobly-memory-row) {
+  transition: background var(--dur-std) var(--ease-premium);
+}
+
+/* Page content rises in on navigation */
+.dashboard-shell .dashboard-page-shell > * {
+  animation: dobly-rise-in var(--dur-sig) var(--ease-premium) both;
+}
+
+/* ── Empty states breathe ─────────────────────────────────────── */
+.coworker-roster-empty svg,
+.coworker-workspace-unavailable svg {
+  animation: dobly-pulse 3s ease-in-out infinite;
+}
+
+/* ── Reduced motion: honor the preference completely ──────────── */
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-shell *,
+  .dashboard-shell *::before,
+  .dashboard-shell *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHAT AS A WORK RECORD
+   The thread is the coworker's complete day: conversation and
+   activity merged, grouped by day, viewable for any date.
+   ═══════════════════════════════════════════════════════════════ */
+
+.operator-conversation {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+/* ── Date controls: pick any day, see everything they did ─────── */
+.operator-thread-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 46px;
+  padding: 6px max(28px, calc((100% - 820px) / 2));
+  border-bottom: 1px solid var(--app-line);
+  background: color-mix(in srgb, var(--app-paper-2) 44%, var(--app-paper));
+}
+
+.operator-thread-controls-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--app-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.operator-thread-controls-label svg {
+  width: 15px;
+  height: 15px;
+  color: var(--app-rust);
+}
+
+.operator-thread-controls-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.operator-thread-controls-actions input[type="date"] {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: 7px;
+  color: var(--app-text);
+  background: var(--app-paper);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.operator-thread-controls-actions input[type="date"]:hover {
+  border-color: color-mix(in srgb, var(--app-rust) 40%, var(--app-line-strong));
+}
+
+.operator-thread-controls-actions button {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--app-line);
+  border-radius: 7px;
+  color: var(--app-rust-dark);
+  background: color-mix(in srgb, var(--app-rust) 7%, var(--app-paper));
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.operator-thread-controls-actions button:hover {
+  border-color: color-mix(in srgb, var(--app-rust) 45%, var(--app-line));
+}
+
+/* ── Day dividers: the thread reads like a work journal ───────── */
+.operator-thread-day + .operator-thread-day {
+  margin-top: 6px;
+}
+
+.operator-day-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 4px 0 18px;
+}
+
+.operator-day-divider::before,
+.operator-day-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--app-line);
+}
+
+.operator-day-divider span {
+  flex: none;
+  padding: 4px 12px;
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  color: var(--app-muted);
+  background: var(--app-paper-2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ── Activity rows: work the coworker did, quiet but present ──── */
+.operator-activity-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  max-width: min(88%, 760px);
+  margin: 0 auto 12px;
+  padding: 9px 14px;
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-paper-2) 55%, var(--app-paper));
+}
+
+.operator-activity-row > i {
+  align-self: center;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--app-muted);
+}
+
+.operator-activity-row[data-severity="success"] > i { background: var(--app-green); }
+.operator-activity-row[data-severity="warning"] > i { background: #c9862f; }
+.operator-activity-row[data-severity="danger"] > i { background: #bd4f3a; }
+
+.operator-activity-copy {
+  min-width: 0;
+}
+
+.operator-activity-copy strong {
+  display: block;
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 12.5px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operator-activity-copy p {
+  display: -webkit-box;
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.operator-activity-row time {
+  color: var(--app-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* ── Typing: the coworker is present and thinking ─────────────── */
+.operator-typing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(78%, 700px);
+  padding: 13px 16px;
+  border: 1px solid color-mix(in srgb, var(--app-rust) 24%, var(--app-line));
+  border-radius: 8px;
+  color: var(--app-muted);
+  background: color-mix(in srgb, var(--app-rust) 5%, var(--app-paper));
+  font-size: 13.5px;
+  animation: dobly-rise-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.operator-typing-dots {
+  display: inline-flex;
+  gap: 4px;
+  flex: none;
+}
+
+.operator-typing-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--app-rust);
+  animation: operator-typing-bounce 1.3s ease-in-out infinite;
+}
+
+.operator-typing-dots i:nth-child(2) { animation-delay: 0.16s; }
+.operator-typing-dots i:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes operator-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* ── Empty state ──────────────────────────────────────────────── */
+.operator-thread-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 64px 24px;
+  color: var(--app-muted);
+  text-align: center;
+}
+
+.operator-thread-empty svg {
+  width: 26px;
+  height: 26px;
+  color: var(--app-rust);
+  animation: dobly-pulse 3s ease-in-out infinite;
+}
+
+.operator-thread-empty strong {
+  color: var(--app-text);
+  font-size: 14px;
+}
+
+.operator-thread-empty span {
+  font-size: 12.5px;
+}
+
+@media (max-width: 720px) {
+  .operator-thread-controls {
+    padding: 6px 12px;
+  }
+
+  .operator-thread-controls-label {
+    display: none;
+  }
+
+  .operator-activity-row {
+    max-width: 100%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HIRING FLOW — describe the job, meet the coworker, hire them.
+   ═══════════════════════════════════════════════════════════════ */
+
+.hire-flow {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.hire-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--app-rust);
+  font-size: 11px;
+  font-weight: 760;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hire-kicker svg {
+  width: 14px;
+  height: 14px;
+}
+
+.hire-spin {
+  animation: hire-spin-rotate 1s linear infinite;
+}
+
+@keyframes hire-spin-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.hire-error {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, #bd4f3a 35%, var(--app-line));
+  border-radius: 8px;
+  color: #a8402d;
+  background: color-mix(in srgb, #bd4f3a 6%, var(--app-paper));
+  font-size: 13px;
+}
+
+html[data-theme="dark"] .hire-error {
+  color: #e89c8a;
+}
+
+/* ── The brief ────────────────────────────────────────────────── */
+.hire-brief {
+  padding: 26px 4px 8px;
+}
+
+.hire-brief-copy h2 {
+  margin: 14px 0 0;
+  color: var(--app-text);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 30px;
+  font-weight: 520;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+}
+
+.hire-brief-copy p {
+  max-width: 560px;
+  margin: 12px 0 0;
+  color: var(--app-muted);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.hire-brief-input {
+  margin-top: 22px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: 12px;
+  background: var(--app-paper);
+  box-shadow: var(--app-shadow);
+  overflow: hidden;
+  transition: border-color 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hire-brief-input:focus-within {
+  border-color: color-mix(in srgb, var(--app-rust) 50%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-rust) 12%, transparent), var(--app-shadow);
+}
+
+.hire-brief-input textarea {
+  display: block;
+  width: 100%;
+  min-height: 108px;
+  padding: 16px 18px 8px;
+  border: 0;
+  color: var(--app-text);
+  background: transparent;
+  font-size: 15px;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+}
+
+.hire-brief-input textarea::placeholder {
+  color: color-mix(in srgb, var(--app-muted) 72%, transparent);
+}
+
+.hire-brief-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--app-line);
+  background: color-mix(in srgb, var(--app-paper-2) 42%, var(--app-paper));
+}
+
+.hire-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hire-examples button {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  color: var(--app-muted);
+  background: var(--app-paper);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.hire-examples button:hover {
+  border-color: color-mix(in srgb, var(--app-rust) 42%, var(--app-line));
+  color: var(--app-rust-dark);
+}
+
+.hire-propose-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--app-rust);
+  border-radius: 8px;
+  color: white;
+  background: linear-gradient(180deg, var(--app-rust), var(--app-rust-dark));
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hire-propose-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--app-rust) 28%, transparent);
+}
+
+.hire-propose-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hire-propose-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ── The proposal: meet your coworker ─────────────────────────── */
+.hire-proposal {
+  display: grid;
+  gap: 16px;
+  padding: 22px 4px 10px;
+}
+
+.hire-proposal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hire-proposal-header h3 {
+  margin: 12px 0 0;
+  color: var(--app-text);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 32px;
+  font-weight: 540;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+}
+
+.hire-proposal-header p {
+  max-width: 540px;
+  margin: 10px 0 0;
+  color: var(--app-muted);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.hire-proposal-header small {
+  display: block;
+  margin-top: 8px;
+  color: var(--app-muted);
+  font-size: 11.5px;
+  text-transform: capitalize;
+}
+
+.hire-status {
+  flex: none;
+  padding: 5px 12px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: 999px;
+  color: var(--app-muted);
+  background: var(--app-paper-2);
+  font-size: 11px;
+  font-weight: 720;
+  text-transform: capitalize;
+}
+
+.hire-status[data-status="tested"] {
+  border-color: color-mix(in srgb, var(--app-green) 45%, transparent);
+  color: var(--app-green);
+  background: color-mix(in srgb, var(--app-green) 8%, var(--app-paper));
+}
+
+.hire-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hire-fact {
+  display: grid;
+  gap: 4px;
+  padding: 13px 15px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  background: var(--app-paper);
+}
+
+.hire-fact svg {
+  width: 16px;
+  height: 16px;
+  color: var(--app-rust);
+}
+
+.hire-fact span {
+  color: var(--app-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hire-fact strong {
+  color: var(--app-text);
+  font-size: 14px;
+  text-transform: capitalize;
+}
+
+.hire-panel {
+  padding: 14px 16px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  background: var(--app-paper);
+}
+
+.hire-panel-title {
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.hire-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hire-abilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.hire-abilities span {
+  padding: 5px 11px;
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  color: var(--app-muted);
+  background: color-mix(in srgb, var(--app-paper-2) 55%, var(--app-paper));
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.hire-panel-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 11px;
+}
+
+.hire-panel-list p {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 12.5px;
+}
+
+.hire-connection strong {
+  display: block;
+  color: var(--app-text);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.hire-connection span {
+  display: block;
+  margin-top: 2px;
+  color: var(--app-muted);
+  font-size: 11.5px;
+  text-transform: capitalize;
+}
+
+.hire-rule {
+  display: flex;
+  gap: 8px;
+  color: var(--app-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.hire-rule svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  color: var(--app-rust);
+}
+
+.hire-test-result {
+  padding: 13px 16px;
+  border: 1px solid color-mix(in srgb, var(--app-green) 36%, var(--app-line));
+  border-radius: 10px;
+  color: var(--app-text);
+  background: color-mix(in srgb, var(--app-green) 7%, var(--app-paper));
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.hire-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.hire-actions > div {
+  display: flex;
+  gap: 8px;
+}
+
+.hire-back-button {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--app-muted);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 620;
+}
+
+.hire-back-button:hover:not(:disabled) {
+  color: var(--app-text);
+  background: var(--app-paper-2);
+}
+
+.hire-test-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: 8px;
+  color: var(--app-text);
+  background: var(--app-paper);
+  font-size: 13.5px;
+  font-weight: 660;
+}
+
+.hire-test-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--app-rust) 40%, var(--app-line-strong));
+}
+
+.hire-deploy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--app-rust);
+  border-radius: 8px;
+  color: white;
+  background: linear-gradient(180deg, var(--app-rust), var(--app-rust-dark));
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.hire-deploy-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--app-rust) 28%, transparent);
+}
+
+.hire-test-button svg,
+.hire-deploy-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.hire-test-button:disabled,
+.hire-deploy-button:disabled,
+.hire-back-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .hire-facts,
+  .hire-panel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hire-brief-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hire-propose-button {
+    justify-content: center;
+  }
+
+  .hire-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .hire-actions > div {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   YOUR TEAM — the dashboard leads with the people you hired.
+   ═══════════════════════════════════════════════════════════════ */
+
+.team-strip-section .ref-section-title {
+  margin-bottom: 10px;
+}
+
+.team-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.team-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 15px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  background: var(--app-paper);
+  box-shadow: 0 1px 3px rgba(40, 31, 24, 0.045);
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.team-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--app-rust) 34%, var(--app-line));
+  box-shadow: 0 8px 22px rgba(40, 31, 24, 0.09);
+}
+
+.team-card-avatar {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px 10px 10px 3px;
+  color: white;
+  background: linear-gradient(145deg, var(--app-rust), var(--app-rust-dark));
+  font-size: 17px;
+  font-weight: 780;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.team-hire-card .team-card-avatar {
+  color: var(--app-rust);
+  background: color-mix(in srgb, var(--app-rust) 9%, var(--app-paper));
+  border: 1px dashed color-mix(in srgb, var(--app-rust) 45%, transparent);
+  box-shadow: none;
+}
+
+.team-hire-card {
+  border-style: dashed;
+}
+
+.team-card-copy {
+  display: block;
+  min-width: 0;
+}
+
+.team-card-copy strong {
+  display: block;
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-card-copy small {
+  display: -webkit-box;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.team-card-copy em {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  color: var(--app-muted);
+  font-size: 11px;
+  font-style: normal;
+  text-transform: capitalize;
+}
+
+.team-card-copy em i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--app-muted);
+}
+
+.team-card-copy em i[data-status="active"] {
+  background: var(--app-green);
+  animation: dobly-live-dot 2.2s ease-in-out infinite;
+}
+
+.team-card-copy em i[data-status="paused"] {
+  background: #c9862f;
+}
+
+@media (max-width: 720px) {
+  .team-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Coworker avatars carry identity: their initial, not a robot icon. */
+.coworker-roster-avatar[data-initial] {
+  border: 0;
+  color: white;
+  background: linear-gradient(145deg, var(--app-rust), var(--app-rust-dark));
+  border-radius: 8px 8px 8px 3px;
+  font-size: 14px;
+  font-weight: 780;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THE LEDGER — the coworker chat is a typeset work record.
+   A time-spine runs down the page. The coworker writes on the
+   paper; you annotate in ink. Nothing floats, nothing is a bubble.
+   ═══════════════════════════════════════════════════════════════ */
+
+.operator-chat-thread {
+  padding: 28px max(22px, calc((100% - 780px) / 2)) 40px !important;
+  background: var(--app-paper) !important;
+}
+
+/* Neutralize the older bubble-era spacing hacks */
+.operator-chat-thread > div { margin-bottom: 0; }
+.operator-chat-thread > * + * { margin-top: 0; }
+
+/* The day group carries the spine */
+.operator-thread-day {
+  position: relative;
+  padding-left: 34px;
+  padding-bottom: 4px;
+}
+
+.operator-thread-day::before {
+  content: "";
+  position: absolute;
+  top: 30px;
+  bottom: 0;
+  left: 9px;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--app-rust) 38%, var(--app-line)),
+    var(--app-line) 120px
+  );
+}
+
+/* Day marker: a filled node on the spine, small-caps date */
+.operator-day-divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 26px 0 20px -34px;
+  padding-left: 34px;
+  border: 0;
+  background: none;
+}
+
+.operator-day-divider::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--app-rust);
+  box-shadow: 0 0 0 4px var(--app-paper);
+}
+
+.operator-day-divider span {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--app-rust-dark);
+  font-size: 11px;
+  font-weight: 780;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.operator-thread-day:first-child .operator-day-divider { margin-top: 2px; }
+
+/* ── Entries ──────────────────────────────────────────────────── */
+.ledger-entry {
+  position: relative;
+  margin: 0 0 24px;
+}
+
+.ledger-entry-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.ledger-entry-meta strong {
+  color: var(--app-rust-dark);
+  font-size: 11px;
+  font-weight: 780;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ledger-entry-meta span {
+  color: var(--app-muted);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ledger-entry-meta time {
+  color: var(--app-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The coworker writes on the paper, anchored to the spine */
+.ledger-entry-coworker::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: -29px;
+  width: 9px;
+  height: 9px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--app-rust);
+  border-radius: 50%;
+  background: var(--app-paper);
+}
+
+.ledger-entry-coworker .ledger-entry-body {
+  max-width: 640px;
+  color: var(--app-text);
+  font-size: 15px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+/* System / approval / run voices: same paper, quieter ink */
+.ledger-entry-coworker[data-role="system"] .ledger-entry-body,
+.ledger-entry-coworker[data-role="run"] .ledger-entry-body {
+  color: color-mix(in srgb, var(--app-text) 74%, var(--app-muted));
+  font-size: 14px;
+}
+
+.ledger-entry-coworker[data-role="approval"]::before {
+  border-color: #c9862f;
+}
+
+/* You annotate in ink: a solid warm-charcoal block, cream text */
+.ledger-entry-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ledger-entry-user .ledger-entry-meta {
+  flex-direction: row-reverse;
+}
+
+.ledger-entry-user .ledger-entry-meta strong {
+  color: var(--app-muted);
+}
+
+.ledger-entry-user .ledger-entry-body {
+  max-width: min(84%, 560px);
+  padding: 12px 16px 13px;
+  border-radius: 14px 14px 4px 14px;
+  color: #f6efe6;
+  background: #262220;
+  font-size: 14.5px;
+  line-height: 1.62;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  box-shadow: 0 2px 10px rgba(35, 28, 22, 0.18);
+}
+
+html[data-theme="dark"] .ledger-entry-user .ledger-entry-body {
+  color: var(--app-text);
+  background: color-mix(in srgb, var(--app-paper-2) 72%, white 4%);
+  border: 1px solid var(--app-line-strong);
+  box-shadow: none;
+}
+
+/* ── Activity: ledger lines with dots on the spine ────────────── */
+.operator-activity-row {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.operator-activity-row > i {
+  position: absolute;
+  top: 5px;
+  left: -27px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--app-muted);
+}
+
+.operator-activity-row[data-severity="success"] > i { background: var(--app-green); }
+.operator-activity-row[data-severity="warning"] > i { background: #c9862f; }
+.operator-activity-row[data-severity="danger"] > i { background: #bd4f3a; }
+
+.operator-activity-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 8px;
+  min-width: 0;
+}
+
+.operator-activity-copy strong {
+  color: var(--app-text);
+  font-size: 12.5px;
+  font-weight: 660;
+}
+
+.operator-activity-copy p {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.operator-activity-row time {
+  flex: none;
+  margin-left: auto;
+  color: var(--app-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Workings: the coworker shows its reasoning as marginalia ── */
+.ledger-workings {
+  max-width: 640px;
+  margin-top: 10px;
+}
+
+.ledger-workings summary {
+  display: inline-flex;
+  cursor: pointer;
+  color: var(--app-rust-dark);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  list-style: none;
+}
+
+.ledger-workings summary::-webkit-details-marker { display: none; }
+
+.ledger-workings summary::before {
+  content: "› ";
+  margin-right: 5px;
+  transition: transform 200ms var(--ease-premium);
+}
+
+.ledger-workings[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.ledger-workings-body {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px 0 4px 14px;
+  border-left: 2px solid color-mix(in srgb, var(--app-rust) 30%, var(--app-line));
+}
+
+.ledger-plan {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 0 18px;
+}
+
+.ledger-plan li::marker {
+  color: var(--app-rust);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ledger-plan strong {
+  display: block;
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 660;
+}
+
+.ledger-plan p {
+  margin: 2px 0 0;
+  color: var(--app-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.ledger-plan small {
+  display: block;
+  margin-top: 3px;
+  color: var(--app-muted);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ledger-info-block span {
+  display: block;
+  color: var(--app-muted);
+  font-size: 10.5px;
+  font-weight: 720;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ledger-info-block pre {
+  max-height: 150px;
+  margin: 5px 0 0;
+  overflow: auto;
+  color: color-mix(in srgb, var(--app-text) 74%, var(--app-muted));
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.ledger-workings-refs {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 11.5px;
+}
+
+.ledger-workings-refs code {
+  color: var(--app-text);
+  font-size: 11px;
+}
+
+/* ── Attachments read like citations ──────────────────────────── */
+.ledger-attachment {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  max-width: 420px;
+  margin-top: 10px;
+  padding: 10px 13px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--app-paper-2) 50%, var(--app-paper));
+}
+
+.ledger-attachment > span {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: var(--app-rust);
+  background: color-mix(in srgb, var(--app-rust) 10%, var(--app-paper));
+}
+
+.ledger-attachment svg { width: 16px; height: 16px; }
+
+.ledger-attachment strong {
+  display: block;
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.ledger-attachment small {
+  display: block;
+  margin-top: 1px;
+  color: var(--app-muted);
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+/* ── The typing line joins the spine ──────────────────────────── */
+.operator-chat-thread > .operator-typing {
+  margin: 4px 0 0 34px;
+}
+
+/* ── Composer: writing a note to a colleague ──────────────────── */
+.ledger-composer-input,
+.ledger-composer-note {
+  width: 100%;
+  border: 1px solid var(--app-line-strong);
+  border-radius: 10px;
+  color: var(--app-text);
+  background: var(--app-paper);
+  outline: none;
+  resize: none;
+}
+
+.ledger-composer-input {
+  padding: 12px 15px;
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.ledger-composer-note {
+  padding: 11px 13px;
+  font-size: 13px;
+}
+
+.ledger-composer-input::placeholder,
+.ledger-composer-note::placeholder {
+  color: color-mix(in srgb, var(--app-muted) 78%, transparent);
+}
+
+.ledger-composer-error {
+  margin: 10px 0 0;
+  color: #a8402d;
+  font-size: 13px;
+}
+
+html[data-theme="dark"] .ledger-composer-error { color: #e89c8a; }
+
+/* Only the newest entry animates in — the record itself is still */
+.operator-thread-day > * {
+  animation: none;
+}
+
+.operator-thread-day:last-of-type > *:last-child {
+  animation: dobly-rise-in var(--dur-sig) var(--ease-premium) both;
+}
+
+@media (max-width: 720px) {
+  .operator-chat-thread {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .operator-thread-day { padding-left: 24px; }
+  .operator-thread-day::before { left: 5px; }
+  .operator-day-divider { margin-left: -24px; padding-left: 24px; }
+  .operator-day-divider::before { left: 1px; }
+  .ledger-entry-coworker::before { left: -23px; }
+  .operator-activity-row > i { left: -21px; }
+  .operator-activity-row time { display: none; }
+  .ledger-entry-user .ledger-entry-body { max-width: 94%; }
+  .operator-chat-thread > .operator-typing { margin-left: 24px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THE FRONT PAGE — the dashboard reads like today's edition of
+   your business. Hairlines and typography carry the hierarchy;
+   nothing floats in a box unless it must.
+   ═══════════════════════════════════════════════════════════════ */
+
+.home-editorial .ref-page-main {
+  max-width: 860px;
+}
+
+.home-masthead {
+  padding: 18px 0 6px;
+}
+
+.home-date {
+  display: block;
+  color: var(--app-rust);
+  font-size: 11px;
+  font-weight: 780;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.home-masthead h1 {
+  margin: 14px 0 0;
+  color: var(--app-text);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(34px, 4.4vw, 46px);
+  font-weight: 480;
+  line-height: 1.06;
+  letter-spacing: -0.015em;
+}
+
+.home-masthead p {
+  max-width: 560px;
+  margin: 14px 0 0;
+  color: var(--app-muted);
+  font-size: 15px;
+  line-height: 1.62;
+}
+
+.home-setup-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 12px 0;
+  border-top: 1px solid var(--app-line);
+  border-bottom: 1px solid var(--app-line);
+  color: var(--app-muted);
+  font-size: 13px;
+}
+
+.home-setup-line a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--app-rust-dark);
+  font-weight: 700;
+}
+
+/* ── The command line: one strong instrument, no chrome ───────── */
+.home-command {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 26px;
+  border-bottom: 2px solid var(--app-text);
+  transition: border-color 200ms var(--ease-premium);
+}
+
+.home-command:focus-within {
+  border-color: var(--app-rust);
+}
+
+.home-command input {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 2px 13px;
+  border: 0;
+  color: var(--app-text);
+  background: transparent;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 19px;
+  outline: none;
+}
+
+.home-command input::placeholder {
+  color: color-mix(in srgb, var(--app-muted) 66%, transparent);
+}
+
+.home-command button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  color: white;
+  background: var(--app-rust);
+  transition: transform 200ms var(--ease-premium), background 200ms var(--ease-premium);
+}
+
+.home-command button:hover {
+  background: var(--app-rust-dark);
+  transform: scale(1.06);
+}
+
+.home-command-starters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-top: 12px;
+}
+
+.home-command-starters button {
+  padding: 2px 0;
+  border: 0;
+  color: var(--app-muted);
+  background: none;
+  font-size: 12.5px;
+  transition: color 150ms var(--ease-premium);
+}
+
+.home-command-starters button:hover {
+  color: var(--app-rust-dark);
+}
+
+/* ── Sections: numbered, ruled, typeset ───────────────────────── */
+.home-section {
+  margin-top: 40px;
+}
+
+.home-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--app-line-strong);
+}
+
+.home-section-head h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 760;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.home-section-head h2 i {
+  color: var(--app-rust);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 12px;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-section-head a {
+  color: var(--app-muted);
+  font-size: 12.5px;
+  font-weight: 650;
+  transition: color 150ms var(--ease-premium);
+}
+
+.home-section-head a:hover {
+  color: var(--app-rust-dark);
+}
+
+/* ── The roster: your people, typeset like a masthead ─────────── */
+.home-roster-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 200px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--app-line);
+  transition: background 150ms var(--ease-premium);
+}
+
+.home-roster-row:hover {
+  background: linear-gradient(to right, transparent, color-mix(in srgb, var(--app-rust) 4%, transparent), transparent);
+}
+
+.home-roster-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px 9px 9px 3px;
+  color: white;
+  background: linear-gradient(145deg, var(--app-rust), var(--app-rust-dark));
+  font-size: 15px;
+  font-weight: 780;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.home-roster-name {
+  overflow: hidden;
+  color: var(--app-text);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 18px;
+  font-weight: 540;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-roster-mission {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.home-roster-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--app-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.home-roster-status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--app-muted);
+}
+
+.home-roster-status[data-status="active"] i {
+  background: var(--app-green);
+  animation: dobly-live-dot 2.2s ease-in-out infinite;
+}
+
+.home-roster-status[data-status="paused"] i { background: #c9862f; }
+
+.home-roster-hire .home-roster-avatar {
+  color: var(--app-rust);
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--app-rust) 50%, transparent);
+  box-shadow: none;
+}
+
+.home-roster-hire .home-roster-name {
+  color: var(--app-rust-dark);
+  font-size: 16px;
+}
+
+/* ── The numbers: editorial figures, hairline separated ───────── */
+.home-figures {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.home-figures > div {
+  padding: 20px 18px 18px 0;
+}
+
+.home-figures > div + div {
+  padding-left: 22px;
+  border-left: 1px solid var(--app-line);
+}
+
+.home-figures b {
+  display: block;
+  color: var(--app-text);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(30px, 3.4vw, 40px);
+  font-weight: 480;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-figures span {
+  display: block;
+  margin-top: 8px;
+  color: var(--app-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Lists: ruled rows, no boxes ──────────────────────────────── */
+.home-list-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--app-line);
+  transition: background 150ms var(--ease-premium);
+}
+
+a.home-list-row:hover {
+  background: linear-gradient(to right, transparent, color-mix(in srgb, var(--app-rust) 4%, transparent), transparent);
+}
+
+.home-list-main {
+  min-width: 0;
+}
+
+.home-list-main strong {
+  display: block;
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 14px;
+  font-weight: 660;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-list-main small {
+  display: block;
+  overflow: hidden;
+  margin-top: 2px;
+  color: var(--app-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-list-meta {
+  display: inline-flex;
+  flex: none;
+  align-items: baseline;
+  gap: 12px;
+  color: var(--app-muted);
+}
+
+.home-list-meta em {
+  font-size: 11px;
+  font-style: normal;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.home-list-meta em[data-status="active"] { color: var(--app-green); }
+.home-list-meta em[data-status="draft"],
+.home-list-meta em[data-status="paused"] { color: #c9862f; }
+
+.home-list-meta time {
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-empty-line {
+  margin: 14px 0 0;
+  color: var(--app-muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.home-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 36px;
+}
+
+/* ── The rail joins the edition: flat, ruled, quiet ───────────── */
+.home-editorial .ref-page-rail .ref-card {
+  padding: 18px 0 6px;
+  border: 0;
+  border-top: 2px solid var(--app-text);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.home-editorial .ref-page-rail .ref-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 960px) {
+  .home-columns { grid-template-columns: 1fr; gap: 8px; }
+  .home-figures { grid-template-columns: repeat(2, 1fr); }
+  .home-figures > div:nth-child(3) { border-left: 0; padding-left: 0; }
+}
+
+@media (max-width: 720px) {
+  .home-roster-row {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+  }
+
+  .home-roster-mission { display: none; }
+  .home-command input { font-size: 16px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FLATTEN THE EDITION — surfaces sit on the paper; they do not
+   float above it or grow under the cursor. Hierarchy comes from
+   type and rules, not elevation.
+   ═══════════════════════════════════════════════════════════════ */
+
+.dashboard-shell :is(.card, .premium-tile, .ref-card, .ref-panel, .card-hover, .surface-panel) {
+  border-color: var(--app-line);
+  box-shadow: none !important;
+}
+
+.dashboard-shell :is(.card, .ref-card, .card-hover, .premium-tile):hover {
+  transform: none;
+  box-shadow: none !important;
+}
+
+.dashboard-shell .dobly-hover-raise:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Ledger day marker supersedes the old centered divider entirely */
+.operator-day-divider::after { content: none; }
+.operator-day-divider { gap: 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   THE CONSOLE — Dobly reads like a calm operations room.
+   Mono type for machine facts, plain language for human ones,
+   hairlines for structure, tint only where something needs you.
+   ═══════════════════════════════════════════════════════════════ */
+
+.dashboard-shell {
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --surface-1: color-mix(in srgb, var(--app-paper-2) 55%, var(--app-paper));
+  --surface-2: var(--app-paper);
+  --text-primary: var(--app-text);
+  --text-secondary: color-mix(in srgb, var(--app-text) 72%, var(--app-muted));
+  --text-muted-c: var(--app-muted);
+  --text-accent: var(--app-rust-dark);
+  --bg-accent: color-mix(in srgb, var(--app-rust) 10%, var(--app-paper));
+  --text-warning: #9a6516;
+  --bg-warning: color-mix(in srgb, #c9862f 11%, var(--app-paper));
+  --border-warning: color-mix(in srgb, #c9862f 34%, transparent);
+  --text-danger: #a8402d;
+  --bg-danger: color-mix(in srgb, #bd4f3a 9%, var(--app-paper));
+  --border-danger: color-mix(in srgb, #bd4f3a 30%, transparent);
+  --fill-success: var(--app-green);
+  --fill-warning: #c9862f;
+  --hairline: var(--app-line);
+}
+
+html[data-theme="dark"] .dashboard-shell {
+  --text-warning: #d9a45c;
+  --text-danger: #e08a76;
+}
+
+/* Machine facts read in mono, lowercase, quiet */
+.dashboard-shell code,
+.dashboard-shell time {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Console head: who's on shift ─────────────────────────────── */
+.console-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-2);
+}
+
+.console-identity {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+.console-tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: var(--text-accent);
+  background: var(--bg-accent);
+  font-size: 17px;
+  font-weight: 740;
+}
+
+.console-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.console-name-row strong {
+  color: var(--text-primary);
+  font-size: 19px;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+}
+
+.console-name-row code {
+  padding: 1px 5px;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  color: var(--text-muted-c);
+  font-size: 11px;
+}
+
+.console-identity p {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.console-presence {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.console-presence-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 560;
+  text-transform: capitalize;
+}
+
+.console-presence-state i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted-c);
+}
+
+.console-presence-state[data-status="active"] i {
+  background: var(--fill-success);
+  animation: dobly-live-dot 2.2s ease-in-out infinite;
+}
+
+.console-presence-state[data-status="paused"] i { background: var(--fill-warning); }
+
+.console-presence > code {
+  color: var(--text-muted-c);
+  font-size: 11px;
+}
+
+.console-presence .operator-details-button { margin-top: 4px; }
+
+/* ── Stat tiles: today at a glance ────────────────────────────── */
+.console-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-2);
+}
+
+.console-stats > div {
+  padding: 9px 12px 10px;
+  border-radius: 8px;
+  background: var(--surface-1);
+}
+
+.console-stats code {
+  display: block;
+  color: var(--text-muted-c);
+  font-size: 11px;
+}
+
+.console-stats b {
+  display: block;
+  margin-top: 1px;
+  color: var(--text-primary);
+  font-size: 21px;
+  font-weight: 560;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+.console-stats > div[data-tone="warning"] {
+  background: var(--bg-warning);
+}
+
+.console-stats > div[data-tone="warning"] code,
+.console-stats > div[data-tone="warning"] b {
+  color: var(--text-warning);
+}
+
+/* ── The Leash: autonomy as a physical control ────────────────── */
+.console-leash {
+  margin: 12px 20px;
+  padding: 13px 16px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.console-leash-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.console-leash-head span {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 560;
+}
+
+.console-leash-head code {
+  color: var(--text-accent);
+  font-size: 12px;
+}
+
+.console-leash input[type="range"] {
+  width: 100%;
+  height: 4px;
+  appearance: none;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--app-rust) calc(var(--leash-pct, 33%) ), var(--hairline) 0);
+  outline: none;
+  cursor: pointer;
+}
+
+.console-leash input[type="range"]::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  appearance: none;
+  border: 2px solid var(--app-rust);
+  border-radius: 50%;
+  background: var(--surface-2);
+  box-shadow: 0 1px 4px rgba(40, 31, 24, 0.2);
+  transition: transform 150ms var(--ease-premium);
+}
+
+.console-leash input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+
+.console-leash input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--app-rust);
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+
+.console-leash-stops {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.console-leash-stops span {
+  color: var(--text-muted-c);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.console-leash > p {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--hairline);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+/* ── Guardrails: the hard rules, tappable pills ───────────────── */
+.console-rails {
+  margin: 0 20px 12px;
+}
+
+.console-rails-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.console-rails-head span {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 560;
+}
+
+.console-rails-head code {
+  color: var(--text-muted-c);
+  font-size: 11px;
+}
+
+.console-rails-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.console-rails-pills span {
+  padding: 4px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  font-size: 12px;
+}
+
+.console-rails-pills span[data-tone="danger"] {
+  border-color: var(--border-danger);
+  color: var(--text-danger);
+  background: var(--bg-danger);
+}
+
+.console-rails-pills span[data-tone="warning"] {
+  border-color: var(--border-warning);
+  color: var(--text-warning);
+  background: var(--bg-warning);
+}
+
+/* ── Shift tape: the thread tightens to the reference ─────────── */
+.operator-thread-controls-label code {
+  margin-left: 6px;
+  color: var(--text-muted-c);
+  font-size: 11px;
+}
+
+.operator-thread-day::before {
+  width: 1.5px;
+  background: var(--hairline);
+}
+
+.ledger-entry-meta strong {
+  font-weight: 640;
+  letter-spacing: 0.06em;
+}
+
+.ledger-entry-meta time,
+.operator-activity-row time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.operator-activity-copy strong { font-weight: 560; }
+
+/* Names and handles the coworker mentions read in accent */
+.ledger-entry-coworker .ledger-entry-body a {
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+@media (max-width: 860px) {
+  .console-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .console-head { flex-direction: column; }
+  .console-presence { flex-direction: row; align-items: center; gap: 10px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CONSOLE LANGUAGE, APP-WIDE — every page inherits the same voice:
+   mono lowercase for labels and machine facts, tint only for state
+   that needs the owner, hairlines everywhere else.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Section labels and figures speak mono, lowercase */
+.dashboard-shell :is(.home-figures span, .ref-section-title strong, .home-section-head h2, .workspace-kicker, .ref-greeting) {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+}
+
+.dashboard-shell :is(.badge, .badge-muted, .badge-green, .badge-accent, .ref-pill) {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: lowercase;
+  border-radius: 5px;
+  min-height: 22px;
+  padding: 2px 7px;
+}
+
+.dashboard-shell .ref-pill.green { color: var(--fill-success); background: color-mix(in srgb, var(--app-green) 9%, var(--app-paper)); border-color: color-mix(in srgb, var(--app-green) 30%, transparent); }
+.dashboard-shell .ref-pill.amber { color: var(--text-warning); background: var(--bg-warning); border-color: var(--border-warning); }
+
+/* Timestamps and counts across all pages read as machine facts */
+.dashboard-shell :is(.home-list-meta time, .ref-task-row > span:not(.ref-pill):not(.ref-icon), .operator-last-active, .home-roster-status) {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: lowercase;
+}
+
+/* Numbered section markers become mono */
+.home-section-head h2 i { font-family: var(--font-mono); font-style: normal; }
+
+/* The masthead date joins the console voice */
+.home-date { font-family: var(--font-mono); font-weight: 500; letter-spacing: 0.04em; text-transform: lowercase; }
+
+/* ── Held work: the tape stops where you are needed ───────────── */
+.tape-held {
+  margin: 10px 0 0 34px;
+  display: grid;
+  gap: 10px;
+}
+
+.tape-held-item {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--border-warning);
+  border-radius: 10px;
+  background: var(--bg-warning);
+}
+
+.tape-held-item > i {
+  position: absolute;
+  top: 16px;
+  left: -27px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--fill-warning);
+  animation: dobly-live-dot 2.2s ease-in-out infinite;
+}
+
+.tape-held-copy { min-width: 0; }
+
+.tape-held-copy strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.tape-held-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tape-held-actions button {
+  min-height: 26px;
+  padding: 3px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tape-held-actions button[data-primary] {
+  border-color: var(--app-rust);
+  color: white;
+  background: var(--app-rust);
+}
+
+.tape-held-actions button:disabled { opacity: 0.55; }
+
+.tape-held-actions code {
+  margin-left: 4px;
+  color: var(--text-muted-c);
+  font-size: 11px;
+}
+
+@media (max-width: 720px) {
+  .tape-held { margin-left: 24px; }
+  .tape-held-item > i { left: -21px; }
+}
+
+/* ── Guardrails editor: rules you can actually touch ──────────── */
+.rails-editor { display: grid; gap: 8px; }
+
+.rails-editor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px 7px 12px;
+  border: 1px solid var(--border-danger);
+  border-radius: 8px;
+  color: var(--text-danger);
+  background: var(--bg-danger);
+  font-size: 12.5px;
+}
+
+.rails-editor-row button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-danger);
+  background: transparent;
+}
+
+.rails-editor-row button:hover { background: color-mix(in srgb, #bd4f3a 14%, transparent); }
+.rails-editor-row button svg { width: 13px; height: 13px; }
+
+.rails-editor > p { margin: 0; color: var(--text-muted-c); font-size: 12px; line-height: 1.55; }
+
+.rails-editor-add { display: flex; gap: 6px; margin-top: 2px; }
+
+.rails-editor-add input {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  outline: none;
+}
+
+.rails-editor-add button {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--app-rust);
+  border-radius: 7px;
+  color: white;
+  background: var(--app-rust);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rails-editor-add button:disabled { opacity: 0.5; }
+
+/* ── Loops: the recurring jobs, read as schedule lines ────────── */
+.loop-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.loop-row:last-of-type { border-bottom: 0; }
+
+.loop-row strong { display: block; color: var(--text-primary); font-size: 12.5px; font-weight: 600; }
+.loop-row p { margin: 2px 0 0; color: var(--text-muted-c); font-size: 11.5px; line-height: 1.5; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.loop-row code { flex: none; color: var(--text-muted-c); font-size: 10.5px; }
+.loop-row[data-status="active"] code { color: var(--fill-success); }
+
+/* ── Approvals page joins the console ─────────────────────────── */
+.approvals-workspace .approval-queue-item {
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+.approvals-workspace .approval-item-badges .badge-muted { background: var(--surface-1); }
+
+.approvals-workspace .approval-queue-count {
+  font-family: var(--font-mono);
+  text-transform: lowercase;
+}
+
+.approvals-workspace .approval-item-icon { color: var(--text-warning); background: var(--bg-warning); border-color: var(--border-warning); }

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { buildDoblyWorkspaceSnapshot } from "@/lib/dobly-ops";
 import { isConnectionOperational } from "@/lib/connection-readiness";
+import { listDoblyOperators, type OperatorWithLoops } from "@/lib/dobly-operators";
 import type { Approval, Connection, Workflow, WorkflowRun, WorkflowVersion } from "@/types";
 import DoblyDashboardClient from "./DoblyDashboardClient";
 
@@ -13,6 +14,7 @@ export default async function DoblyDashboardPage() {
 
   if (!user) redirect("/auth/login");
 
+  const operatorsPromise = listDoblyOperators({ userId: user.id }).catch((): OperatorWithLoops[] => []);
   const [
     { data: profile },
     { data: businessProfile },
@@ -53,6 +55,14 @@ export default async function DoblyDashboardPage() {
   };
 
   const firstName = profile?.full_name?.split(" ")[0] || "there";
+  const operators = await operatorsPromise;
+  const team = operators.slice(0, 6).map((operator) => ({
+    id: operator.id,
+    name: operator.name,
+    mission: operator.mission,
+    status: operator.status,
+    lastRunAt: operator.last_run_at,
+  }));
 
   return (
     <DoblyDashboardClient
@@ -64,6 +74,7 @@ export default async function DoblyDashboardPage() {
       workflowTitles={workflowTitles}
       onboarding={onboarding}
       firstName={firstName}
+      team={team}
     />
   );
 }

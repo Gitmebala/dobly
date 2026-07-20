@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function OperatorsPage() {
+// Consolidated: this legacy surface merged into its canonical home.
+export default function Page() {
   redirect("/dashboard/coworkers");
 }

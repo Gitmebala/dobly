@@ -79,8 +79,36 @@
     --rust: #D97757;
     --rust-h: #E08A6E;
     --rust-dark: #B85C38;
+    --rust-subtle: rgba(217, 119, 87, 0.08);
+    --rust-dim: rgba(217, 119, 87, 0.25);
     --transition-speed: 0.42s;
+
+    /* Motion language — physics-based, never arbitrary */
     --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+    --ease-entry: cubic-bezier(0, 0, 0.2, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --dur-micro: 150ms;
+    --dur-standard: 200ms;
+    --dur-significant: 300ms;
+    --dur-major: 420ms;
+
+    /* Spacing scale (4px base) */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+    --sp-8: 32px;
+    --sp-10: 40px;
+
+    /* Radius scale */
+    --r-tight: 4px;
+    --r-std: 6px;
+    --r-round: 8px;
+    --r-extra: 12px;
+    --r-full: 999px;
   }
 
   /* Dark - warmer charcoal, not cold grey */
@@ -2948,5 +2976,141 @@
 
   .dobly-os-activity-row > span:nth-of-type(2) {
     display: none;
+  }
+}
+
+/* ═════════════════════════════════════════
+   MOTION LANGUAGE — physics-based keyframes
+   ════════════════════════════════════════= */
+@keyframes dobly-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dobly-rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dobly-drop-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dobly-scale-in {
+  from { opacity: 0; transform: scale(0.965); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes dobly-slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes dobly-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes dobly-shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+@keyframes dobly-live-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(63, 143, 104, 0.35); }
+  55% { box-shadow: 0 0 0 5px rgba(63, 143, 104, 0); }
+}
+
+/* Reusable entrance utilities — apply to mounted content */
+.dobly-anim-rise {
+  animation: dobly-rise-in var(--dur-significant) var(--ease-premium) both;
+}
+
+.dobly-anim-drop {
+  animation: dobly-drop-in var(--dur-significant) var(--ease-premium) both;
+}
+
+.dobly-anim-fade {
+  animation: dobly-fade-in var(--dur-significant) var(--ease-premium) both;
+}
+
+.dobly-anim-scale {
+  animation: dobly-scale-in var(--dur-significant) var(--ease-premium) both;
+}
+
+/* Staggered children — wrap a list, children cascade in */
+.dobly-stagger > * {
+  animation: dobly-rise-in var(--dur-significant) var(--ease-premium) both;
+}
+
+.dobly-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.dobly-stagger > *:nth-child(2) { animation-delay: 40ms; }
+.dobly-stagger > *:nth-child(3) { animation-delay: 80ms; }
+.dobly-stagger > *:nth-child(4) { animation-delay: 120ms; }
+.dobly-stagger > *:nth-child(5) { animation-delay: 160ms; }
+.dobly-stagger > *:nth-child(6) { animation-delay: 200ms; }
+.dobly-stagger > *:nth-child(7) { animation-delay: 240ms; }
+.dobly-stagger > *:nth-child(8) { animation-delay: 280ms; }
+.dobly-stagger > *:nth-child(n + 9) { animation-delay: 320ms; }
+
+/* Skeleton loading shimmer */
+.dobly-skeleton {
+  border-radius: var(--r-std);
+  background:
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--dobly-text) 5%, transparent) 40%,
+      color-mix(in srgb, var(--dobly-text) 10%, transparent) 50%,
+      color-mix(in srgb, var(--dobly-text) 5%, transparent) 60%
+    );
+  background-size: 200% 100%;
+  animation: dobly-shimmer 1.5s ease-in-out infinite;
+}
+
+/* Live presence dot — "coworker is working right now" */
+.dobly-live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: dobly-live-dot 2.2s ease-in-out infinite;
+}
+
+/* Interaction utilities */
+.dobly-hover-raise {
+  transition:
+    transform var(--dur-standard) var(--ease-premium),
+    box-shadow var(--dur-standard) var(--ease-premium),
+    border-color var(--dur-standard) var(--ease-premium),
+    background var(--dur-standard) var(--ease-premium);
+}
+
+.dobly-hover-raise:hover {
+  transform: translateY(-1px);
+}
+
+.dobly-press:active {
+  transform: translateY(0) scale(0.985);
+  transition-duration: var(--dur-micro);
+}
+
+/* Focus ring — visible, warm, never removed */
+.dobly-focus-ring:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--rust) 45%, transparent);
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.14);
+}
+
+/* Respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

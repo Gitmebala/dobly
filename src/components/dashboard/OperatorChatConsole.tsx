@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState, useTransition } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowRight,
   Bot,
   BrainCircuit,
+  CalendarDays,
   CheckCircle2,
   Clock3,
   Download,
@@ -50,8 +51,10 @@ type OperatorChatConsoleProps = {
     mission: string;
     outcome: string;
     status: string;
+    kind?: string;
     approval_mode: string;
     capability_tags: string[];
+    guardrails?: JsonRecord;
     last_run_at: string | null;
     loops: Array<{ id: string; name: string; cadence: string; status: string; trigger: string }>;
   };
@@ -80,6 +83,31 @@ const quickDirections = [
 
 type InspectorTab = "overview" | "review" | "outputs" | "activity" | "control";
 
+// The Leash: how much run the coworker has, in plain language.
+const leashModes = [
+  { value: "supervised", label: "watch only", copy: "Reads everything, writes nothing. Good for the first week." },
+  { value: "ask_first", label: "draft, then ask", copy: "Prepares the work and holds it. Nothing leaves without your tap." },
+  { value: "approve_risky", label: "act, then notify", copy: "Handles routine work alone. Risky moves still come to you first." },
+  { value: "trusted", label: "autonomous", copy: "Full run of the job. Guardrails still hard-stop it." },
+] as const;
+
+function guardrailPills(guardrails?: JsonRecord): Array<{ label: string; tone: string }> {
+  if (!guardrails) return [];
+  const pills: Array<{ label: string; tone: string }> = [];
+  for (const [key, value] of Object.entries(guardrails)) {
+    if (Array.isArray(value)) {
+      for (const item of value.slice(0, 4)) {
+        if (typeof item === "string" && item.length < 48) pills.push({ label: item.toLowerCase(), tone: "danger" });
+      }
+    } else if (typeof value === "string" && value.length < 48) {
+      pills.push({ label: value.toLowerCase(), tone: "warning" });
+    } else if (value === true) {
+      pills.push({ label: key.replace(/_/g, " ").toLowerCase(), tone: "warning" });
+    }
+  }
+  return pills.slice(0, 6);
+}
+
 const operatorControlPrompts = [
   "Pause this Operator and explain what is blocked.",
   "Continue from the latest draft, but improve quality before external action.",
@@ -93,6 +121,41 @@ function formatTime(value?: string | null) {
   if (!value) return "Not yet";
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
+
+function heldFor(value?: string | null) {
+  if (!value) return "just now";
+  const minutes = Math.max(1, Math.round((Date.now() - Date.parse(value)) / 60000));
+  if (minutes < 60) return `held ${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  return hours < 24 ? `held ${hours}h` : `held ${Math.round(hours / 24)}d`;
+}
+
+function formatClock(value?: string | null) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
+
+function dayKey(iso: string) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatDayLabel(iso: string) {
+  const date = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const same = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  if (same(date, today)) return "Today";
+  if (same(date, yesterday)) return "Yesterday";
+  return new Intl.DateTimeFormat(undefined, { weekday: "long", month: "short", day: "numeric" }).format(date);
+}
+
+type TimelineEntry =
+  | { kind: "message"; at: string; message: ChatMessage }
+  | { kind: "event"; at: string; event: JsonRecord };
+
+type TimelineGroup = { day: string; label: string; entries: TimelineEntry[] };
 
 function statusTone(status?: string) {
   if (status === "completed" || status === "approved" || status === "active") return "text-emerald-300";
@@ -136,12 +199,101 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
   const [feedbackPending, setFeedbackPending] = useState<string | null>(null);
   const [decisionLoading, setDecisionLoading] = useState<string | null>(null);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("overview");
+  const [dateFilter, setDateFilter] = useState("");
+  const [leash, setLeash] = useState(() => {
+    const index = leashModes.findIndex((mode) => mode.value === props.operator.approval_mode);
+    return index === -1 ? 1 : index;
+  });
+  const [leashSaving, setLeashSaving] = useState(false);
+  const [rails, setRails] = useState<string[]>(() =>
+    Array.isArray(props.operator.guardrails?.rules)
+      ? (props.operator.guardrails.rules as unknown[]).filter((rule): rule is string => typeof rule === "string")
+      : [],
+  );
+  const [newRail, setNewRail] = useState("");
+  const [railsSaving, setRailsSaving] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  async function saveRails(next: string[]) {
+    const previous = rails;
+    setRails(next);
+    setRailsSaving(true);
+    try {
+      const response = await fetch(`/api/operators/${props.operator.id}/guardrails`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ rules: next }),
+      });
+      if (!response.ok) {
+        setRails(previous);
+        const data = await response.json().catch(() => ({}));
+        setError(data.error ?? "Could not update guardrails.");
+      }
+    } catch {
+      setRails(previous);
+      setError("Could not update guardrails.");
+    } finally {
+      setRailsSaving(false);
+    }
+  }
+
+  async function updateLeash(nextIndex: number) {
+    const previous = leash;
+    setLeash(nextIndex);
+    setLeashSaving(true);
+    try {
+      const response = await fetch(`/api/operators/${props.operator.id}/leash`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ approvalMode: leashModes[nextIndex].value }),
+      });
+      if (!response.ok) {
+        setLeash(previous);
+        const data = await response.json().catch(() => ({}));
+        setError(data.error ?? "Could not change autonomy.");
+      }
+    } catch {
+      setLeash(previous);
+      setError("Could not change autonomy.");
+    } finally {
+      setLeashSaving(false);
+    }
+  }
 
   const pendingApprovals = useMemo(
     () => approvals.filter((approval) => approval.status === "pending"),
     [approvals],
   );
+
+  // Everything the coworker does — messages and work events — merged into
+  // one chronological record, grouped by day, filterable to a single date.
+  const timeline = useMemo<TimelineGroup[]>(() => {
+    const messageEntries: TimelineEntry[] = messages
+      .filter((message) => message.created_at)
+      .map((message) => ({ kind: "message", at: message.created_at, message }));
+    const eventEntries: TimelineEntry[] = props.events
+      .filter((event) => event.created_at)
+      .map((event) => ({ kind: "event", at: String(event.created_at), event }));
+    const all = [...messageEntries, ...eventEntries].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+    const visible = dateFilter ? all.filter((entry) => dayKey(entry.at) === dateFilter) : all;
+    const groups: TimelineGroup[] = [];
+    for (const entry of visible) {
+      const key = dayKey(entry.at);
+      const last = groups[groups.length - 1];
+      if (last && last.day === key) last.entries.push(entry);
+      else groups.push({ day: key, label: formatDayLabel(entry.at), entries: [entry] });
+    }
+    return groups;
+  }, [messages, props.events, dateFilter]);
+
+  useEffect(() => {
+    // Open the conversation at the most recent moment, like returning to a desk.
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, []);
+
+  useEffect(() => {
+    if (dateFilter) listRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [dateFilter]);
   const handoffTimeline = useMemo(() => {
     const messageEntries = messages
       .filter((message) => message.metadata?.handoff)
@@ -320,21 +472,23 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
     <section className="operator-chat-console">
       <div className="operator-chat-layout">
         <div className="operator-conversation">
-          <div className="operator-conversation-header">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-[rgba(196,80,26,0.3)] bg-[rgba(196,80,26,0.12)] px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[var(--dobly-accent)]">
-                  Live coworker
-                </span>
-                <span className="badge-muted capitalize">{props.operator.status}</span>
+          <div className="console-head">
+            <div className="console-identity">
+              <span className="console-tile" aria-hidden="true">{props.operator.name.slice(0, 1).toUpperCase()}</span>
+              <div>
+                <div className="console-name-row">
+                  <strong>{props.operator.name}</strong>
+                  <code>#{props.operator.id.slice(0, 4)} · {props.operator.kind ?? "custom"}</code>
+                </div>
+                <p>{props.operator.mission}</p>
               </div>
-              <h2 className="mt-3 font-display text-3xl text-[var(--dobly-text)]">{props.operator.name}</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--dobly-text-secondary)]">
-                {props.operator.mission}
-              </p>
             </div>
-            <div className="operator-header-actions">
-              <span className="operator-last-active">Last active {formatTime(props.operator.last_run_at)}</span>
+            <div className="console-presence">
+              <span className="console-presence-state" data-status={props.operator.status}>
+                <i aria-hidden="true" />
+                {props.operator.status === "active" ? "On shift" : props.operator.status}
+              </span>
+              <code>last active {formatTime(props.operator.last_run_at).toLowerCase()}</code>
               <button type="button" className="operator-details-button" onClick={() => setInspectorOpen(true)}>
                 <PanelRightOpen aria-hidden="true" />
                 Details
@@ -343,21 +497,114 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
             </div>
           </div>
 
+          <div className="console-stats" aria-label="Today at a glance">
+            <div><code>handled</code><b>{props.recentRuns.length}</b></div>
+            <div><code>outputs</code><b>{artifacts.length}</b></div>
+            <div data-tone={pendingApprovals.length ? "warning" : undefined}><code>waiting on you</code><b>{pendingApprovals.length}</b></div>
+            <div><code>loops</code><b>{props.operator.loops.filter((loop) => loop.status === "active").length}</b></div>
+          </div>
+
+          <div className="console-leash">
+            <div className="console-leash-head">
+              <span>Leash</span>
+              <code>{leashSaving ? "saving…" : leashModes[leash].label}</code>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={3}
+              step={1}
+              value={leash}
+              onChange={(event) => updateLeash(Number(event.target.value))}
+              aria-label="Autonomy level"
+              style={{ "--leash-pct": `${(leash / 3) * 100}%` } as React.CSSProperties}
+            />
+            <div className="console-leash-stops" aria-hidden="true">
+              {leashModes.map((mode) => <span key={mode.value}>{mode.label.split(",")[0]}</span>)}
+            </div>
+            <p>{leashModes[leash].copy}</p>
+          </div>
+
+          {guardrailPills({ ...props.operator.guardrails, rules: rails }).length ? (
+            <div className="console-rails">
+              <div className="console-rails-head">
+                <span>Guardrails</span>
+                <code>{guardrailPills({ ...props.operator.guardrails, rules: rails }).length} rules · edit in details</code>
+              </div>
+              <div className="console-rails-pills">
+                {guardrailPills({ ...props.operator.guardrails, rules: rails }).map((pill) => (
+                  <span key={pill.label} data-tone={pill.tone}>{pill.label}</span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="operator-thread-controls">
+            <span className="operator-thread-controls-label">
+              <CalendarDays aria-hidden="true" />
+              Shift tape
+              <code>{dateFilter ? formatDayLabel(`${dateFilter}T12:00:00`).toLowerCase() : "full history"}</code>
+            </span>
+            <div className="operator-thread-controls-actions">
+              <input
+                type="date"
+                value={dateFilter}
+                max={dayKey(new Date().toISOString())}
+                onChange={(event) => setDateFilter(event.target.value)}
+                aria-label="View what this coworker did on a specific day"
+              />
+              {dateFilter ? (
+                <button type="button" onClick={() => setDateFilter("")}>Show everything</button>
+              ) : null}
+            </div>
+          </div>
+
           <div ref={listRef} className="operator-chat-thread">
-            {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
+            {timeline.map((group) => (
+              <div key={group.day} className="operator-thread-day">
+                <div className="operator-day-divider" role="separator" aria-label={group.label}>
+                  <span>{group.label}</span>
+                </div>
+                {group.entries.map((entry) =>
+                  entry.kind === "message"
+                    ? <MessageBubble key={entry.message.id} message={entry.message} coworkerName={props.operator.name} />
+                    : <ActivityRow key={`event-${entry.event.id}`} event={entry.event} />
+                )}
+              </div>
             ))}
+            {!timeline.length ? (
+              <div className="operator-thread-empty">
+                <Bot aria-hidden="true" />
+                <strong>{dateFilter ? "Nothing happened on this day" : "No conversation yet"}</strong>
+                <span>{dateFilter ? "Pick another date, or show everything." : `Say hello — tell ${props.operator.name} what you need.`}</span>
+              </div>
+            ) : null}
+            {pendingApprovals.length ? (
+              <div className="tape-held" aria-label="Work held for your decision">
+                {pendingApprovals.slice(0, 3).map((approval) => (
+                  <div key={approval.id} className="tape-held-item">
+                    <i aria-hidden="true" />
+                    <div className="tape-held-copy">
+                      <strong>{approval.title || approval.message}</strong>
+                      <div className="tape-held-actions">
+                        <button type="button" onClick={() => decideApproval(approval.id, "approved")} disabled={Boolean(decisionLoading)} data-primary>
+                          {decisionLoading === `${approval.id}:approved` ? "…" : "Approve"}
+                        </button>
+                        <button type="button" onClick={() => decideApproval(approval.id, "rejected")} disabled={Boolean(decisionLoading)}>
+                          {decisionLoading === `${approval.id}:rejected` ? "…" : "Not this"}
+                        </button>
+                        <button type="button" onClick={() => setInspectorOpen(true)}>Read it ↗</button>
+                        <code>{heldFor(approval.requested_at)}</code>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             {isPending ? (
-              <div className="rounded-[1rem] border border-[rgba(196,80,26,0.28)] bg-[rgba(196,80,26,0.08)] p-4 text-sm text-[var(--dobly-text-muted)]">
-                <div className="flex items-center gap-2 text-[var(--dobly-text)]">
-                  <Loader2 className="h-4 w-4 animate-spin text-[var(--dobly-accent)]" />
-                  Coworker is planning, checking risk, choosing tools, and queueing the run...
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-4">
-                  {["Understand", "Choose tools", "Check risk", "Queue run"].map((step) => (
-                    <div key={step} className="rounded-[0.75rem] border border-[var(--dobly-border)] bg-[rgba(0,0,0,0.1)] px-3 py-2 text-xs">{step}</div>
-                  ))}
-                </div>
+              <div className="operator-typing" aria-live="polite">
+                <span className="operator-typing-dots" aria-hidden="true"><i /><i /><i /></span>
+                {props.operator.name} is thinking — planning the work, checking risk, choosing tools...
               </div>
             ) : null}
           </div>
@@ -382,15 +629,15 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 rows={3}
-                placeholder={`Message ${props.operator.name}...`}
-                className="resize-none rounded-[1rem] border border-[var(--dobly-border)] bg-[color-mix(in_srgb,var(--dobly-bg)_82%,transparent)] px-4 py-3 text-sm leading-6 text-[var(--dobly-text)] outline-none focus:border-[rgba(196,80,26,0.45)]"
+                placeholder={`Tell ${props.operator.name} what changed…`}
+                className="ledger-composer-input"
               />
               <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
                 <input
                   value={attachmentNote}
                   onChange={(event) => setAttachmentNote(event.target.value)}
                   placeholder="Optional note for attached image, doc, video, CAD file, or reference..."
-                  className="rounded-[0.9rem] border border-[var(--dobly-border)] bg-[rgba(255,255,255,0.025)] px-3 py-3 text-sm text-[var(--dobly-text)] outline-none focus:border-[rgba(196,80,26,0.45)]"
+                  className="ledger-composer-note"
                 />
                 <input
                   ref={fileInputRef}
@@ -447,7 +694,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                 ))}
               </div>
             </details>
-            {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
+            {error ? <p className="ledger-composer-error" role="alert">{error}</p> : null}
           </div>
         </div>
 
@@ -522,9 +769,55 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
             ) : null}
 
             {inspectorTab === "control" ? (
-              <ControlCard icon={Sparkles} title="Steer this coworker" value="Commands">
-                {operatorControlPrompts.map((item) => <button key={item} onClick={() => sendPrompt(item)} className="operator-control-prompt">{item}</button>)}
-              </ControlCard>
+              <>
+                <ControlCard icon={ShieldCheck} title="Guardrails" value={railsSaving ? "saving…" : `${rails.length} rules`}>
+                  <div className="rails-editor">
+                    {rails.map((rule, index) => (
+                      <div key={`${rule}-${index}`} className="rails-editor-row">
+                        <span>{rule}</span>
+                        <button type="button" onClick={() => saveRails(rails.filter((_, i) => i !== index))} disabled={railsSaving} aria-label={`Remove rule: ${rule}`}>
+                          <X aria-hidden="true" />
+                        </button>
+                      </div>
+                    ))}
+                    {!rails.length ? <p>No hard rules yet. Anything you add here always stops the coworker for your decision.</p> : null}
+                    <form
+                      className="rails-editor-add"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        const value = newRail.trim();
+                        if (value.length < 2 || rails.length >= 12) return;
+                        saveRails([...rails, value]);
+                        setNewRail("");
+                      }}
+                    >
+                      <input
+                        value={newRail}
+                        onChange={(event) => setNewRail(event.target.value)}
+                        placeholder="e.g. refunds over $50"
+                        maxLength={80}
+                        aria-label="Add a hard rule"
+                      />
+                      <button type="submit" disabled={railsSaving || newRail.trim().length < 2}>Add rule</button>
+                    </form>
+                  </div>
+                </ControlCard>
+                <ControlCard icon={Clock3} title="Loops" value={`${props.operator.loops.length}`}>
+                  {props.operator.loops.map((loop) => (
+                    <div key={loop.id} className="loop-row" data-status={loop.status}>
+                      <div>
+                        <strong>{loop.name}</strong>
+                        <p>{loop.trigger}</p>
+                      </div>
+                      <code>{loop.cadence.replace(/_/g, " ")} · {loop.status}</code>
+                    </div>
+                  ))}
+                  {!props.operator.loops.length ? <p>No loops yet. Loops are the recurring jobs this coworker runs on its own.</p> : null}
+                </ControlCard>
+                <ControlCard icon={Sparkles} title="Steer this coworker" value="Commands">
+                  {operatorControlPrompts.map((item) => <button key={item} onClick={() => sendPrompt(item)} className="operator-control-prompt">{item}</button>)}
+                </ControlCard>
+              </>
             ) : null}
           </div>
         </aside>
@@ -535,37 +828,44 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function ActivityRow({ event }: { event: JsonRecord }) {
+  const severity = String(event.severity ?? "info");
+  return (
+    <div className="operator-activity-row" data-severity={severity}>
+      <i aria-hidden="true" />
+      <div className="operator-activity-copy">
+        <strong>{String(event.title ?? "Activity")}</strong>
+        {event.summary ? <p>{String(event.summary)}</p> : null}
+      </div>
+      <time dateTime={String(event.created_at ?? "")}>{formatClock(String(event.created_at ?? ""))}</time>
+    </div>
+  );
+}
+
+function MessageBubble({ message, coworkerName }: { message: ChatMessage; coworkerName: string }) {
   const isUser = message.role === "user";
-  const isArtifact = message.role === "artifact";
-  const isApproval = message.role === "approval";
-  const Icon = isUser ? User : isArtifact ? FileText : isApproval ? ShieldCheck : message.role === "system" ? PauseCircle : Bot;
+  const author = isUser
+    ? "You"
+    : message.role === "operator"
+    ? coworkerName
+    : message.role === "approval"
+    ? "Decision"
+    : message.role === "system"
+    ? "Dobly"
+    : message.role;
+  const showIntent = message.intent && !["instruction", "message", "reply"].includes(message.intent);
 
   return (
-    <div className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
-      {!isUser ? (
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[rgba(196,80,26,0.28)] bg-[rgba(196,80,26,0.12)] text-[var(--dobly-accent)]">
-          <Icon className="h-4 w-4" />
-        </span>
-      ) : null}
-      <div className={`max-w-[86%] rounded-[1.1rem] border p-4 ${isUser ? "border-[rgba(196,80,26,0.34)] bg-[rgba(196,80,26,0.16)]" : "border-[var(--dobly-border)] bg-[rgba(255,255,255,0.026)]"}`}>
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">
-            {isUser ? "You" : message.role === "operator" ? "Coworker" : message.role}
-          </span>
-          <span className="rounded-full border border-[var(--dobly-border)] px-2 py-0.5 text-[10px] text-[var(--dobly-text-muted)]">{message.intent.replace("_", " ")}</span>
-          <span className="text-[10px] text-[var(--dobly-text-dim)]">{formatTime(message.created_at)}</span>
-        </div>
-        <p className="whitespace-pre-wrap text-sm leading-7 text-[var(--dobly-text-secondary)]">{message.body}</p>
-        <OperatorThinking message={message} />
-        <MessageArtifactPreview message={message} />
-      </div>
-      {isUser ? (
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[var(--dobly-border)] bg-[rgba(255,255,255,0.04)] text-[var(--dobly-text-muted)]">
-          <Icon className="h-4 w-4" />
-        </span>
-      ) : null}
-    </div>
+    <article className={`ledger-entry ${isUser ? "ledger-entry-user" : "ledger-entry-coworker"}`} data-role={message.role}>
+      <header className="ledger-entry-meta">
+        <strong>{author}</strong>
+        {showIntent ? <span>{message.intent.replace(/_/g, " ")}</span> : null}
+        <time dateTime={message.created_at}>{formatClock(message.created_at)}</time>
+      </header>
+      <div className="ledger-entry-body">{message.body}</div>
+      <OperatorThinking message={message} />
+      <MessageArtifactPreview message={message} />
+    </article>
   );
 }
 
@@ -578,40 +878,31 @@ function OperatorThinking({ message }: { message: ChatMessage }) {
   if (!plan.length && !autonomy && !risk && !missingInfo && !message.job_id && !message.brain_trace_id) return null;
 
   return (
-    <details className="mt-4 rounded-[0.9rem] border border-[rgba(196,80,26,0.22)] bg-[rgba(196,80,26,0.06)] p-3">
-      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.16em] text-[var(--dobly-accent)]">
-        Work details
-      </summary>
-      <div className="mt-3 grid gap-3">
+    <details className="ledger-workings">
+      <summary>How this was worked out</summary>
+      <div className="ledger-workings-body">
         {plan.length ? (
-          <div className="grid gap-2">
+          <ol className="ledger-plan">
             {plan.slice(0, 8).map((step: JsonRecord, index: number) => (
-              <div key={step.id ?? index} className="rounded-[0.75rem] border border-[var(--dobly-border)] bg-[rgba(0,0,0,0.12)] p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-semibold text-[var(--dobly-text)]">{step.title ?? `Step ${index + 1}`}</div>
-                  <span className="rounded-full border border-[var(--dobly-border)] px-2 py-0.5 text-[10px] text-[var(--dobly-text-muted)]">{step.phase ?? "plan"}</span>
-                </div>
-                <p className="mt-1 text-xs leading-5 text-[var(--dobly-text-muted)]">{step.purpose ?? step.expectedOutput}</p>
-                <div className="mt-2 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.13em] text-[var(--dobly-text-dim)]">
-                  <span>{step.toolPreference ?? "tool judgment"}</span>
-                  <span>{step.riskLevel ?? "risk unknown"}</span>
-                  {step.requiresApproval ? <span className="text-amber-300">needs approval</span> : <span>safe to continue</span>}
-                </div>
-              </div>
+              <li key={step.id ?? index}>
+                <strong>{step.title ?? `Step ${index + 1}`}</strong>
+                {step.purpose ?? step.expectedOutput ? <p>{step.purpose ?? step.expectedOutput}</p> : null}
+                <small>
+                  {step.phase ?? "plan"} · {step.toolPreference ?? "tool judgment"} · {step.requiresApproval ? "needs approval" : "safe to continue"}
+                </small>
+              </li>
             ))}
-          </div>
+          </ol>
         ) : null}
-        <div className="grid gap-2 md:grid-cols-2">
-          {autonomy ? <InfoBlock title="Autonomy" data={autonomy} /> : null}
-          {risk ? <InfoBlock title="Risk" data={risk} /> : null}
-          {missingInfo ? <InfoBlock title="Missing Info" data={missingInfo} /> : null}
-          {message.job_id || message.brain_trace_id ? (
-            <div className="rounded-[0.75rem] border border-[var(--dobly-border)] bg-[rgba(0,0,0,0.12)] p-3 text-xs text-[var(--dobly-text-muted)]">
-              {message.job_id ? <div>Queued job: <span className="font-mono text-[var(--dobly-text)]">{message.job_id.slice(0, 8)}</span></div> : null}
-              {message.brain_trace_id ? <div className="mt-1">Brain trace: <span className="font-mono text-[var(--dobly-text)]">{message.brain_trace_id.slice(0, 8)}</span></div> : null}
-            </div>
-          ) : null}
-        </div>
+        {autonomy ? <InfoBlock title="Autonomy" data={autonomy} /> : null}
+        {risk ? <InfoBlock title="Risk" data={risk} /> : null}
+        {missingInfo ? <InfoBlock title="Missing info" data={missingInfo} /> : null}
+        {message.job_id || message.brain_trace_id ? (
+          <p className="ledger-workings-refs">
+            {message.job_id ? <>Job <code>{message.job_id.slice(0, 8)}</code></> : null}
+            {message.brain_trace_id ? <> · Trace <code>{message.brain_trace_id.slice(0, 8)}</code></> : null}
+          </p>
+        ) : null}
       </div>
     </details>
   );
@@ -622,15 +913,11 @@ function MessageArtifactPreview({ message }: { message: ChatMessage }) {
   if (!artifact) return null;
   const Icon = artifactIcon(artifact);
   return (
-    <div className="mt-4 rounded-[0.9rem] border border-[var(--dobly-border)] bg-[rgba(0,0,0,0.12)] p-3">
-      <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-[0.75rem] bg-[rgba(196,80,26,0.14)] text-[var(--dobly-accent)]">
-          <Icon className="h-5 w-5" />
-        </span>
-        <div>
-          <div className="text-sm font-semibold text-[var(--dobly-text)]">{artifact.title}</div>
-          <p className="mt-1 text-xs text-[var(--dobly-text-muted)]">{artifact.kind} artifact, version {artifact.version}</p>
-        </div>
+    <div className="ledger-attachment">
+      <span aria-hidden="true"><Icon /></span>
+      <div>
+        <strong>{artifact.title}</strong>
+        <small>{artifact.kind} · version {artifact.version}</small>
       </div>
     </div>
   );
@@ -638,9 +925,9 @@ function MessageArtifactPreview({ message }: { message: ChatMessage }) {
 
 function InfoBlock({ title, data }: { title: string; data: unknown }) {
   return (
-    <div className="rounded-[0.75rem] border border-[var(--dobly-border)] bg-[rgba(0,0,0,0.12)] p-3">
-      <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--dobly-text-dim)]">{title}</div>
-      <pre className="mt-2 max-h-36 overflow-auto whitespace-pre-wrap text-[11px] leading-5 text-[var(--dobly-text-muted)]">{JSON.stringify(data, null, 2)}</pre>
+    <div className="ledger-info-block">
+      <span>{title}</span>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
     </div>
   );
 }

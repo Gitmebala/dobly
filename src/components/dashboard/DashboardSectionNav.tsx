@@ -5,17 +5,12 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   Bot,
-  Boxes,
-  Building2,
   CheckCircle2,
   FileText,
   FolderKanban,
   Inbox,
   LayoutDashboard,
   ListTodo,
-  Network,
-  Radar,
-  Users,
 } from "lucide-react";
 
 type Section = {
@@ -38,21 +33,18 @@ const sections: Section[] = [
   },
   {
     name: "Coworkers",
-    routes: ["/dashboard/coworkers", "/dashboard/departments", "/dashboard/pods", "/dashboard/team"],
+    routes: ["/dashboard/coworkers"],
     items: [
       { label: "Coworkers", href: "/dashboard/coworkers", icon: Bot },
-      { label: "Departments", href: "/dashboard/departments", icon: Building2 },
-      { label: "Pods", href: "/dashboard/pods", icon: Boxes },
-      { label: "People", href: "/dashboard/team", icon: Users },
+      { label: "Approvals", href: "/dashboard/approvals", icon: CheckCircle2 },
     ],
   },
   {
-    name: "Map",
-    routes: ["/dashboard/map", "/dashboard/states", "/dashboard/approvals"],
+    name: "Approvals",
+    routes: ["/dashboard/approvals"],
     items: [
-      { label: "Live map", href: "/dashboard/map", icon: Network },
-      { label: "States", href: "/dashboard/states", icon: Radar },
       { label: "Approvals", href: "/dashboard/approvals", icon: CheckCircle2 },
+      { label: "Coworkers", href: "/dashboard/coworkers", icon: Bot },
     ],
   },
   {
@@ -60,7 +52,6 @@ const sections: Section[] = [
     routes: ["/dashboard"],
     items: [
       { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-      { label: "Live map", href: "/dashboard/map", icon: Network },
     ],
   },
 ];

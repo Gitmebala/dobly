@@ -101,7 +101,7 @@ export default async function CoworkerPage({
     .slice(0, 8);
 
   return (
-    <div className="coworker-detail-page mx-auto max-w-5xl space-y-6">
+    <div className="coworker-detail-page dobly-stagger mx-auto max-w-5xl space-y-6">
       <section className="card">
         <Link href="/dashboard/coworkers" className="inline-flex items-center gap-2 text-sm text-[var(--dobly-text-muted)] hover:text-[var(--dobly-text)]">
           <ArrowLeft className="h-4 w-4" />

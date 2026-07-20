@@ -59,8 +59,7 @@ const todayItems: NavItem[] = [
 
 const routeFamilies: Record<string, string[]> = {
   "/dashboard/tasks": ["/dashboard/tasks", "/dashboard/inbox", "/dashboard/projects", "/dashboard/documents", "/dashboard/activity"],
-  "/dashboard/coworkers": ["/dashboard/coworkers", "/dashboard/departments", "/dashboard/pods", "/dashboard/team"],
-  "/dashboard/map": ["/dashboard/map", "/dashboard/states"],
+  "/dashboard/coworkers": ["/dashboard/coworkers"],
 };
 
 const moreGroups = [
@@ -71,22 +70,18 @@ const moreGroups = [
       { label: "Briefings", href: "/dashboard/briefings", icon: BookOpenText },
       { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
       { label: "Reports", href: "/dashboard/reports", icon: RadioTower },
-      { label: "Work map", href: "/dashboard/map", icon: Network },
     ],
   },
   {
     label: "Systems",
     items: [
-      { label: "Automations", href: "/dashboard/automations", icon: Sparkles },
-      { label: "Workflows", href: "/dashboard/workflows", icon: Workflow },
+      { label: "Loops", href: "/dashboard/workflows", icon: Workflow },
       { label: "Approvals", href: "/dashboard/approvals", icon: CheckCircle2 },
     ],
   },
   {
     label: "Library",
     items: [
-      { label: "Templates", href: "/dashboard/templates", icon: LayoutGrid },
-      { label: "Marketplace", href: "/dashboard/marketplace", icon: Compass },
       { label: "Files", href: "/dashboard/documents", icon: Files },
       { label: "Projects", href: "/dashboard/projects", icon: FolderKanban },
       { label: "Inbox", href: "/dashboard/inbox", icon: Inbox },

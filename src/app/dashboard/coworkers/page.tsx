@@ -115,7 +115,7 @@ function CoworkerRosterItem({ operator, active }: { operator: OperatorWithLoops;
       className="coworker-roster-item"
       data-active={active}
     >
-      <span className="coworker-roster-avatar"><Bot /></span>
+      <span className="coworker-roster-avatar" data-initial aria-hidden="true">{operator.name.slice(0, 1).toUpperCase()}</span>
       <span className="coworker-roster-copy">
         <strong>{operator.name}</strong>
         <small>{operator.mission}</small>

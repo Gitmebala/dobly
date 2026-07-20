@@ -24,7 +24,7 @@ export default async function BriefingsPage() {
   const briefings = await getBriefings(userId, { limit: 20 }).catch(() => []);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="briefings-page dobly-stagger mx-auto max-w-6xl space-y-6">
       <section className="card">
         <div className="flex items-start justify-between gap-4">
           <div>

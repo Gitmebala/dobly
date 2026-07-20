@@ -46,6 +46,14 @@ type ConnectionRecord = {
   updated_at: string;
 };
 
+type TeamMember = {
+  id: string;
+  name: string;
+  mission: string;
+  status: string;
+  lastRunAt: string | null;
+};
+
 type Snapshot = {
   corePromise: string;
   focusReason: string;
@@ -73,6 +81,7 @@ export default function DoblyDashboardClient({
   workflowTitles,
   onboarding,
   firstName,
+  team = [],
 }: {
   recentWorkflows: WorkflowRecord[];
   latestRuns: RunRecord[];
@@ -86,6 +95,7 @@ export default function DoblyDashboardClient({
     hasWorkflow: boolean;
   };
   firstName?: string;
+  team?: TeamMember[];
 }) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
@@ -104,112 +114,149 @@ export default function DoblyDashboardClient({
     router.push(`/dashboard/generate?prompt=${encodeURIComponent(value)}`);
   }
 
+  const hour = new Date().getHours();
+  const daypart = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+  const todayLabel = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
+  const workingCount = team.filter((member) => member.status === "active").length;
+
   return (
-    <div className="ref-page">
+    <div className="ref-page home-editorial">
       <div className="ref-page-grid">
         <main className="ref-page-main">
-          <header className="ref-header">
-            <div>
-              <div className="ref-greeting"><Sparkles size={16} /> Welcome back, {name}</div>
-              <h1>What should Dobly handle next?</h1>
-              <p className="ref-subtitle">{snapshot.corePromise || "Direct your operators, automations, and business systems from one place."}</p>
-            </div>
-            <Link href="/dashboard/create" className="ref-button primary"><Plus size={16} /> Create</Link>
+          <header className="home-masthead">
+            <span className="home-date">{todayLabel}</span>
+            <h1>Good {daypart}, {name}.</h1>
+            <p>
+              {team.length
+                ? `${workingCount ? `${workingCount} of your ${team.length} coworker${team.length === 1 ? " is" : "s are"} on the clock.` : "Your team is standing by."} ${snapshot.metrics.waitingApprovals ? `${snapshot.metrics.waitingApprovals} decision${snapshot.metrics.waitingApprovals === 1 ? " needs" : "s need"} you.` : "Nothing needs your decision right now."}`
+                : snapshot.corePromise || "Hire your first coworker and hand over the work you shouldn't be doing."}
+            </p>
           </header>
 
-          <div className="ref-stack">
-            {!setupComplete ? (
-              <section className="ref-card ref-setup-callout">
-                <div>
-                  <span><Sparkles size={14} /> Finish setup</span>
-                  <strong>Give Dobly enough context to do trustworthy work.</strong>
-                  <p>{[!onboarding.hasBusinessContext && "business context", !onboarding.hasConnection && "one connection", !onboarding.hasWorkflow && "a first outcome"].filter(Boolean).join(", ")} still needed.</p>
-                </div>
-                <Link href="/dashboard/onboarding" className="ref-button">Continue setup <ArrowRight size={14} /></Link>
-              </section>
-            ) : null}
-
-            <div className="ref-command">
-              <Sparkles />
-              <input
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") submitWork();
-                }}
-                placeholder="Describe an outcome, problem, or recurring job..."
-              />
-              <button type="button" onClick={submitWork} aria-label="Send to Dobly"><Send size={17} /></button>
+          {!setupComplete ? (
+            <div className="home-setup-line">
+              <span>Before Dobly can do trustworthy work: {[!onboarding.hasBusinessContext && "business context", !onboarding.hasConnection && "one connection", !onboarding.hasWorkflow && "a first outcome"].filter(Boolean).join(", ")}.</span>
+              <Link href="/dashboard/onboarding">Finish setup <ArrowRight size={13} /></Link>
             </div>
-            <div className="ref-quick-actions" aria-label="Suggested starting points">
-              {quickPrompts.map((item) => <button type="button" key={item} onClick={() => setPrompt(item)}>{item}</button>)}
+          ) : null}
+
+          <div className="home-command">
+            <input
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") submitWork();
+              }}
+              placeholder="Describe an outcome, a problem, or a recurring job..."
+              aria-label="Tell Dobly what to handle"
+            />
+            <button type="button" onClick={submitWork} aria-label="Send to Dobly"><Send size={16} /></button>
+          </div>
+          <div className="home-command-starters" aria-label="Suggested starting points">
+            {quickPrompts.map((item) => <button type="button" key={item} onClick={() => setPrompt(item)}>{item}</button>)}
+          </div>
+
+          <section className="home-section">
+            <header className="home-section-head">
+              <h2><i>01</i> Your team</h2>
+              <Link href="/dashboard/coworkers">Open workspace</Link>
+            </header>
+            <div className="home-roster">
+              {team.map((member) => (
+                <Link key={member.id} href={`/dashboard/coworkers?operatorId=${member.id}`} className="home-roster-row">
+                  <span className="home-roster-avatar" aria-hidden="true">{member.name.slice(0, 1).toUpperCase()}</span>
+                  <span className="home-roster-name">{member.name}</span>
+                  <span className="home-roster-mission">{member.mission}</span>
+                  <span className="home-roster-status" data-status={member.status}>
+                    <i aria-hidden="true" />
+                    {member.status === "active"
+                      ? member.lastRunAt ? `active ${formatDate(member.lastRunAt)}` : "ready"
+                      : member.status}
+                  </span>
+                </Link>
+              ))}
+              <Link href="/dashboard/coworkers?create=true" className="home-roster-row home-roster-hire">
+                <span className="home-roster-avatar" aria-hidden="true"><Plus size={15} /></span>
+                <span className="home-roster-name">Hire a coworker</span>
+                <span className="home-roster-mission">Describe a job. Dobly proposes the person, tools, and rules.</span>
+                <span className="home-roster-status"><ArrowRight size={14} /></span>
+              </Link>
             </div>
+          </section>
 
-            <section className="ref-card ref-progress">
-              <Metric value={snapshot.metrics.activeSystems} label="Active systems" />
-              <Metric value={snapshot.metrics.ranToday} label="Runs today" />
-              <Metric value={snapshot.metrics.waitingApprovals} label="Approvals waiting" />
-              <div className="ref-chart" aria-label="Workspace activity">
-                {[snapshot.metrics.activeSystems, snapshot.metrics.ranToday, snapshot.metrics.changedRecently, snapshot.metrics.waitingApprovals, snapshot.metrics.failedToday].map((value, index) => (
-                  <i key={index} style={{ height: `${Math.max(14, Math.min(90, value * 12 + 14))}%` }} />
-                ))}
-              </div>
-            </section>
+          <section className="home-section">
+            <header className="home-section-head">
+              <h2><i>02</i> The numbers</h2>
+            </header>
+            <div className="home-figures">
+              <div><b>{snapshot.metrics.activeSystems}</b><span>Active systems</span></div>
+              <div><b>{snapshot.metrics.ranToday}</b><span>Runs today</span></div>
+              <div><b>{snapshot.metrics.waitingApprovals}</b><span>Awaiting you</span></div>
+              <div><b>{Math.round(snapshot.metrics.timeSavedHours || 0)}h</b><span>Time returned</span></div>
+            </div>
+          </section>
 
-            <section className="ref-card">
-              <div className="ref-section-title">
-                <strong>Operating systems</strong>
-                <Link href="/dashboard/workflows">View all</Link>
-              </div>
-              {recentWorkflows.length ? (
-                recentWorkflows.map((workflow) => (
-                  <Link className="ref-task-row" href={`/dashboard/workflows/${workflow.id}`} key={workflow.id}>
-                    <span className="ref-icon" style={{ width: 30, height: 30 }}>
-                      {workflow.status === "active" ? <Workflow size={15} /> : <Bot size={15} />}
-                    </span>
-                    <div>
+          <section className="home-section">
+            <header className="home-section-head">
+              <h2><i>03</i> Operating systems</h2>
+              <Link href="/dashboard/workflows">View all</Link>
+            </header>
+            {recentWorkflows.length ? (
+              <div className="home-list">
+                {recentWorkflows.map((workflow) => (
+                  <Link className="home-list-row" href={`/dashboard/workflows/${workflow.id}`} key={workflow.id}>
+                    <span className="home-list-main">
                       <strong>{workflow.title}</strong>
                       <small>{workflow.description || "No description yet"}</small>
-                    </div>
-                    <span>{formatDate(workflow.updated_at)}</span>
-                    <span className={`ref-pill ${workflow.status === "active" ? "green" : "amber"}`}>{workflow.status}</span>
-                    <ArrowRight size={15} />
+                    </span>
+                    <span className="home-list-meta">
+                      <em data-status={workflow.status}>{workflow.status}</em>
+                      <time>{formatDate(workflow.updated_at)}</time>
+                    </span>
                   </Link>
-                ))
-              ) : (
-                <EmptyState
-                  title="No systems yet"
-                  copy="Describe the first outcome you want Dobly to own."
-                  href="/dashboard/create"
-                  action="Create your first system"
-                />
-              )}
-            </section>
+                ))}
+              </div>
+            ) : (
+              <p className="home-empty-line">Nothing is running yet. Describe the first outcome you want Dobly to own, above.</p>
+            )}
+          </section>
 
-            <div className="ref-two">
-              <section className="ref-card ref-panel">
-                <div className="ref-between"><strong>Recent runs</strong><Link href="/dashboard/workflows/executions">History</Link></div>
-                {latestRuns.length ? (
-                  <div className="ref-simple-rows">
-                    {latestRuns.slice(0, 4).map((run) => (
-                      <div className="ref-between" key={run.id}>
-                        <span><strong>{workflowTitles[run.workflow_id] || "Operating system"}</strong><small className="ref-muted">{run.status}</small></span>
-                        <small className="ref-muted">{formatDate(run.started_at)}</small>
-                      </div>
-                    ))}
-                  </div>
-                ) : <p className="ref-muted">Runs will appear after a system starts working.</p>}
-              </section>
-              <section className="ref-card ref-panel">
-                <div className="ref-between"><strong>Dobly recommends</strong><Sparkles size={17} /></div>
-                {snapshot.recommendations.length ? (
-                  <div className="ref-simple-rows">
-                    {snapshot.recommendations.slice(0, 4).map((item) => <div className="ref-between" key={item.title}><span>{item.title}</span><ArrowRight size={14} /></div>)}
-                  </div>
-                ) : <p className="ref-muted">Recommendations will form as Dobly learns the business.</p>}
-              </section>
+          <section className="home-section home-columns">
+            <div>
+              <header className="home-section-head">
+                <h2><i>04</i> Recent runs</h2>
+                <Link href="/dashboard/workflows/executions">History</Link>
+              </header>
+              {latestRuns.length ? (
+                <div className="home-list">
+                  {latestRuns.slice(0, 4).map((run) => (
+                    <div className="home-list-row" key={run.id}>
+                      <span className="home-list-main">
+                        <strong>{workflowTitles[run.workflow_id] || "Operating system"}</strong>
+                        <small>{run.status}</small>
+                      </span>
+                      <span className="home-list-meta"><time>{formatDate(run.started_at)}</time></span>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="home-empty-line">Runs will appear once a system starts working.</p>}
             </div>
-          </div>
+            <div>
+              <header className="home-section-head">
+                <h2><i>05</i> Dobly recommends</h2>
+              </header>
+              {snapshot.recommendations.length ? (
+                <div className="home-list">
+                  {snapshot.recommendations.slice(0, 4).map((item) => (
+                    <div className="home-list-row" key={item.title}>
+                      <span className="home-list-main"><strong>{item.title}</strong></span>
+                      <span className="home-list-meta"><ArrowRight size={14} /></span>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="home-empty-line">Recommendations form as Dobly learns the business.</p>}
+            </div>
+          </section>
         </main>
 
         <aside className="ref-page-rail ref-stack">

@@ -47,7 +47,7 @@ export default async function ApprovalsPage() {
           <p>The office is continuing within the rules you have already approved.</p>
         </section>
       ) : (
-        <section className="approval-queue" aria-label="Items waiting for approval">
+        <section className="approval-queue dobly-stagger" aria-label="Items waiting for approval">
           {runtimeApprovals.map((approval) => {
             const metadata = (approval.metadata ?? {}) as Record<string, any>;
             const resume = (metadata.resume ?? {}) as Record<string, any>;

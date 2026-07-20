@@ -563,3 +563,93 @@ html[data-theme="dark"] .reference-auth__card {
     font-size: 13px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTH POLISH — the first thirty seconds should already feel
+   like the product: calm, warm, physically responsive.
+   ═══════════════════════════════════════════════════════════════ */
+
+.reference-auth__card {
+  animation: dobly-rise-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.reference-auth__intro > span,
+.reference-auth__intro h1,
+.reference-auth__intro p {
+  animation: dobly-rise-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.reference-auth__intro h1 { animation-delay: 60ms; }
+.reference-auth__intro p { animation-delay: 120ms; }
+
+.reference-auth__input {
+  transition:
+    border-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reference-auth__input:focus {
+  box-shadow: 0 0 0 3px rgba(217, 81, 32, 0.12);
+}
+
+.reference-auth__submit {
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reference-auth__submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(180, 61, 17, 0.22);
+}
+
+.reference-auth__submit:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+  transition-duration: 120ms;
+}
+
+.reference-auth__oauth button,
+.reference-auth__oauth a,
+.reference-auth__switch a,
+.reference-auth__back,
+.reference-auth__eye {
+  transition:
+    border-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reference-auth__oauth button:hover,
+.reference-auth__oauth a:hover {
+  transform: translateY(-1px);
+}
+
+.reference-auth__error {
+  animation: dobly-drop-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.reference-auth__success {
+  animation: dobly-scale-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.reference-auth__input:focus-visible,
+.reference-auth__submit:focus-visible,
+.reference-auth__oauth :is(button, a):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(217, 81, 32, 0.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reference-auth__card,
+  .reference-auth__intro > span,
+  .reference-auth__intro h1,
+  .reference-auth__intro p,
+  .reference-auth__error,
+  .reference-auth__success {
+    animation-duration: 0.01ms !important;
+  }
+}
