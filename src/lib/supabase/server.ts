@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
 import { createLocalAdminClient, createLocalServerClient, localUserFromCookie } from "@/lib/local-runtime/client";
 import { LOCAL_SESSION_COOKIE } from "@/lib/local-runtime/auth";
+import { isLocalModeActive } from "@/lib/local-runtime/guard";
 
 type CookieToSet = {
   name: string;
@@ -21,7 +22,7 @@ function timedFetch(input: RequestInfo | URL, init?: RequestInit) {
 // Used in Server Components and API Routes
 export async function createServerSupabaseClient() {
   const cookieStore = await cookies();
-  if (process.env.DOBLY_LOCAL_MODE === "true") {
+  if (isLocalModeActive()) {
     return createLocalServerClient(
       localUserFromCookie(cookieStore.get(LOCAL_SESSION_COOKIE)?.value),
     ) as any;
@@ -66,7 +67,7 @@ export async function createServerSupabaseClient() {
 // Admin client — ONLY use in trusted server-side code, NEVER in client
 // Uses service role key which bypasses RLS
 export function createAdminSupabaseClient() {
-  if (process.env.DOBLY_LOCAL_MODE === "true") {
+  if (isLocalModeActive()) {
     return createLocalAdminClient() as any;
   }
   const { createClient } = require("@supabase/supabase-js");

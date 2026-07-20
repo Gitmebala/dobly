@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createLocalPasswordReset } from "@/lib/local-runtime/auth";
+import { isLocalModeActive } from "@/lib/local-runtime/guard";
 import { getRequestIp } from "@/lib/api-security";
 import { rateLimits } from "@/lib/rate-limit";
 
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   if (!email) return NextResponse.json({ error: "Email is required." }, { status: 400 });
 
-  if (process.env.DOBLY_LOCAL_MODE === "true") {
+  if (isLocalModeActive()) {
     const token = await createLocalPasswordReset(email);
     const resetUrl = token
       ? `${request.nextUrl.origin}/auth/reset-password?token=${encodeURIComponent(token)}`

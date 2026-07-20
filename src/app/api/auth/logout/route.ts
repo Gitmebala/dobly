@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { LOCAL_SESSION_COOKIE, sessionCookieOptions } from "@/lib/local-runtime/auth";
+import { isLocalModeActive } from "@/lib/local-runtime/guard";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function POST() {
-  if (process.env.DOBLY_LOCAL_MODE !== "true") {
+  if (!isLocalModeActive()) {
     const supabase = await createServerSupabaseClient();
     await (supabase as any).auth.signOut();
   }

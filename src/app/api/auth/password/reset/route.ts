@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resetLocalPassword } from "@/lib/local-runtime/auth";
+import { isLocalModeActive } from "@/lib/local-runtime/guard";
 import { getRequestIp } from "@/lib/api-security";
 import { rateLimits } from "@/lib/rate-limit";
 
@@ -7,7 +8,7 @@ export async function POST(request: NextRequest) {
   if (!rateLimits.auth(getRequestIp(request)).allowed) {
     return NextResponse.json({ error: "Too many reset attempts. Wait before trying again." }, { status: 429 });
   }
-  if (process.env.DOBLY_LOCAL_MODE !== "true") {
+  if (!isLocalModeActive()) {
     return NextResponse.json(
       { error: "Use the recovery session from your reset email." },
       { status: 400 },

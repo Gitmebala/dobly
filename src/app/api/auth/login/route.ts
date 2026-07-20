@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isSupabaseReachable } from "@/lib/supabase/availability";
+import { isLocalModeActive } from "@/lib/local-runtime/guard";
 import {
   authenticateLocalUser,
   createSessionToken,
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    if (process.env.DOBLY_LOCAL_MODE === "true") {
+    if (isLocalModeActive()) {
       const user = await authenticateLocalUser(email, password);
       if (!user) {
         return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });

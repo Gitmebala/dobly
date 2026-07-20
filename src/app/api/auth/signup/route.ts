@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isLocalModeActive } from "@/lib/local-runtime/guard";
 import {
   createSessionToken,
   LOCAL_SESSION_COOKIE,
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    if (process.env.DOBLY_LOCAL_MODE === "true") {
+    if (isLocalModeActive()) {
       const user = await registerLocalUser({ email, password, fullName });
       await captureServerEvent({ event: "signup_completed", distinctId: user.id, properties: { auth_mode: "local" } });
       const response = NextResponse.json({ ok: true, user });

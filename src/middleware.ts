@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isLocalModeActive } from "@/lib/local-runtime/guard";
 
 async function distributedPublicRateLimit(request: NextRequest, pathname: string) {
   const endpoint = process.env.UPSTASH_REDIS_REST_URL;
@@ -63,7 +64,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(prefix)
   );
   const authRoutes = ["/auth/login", "/auth/signup"];
-  const localMode = process.env.DOBLY_LOCAL_MODE === "true";
+  const localMode = isLocalModeActive();
   const unsafeMethod = !["GET", "HEAD", "OPTIONS"].includes(request.method);
   const csrfExemptPrefixes = ["/api/webhooks", "/api/internal", "/api/triggers/webhook", "/api/chat/widget", "/api/voice/reception"];
   if (pathname.startsWith("/api/") && unsafeMethod && !csrfExemptPrefixes.some((prefix) => pathname.startsWith(prefix))) {
