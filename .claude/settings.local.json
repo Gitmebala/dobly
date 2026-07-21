@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Skill(update-config)",
-      "WebSearch"
+      "WebSearch",
+      "Skill(run)",
+      "Skill(claude-in-chrome)"
     ]
   }
 }

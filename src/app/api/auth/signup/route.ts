@@ -7,6 +7,7 @@ import {
   sessionCookieOptions,
 } from "@/lib/local-runtime/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { isSupabaseReachable } from "@/lib/supabase/availability";
 import { getRequestIp } from "@/lib/api-security";
 import { rateLimits } from "@/lib/rate-limit";
 import { captureServerEvent } from "@/lib/telemetry/server";
@@ -33,21 +34,37 @@ export async function POST(request: NextRequest) {
       return response;
     }
 
+    if (!(await isSupabaseReachable())) {
+      return NextResponse.json(
+        { error: "Authentication is not configured correctly. Update the Supabase project URL, then try again." },
+        { status: 503 },
+      );
+    }
+
     const supabase = await createServerSupabaseClient();
     const { data, error } = await (supabase as any).auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName } },
     });
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) {
+      if (/fetch failed|enotfound|network/i.test(error.message)) {
+        return NextResponse.json(
+          { error: "Authentication service unavailable. Check the Supabase project URL and try again." },
+          { status: 503 },
+        );
+      }
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     if (data?.user?.id) {
       await captureServerEvent({ event: "signup_completed", distinctId: data.user.id, properties: { auth_mode: "supabase" } });
     }
     return NextResponse.json({ ok: true, user: data?.user ?? null });
   } catch (error) {
+    console.error("[api/auth/signup] authentication service unavailable", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Could not create the account." },
-      { status: 400 },
+      { error: "Authentication service unavailable. Check the Supabase project URL and try again." },
+      { status: 503 },
     );
   }
 }

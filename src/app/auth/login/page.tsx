@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Eye, EyeOff, Loader2, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
-import BrandLogo from "@/components/BrandLogo";
+import { Eye, EyeOff, Loader2, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import GoogleLogo from "@/components/GoogleLogo";
+import { AuthShell, AuthField } from "@/components/auth/AuthShell";
 import { createClient } from "@/lib/supabase/client";
 import "../reference-auth.css";
 
@@ -70,82 +70,59 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="reference-auth">
-      <div className="reference-auth__frame">
-        <header className="reference-auth__header">
-          <BrandLogo href="/" className="reference-auth__logo" markClassName="h-10 w-10" wordmarkClassName="text-2xl" />
-          <Link href="/" className="reference-auth__back"><ArrowLeft size={16} /> Back to home</Link>
-        </header>
+    <AuthShell
+      eyebrow="Welcome back"
+      heading="Sign in to Dobly"
+      subheading="Continue to your workspace and the work already in motion."
+    >
+      <button type="button" onClick={handleGoogleSignIn} disabled={loading} className="dl-auth-oauth">
+        <GoogleLogo className="h-5 w-5" /> Continue with Google
+      </button>
+      <div className="dl-auth-divider">or</div>
 
-        <section className="reference-auth__panel">
-          <div className="reference-auth__card">
-            <div className="reference-auth__intro">
-              <span>Welcome back</span>
-              <h1>Sign in to Dobly</h1>
-              <p>Continue to your workspace and the work already in motion.</p>
-            </div>
+      <form onSubmit={handleSubmit} noValidate>
+        <AuthField label="Email" icon={<Mail />}>
+          <input
+            className="dl-auth-input"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            onBlur={() => setEmail((value) => value.trim().toLowerCase())}
+            placeholder="you@company.com"
+            autoComplete="email"
+            required
+          />
+        </AuthField>
+        <AuthField label="Password" icon={<LockKeyhole />}>
+          <input
+            className="dl-auth-input"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Enter your password"
+            autoComplete="current-password"
+            required
+          />
+          <button type="button" onClick={() => setShowPassword((value) => !value)} className="dl-auth-eye" aria-label={showPassword ? "Hide password" : "Show password"}>
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </AuthField>
 
-            <button type="button" onClick={handleGoogleSignIn} disabled={loading} className="reference-auth__oauth">
-              <GoogleLogo className="h-5 w-5" /> Continue with Google
-            </button>
-            <div className="reference-auth__divider">or</div>
+        <div className="dl-auth-meta">
+          <label><input type="checkbox" /> Remember me</label>
+          <Link href="/auth/forgot-password">Forgot password?</Link>
+        </div>
+        {error ? <div className="dl-auth-error" role="alert">{error}</div> : null}
+        <button type="submit" disabled={loading || !email || !password} className="dl-auth-submit">
+          {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</> : "Sign in"}
+        </button>
+      </form>
 
-            <form onSubmit={handleSubmit} noValidate>
-              <AuthField label="Email" icon={<Mail />}>
-                <input
-                  className="reference-auth__input"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  onBlur={() => setEmail((value) => value.trim().toLowerCase())}
-                  placeholder="you@company.com"
-                  autoComplete="email"
-                  required
-                />
-              </AuthField>
-              <AuthField label="Password" icon={<LockKeyhole />}>
-                <input
-                  className="reference-auth__input"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
-                  required
-                />
-                <button type="button" onClick={() => setShowPassword((value) => !value)} className="reference-auth__eye" aria-label={showPassword ? "Hide password" : "Show password"}>
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </AuthField>
-
-              <div className="reference-auth__meta">
-                <label><input type="checkbox" /> Remember me</label>
-                <Link href="/auth/forgot-password">Forgot password?</Link>
-              </div>
-              {error ? <div className="reference-auth__error" role="alert">{error}</div> : null}
-              <button type="submit" disabled={loading || !email || !password} className="reference-auth__submit">
-                {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</> : "Sign in"}
-              </button>
-            </form>
-
-            <p className="reference-auth__switch">
-              Don&apos;t have an account?{" "}
-              <Link href={`/auth/signup?next=${encodeURIComponent(safeRedirect)}`}>Create one</Link>
-            </p>
-            <div className="reference-auth__secure"><ShieldCheck size={15} /> Secure authentication. Dobly never stores your password.</div>
-          </div>
-        </section>
-
-        <footer className="reference-auth__footer">
-          <span>&copy; 2026 Dobly</span>
-          <Link href="/terms">Terms</Link>
-          <Link href="/privacy">Privacy</Link>
-        </footer>
-      </div>
-    </main>
+      <p className="dl-auth-switch">
+        Don&apos;t have an account?{" "}
+        <Link href={`/auth/signup?next=${encodeURIComponent(safeRedirect)}`}>Create one</Link>
+      </p>
+      <div className="dl-auth-secure"><ShieldCheck size={15} /> Secure authentication. Dobly never stores your password.</div>
+    </AuthShell>
   );
-}
-
-function AuthField({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
-  return <div className="reference-auth__field"><label>{label}</label><div className="reference-auth__input-wrap">{icon}{children}</div></div>;
 }
