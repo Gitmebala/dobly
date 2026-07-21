@@ -7,7 +7,7 @@ export default function DashboardNotFound() {
       <code>404 · no such screen</code>
       <h1>That page moved.</h1>
       <p>
-        Dobly was consolidated around coworkers, loops, and approvals — some
+        Dobly was consolidated around coworkers, loops, and approvals, so some
         older screens folded into those. Head back to the workspace and you
         will find what you were looking for.
       </p>

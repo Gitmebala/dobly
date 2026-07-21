@@ -607,7 +607,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
               <div className="operator-thread-empty">
                 <Bot aria-hidden="true" />
                 <strong>{dateFilter ? "Nothing happened on this day" : "No conversation yet"}</strong>
-                <span>{dateFilter ? "Pick another date, or show everything." : `Say hello — tell ${props.operator.name} what you need.`}</span>
+                <span>{dateFilter ? "Pick another date, or show everything." : `Say hello. Tell ${props.operator.name} what you need.`}</span>
               </div>
             ) : null}
             {pendingApprovals.length ? (
@@ -635,7 +635,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
             {isPending ? (
               <div className="operator-typing" aria-live="polite">
                 <span className="operator-typing-dots" aria-hidden="true"><i /><i /><i /></span>
-                {props.operator.name} is thinking — planning the work, checking risk, choosing tools...
+                {props.operator.name} is thinking: planning the work, checking risk, choosing tools...
               </div>
             ) : null}
           </div>

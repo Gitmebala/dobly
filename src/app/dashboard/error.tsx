@@ -21,7 +21,7 @@ export default function DashboardError({
       <code>something broke on this screen</code>
       <h1>That didn&apos;t work.</h1>
       <p>
-        The rest of the workspace is fine — this screen hit an error. Your
+        The rest of the workspace is fine. This screen hit an error. Your
         coworkers keep working and nothing was lost.
         {error.digest ? <> Reference <code>{error.digest}</code>.</> : null}
       </p>

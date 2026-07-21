@@ -60,7 +60,7 @@ export default async function CoworkersPage({
               <div className="coworker-roster-empty">
                 <Bot />
                 <strong>No coworkers yet</strong>
-                <span>Describe a job — inbound leads, bookkeeping, market watch — and Dobly proposes who to hire.</span>
+                <span>Describe a job (inbound leads, bookkeeping, market watch) and Dobly proposes who to hire.</span>
               </div>
             ) : null}
           </nav>

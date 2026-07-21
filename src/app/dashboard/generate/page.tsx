@@ -19,6 +19,7 @@ import {
   Wand2,
   X,
 } from "lucide-react";
+import HiringComposition from "@/components/dashboard/HiringComposition";
 import { getAgentCapabilityContract } from "@/lib/agent-capability-contracts";
 import { getConnectionProvider } from "@/lib/connection-catalog";
 import { getConnectionReadiness } from "@/lib/connection-readiness";
@@ -534,20 +535,7 @@ export default function GeneratePage() {
   }
 
   if (step === "generating") {
-    return (
-      <div className="mx-auto max-w-2xl">
-        <div className="card py-16 text-center">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)]">
-            <Loader2 className="h-6 w-6 animate-spin text-text" />
-          </div>
-          <h2 className="text-xl font-semibold text-text">Compiling the system</h2>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-text-muted">
-            Dobly is using your prompt, workspace memory, standards, and follow-up answers to shape
-            responsibilities, escalation rules, delivery stages, runtime behavior, and the first learning loop.
-          </p>
-        </div>
-      </div>
-    );
+    return <HiringComposition />;
   }
 
   if (!result) return null;

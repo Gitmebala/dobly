@@ -131,8 +131,8 @@ export default function OperatorHandleBar({ compact = false }: { compact?: boole
             </span>
             <h2>Describe the job. Dobly finds the person.</h2>
             <p>
-              Write it the way you would brief a new hire. Dobly proposes the coworker —
-              their skills, tools, working loops, and the rules they will ask you about — before anything goes live.
+              Write it the way you would brief a new hire. Dobly proposes the coworker:
+              their skills, tools, working loops, and the rules they will ask you about, before anything goes live.
             </p>
           </div>
 

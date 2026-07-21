@@ -52,8 +52,14 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-6 w-6 animate-spin text-accent" />
+      <div className="settings-page mx-auto max-w-4xl space-y-8" aria-busy="true" aria-label="Loading settings">
+        <div className="space-y-3">
+          <div className="dobly-skeleton" style={{ height: 30, width: 160 }} />
+          <div className="dobly-skeleton" style={{ height: 14, width: "70%" }} />
+        </div>
+        <div className="dobly-skeleton" style={{ height: 46, width: 380, borderRadius: 12 }} />
+        <div className="dobly-skeleton" style={{ height: 220, borderRadius: 16 }} />
+        <div className="dobly-skeleton" style={{ height: 160, borderRadius: 16 }} />
       </div>
     );
   }

@@ -47,7 +47,7 @@ export default async function WorkflowsPage() {
           </div>
           <h2 className="font-display text-xl font-semibold text-text">Nothing runs on its own yet</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-text-muted">
-            Loops appear when a coworker takes on recurring or event-driven work. Hire a coworker and describe the job — Dobly sets up the loops.
+            Loops appear when a coworker takes on recurring or event-driven work. Hire a coworker and describe the job, then Dobly sets up the loops.
           </p>
           <Link href="/dashboard/coworkers?create=true" className="btn-primary mt-4">
             Hire a coworker
