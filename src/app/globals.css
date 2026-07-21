@@ -267,11 +267,120 @@
     color-scheme: light;
   }
 
-  /* Default to dark if no theme set */
-  :root,
-  html,
-  body {
-    color-scheme: dark;
+  /* ── Unthemed fallback ────────────────────────────────────────────
+     Every color token above lives inside html.light / html.dark, and
+     that class is set by a script that can fail (blocked storage,
+     script error). Without a fallback the page renders with no colors
+     at all: invisible text on no background. These mirror html.light
+     so an unthemed document is still a readable page.
+     ───────────────────────────────────────────────────────────────── */
+  :root {
+    --bg: #F6EFE6;
+    --bg-2: #EFE4D8;
+    --bg-3: #E6D7C8;
+    --surface: #F9F4ED;
+    --surface-2: #EFE4D8;
+    --ink: #231F1B;
+    --ink-2: rgba(35,31,27,0.60);
+    --ink-3: rgba(35,31,27,0.42);
+    --ink-4: rgba(35,31,27,0.12);
+    --border-2: rgba(37,31,27,0.05);
+    --glow: rgba(217,119,87,0.06);
+    --t1: #231F1B;
+    --t2: rgba(35,31,27,0.60);
+    --t3: rgba(35,31,27,0.42);
+    --t4: rgba(35,31,27,0.16);
+    --div: rgba(26,15,8,0.09);
+    --div2: rgba(26,15,8,0.05);
+    --bar1-op: 0.18;
+    --bar2-op: 0.55;
+    --bar3-op: 1;
+
+    --clay: #231F1B;
+    --dark: #231F1B;
+    --dobly-bg: #F6EFE6;
+    --dobly-bg-subtle: #EFE4D8;
+    --dobly-bg-muted: #E6D7C8;
+    --dobly-surface: #F9F4ED;
+    --dobly-surface-raised: #EFE4D8;
+    --dobly-border: rgba(37,31,27,0.10);
+    --dobly-border-subtle: rgba(37,31,27,0.05);
+    --dobly-text: #231F1B;
+    --dobly-text-secondary: rgba(35,31,27,0.60);
+    --dobly-text-muted: rgba(35,31,27,0.42);
+    --dobly-text-dim: rgba(35,31,27,0.12);
+    --dobly-accent: #D97757;
+    --dobly-accent-dim: rgba(217,119,87,0.24);
+    --dobly-accent-subtle: rgba(217,119,87,0.14);
+    --dobly-sidebar: #EFE4D8;
+    --dobly-sidebar-active: rgba(217,119,87,0.15);
+
+    --accent: #D97757;
+    --accent-2: #B85C38;
+    --green: #3F8F68;
+    --green-dim: rgba(45,158,90,0.12);
+    --danger: #B85C4E;
+    --warning: #C4823D;
+    --success: #3F8F68;
+
+    --text: #1A0F08;
+    --text-muted: rgba(26,15,8,0.52);
+    --text-dim: rgba(26,15,8,0.34);
+
+    --border: rgba(26,15,8,0.08);
+    --border-hi: rgba(26,15,8,0.16);
+    --glass: rgba(239,231,222,0.4);
+    --glass-hover: rgba(239,231,222,0.6);
+    --glass-border: rgba(26,15,8,0.08);
+    --glass-border-hover: rgba(26,15,8,0.14);
+
+    --text-primary: #1A0F08;
+    --text-secondary: rgba(26,15,8,0.52);
+    --text-tertiary: rgba(26,15,8,0.34);
+
+    /* ── Tailwind color channels ──────────────────────────────────
+       tailwind.config.ts builds every `text-text`, `bg-surface-*`,
+       `border-border`, and `bg-accent` utility as
+       `rgb(var(--<name>-rgb) / <alpha-value>)`. These channels were
+       never defined anywhere, so all ~1300 of those utilities
+       resolved to an invalid color and silently did nothing:
+       unstyled text on no background. Defined here as
+       space-separated RGB triplets matching the editorial palette,
+       so Tailwind-era pages and reference-app pages are one system.
+       ─────────────────────────────────────────────────────────── */
+    --surface-rgb: 251 248 243;
+    --surface-1-rgb: 251 248 243;
+    --surface-2-rgb: 240 232 223;
+    --surface-3-rgb: 230 215 200;
+    --text-rgb: 39 34 30;
+    --text-muted-rgb: 121 109 100;
+    --text-dim-rgb: 154 143 133;
+    /* Borders are consumed at full opacity, so these are the hairline
+       already blended against paper rather than the ink behind it. */
+    --border-rgb: 231 227 221;
+    --border-bright-rgb: 220 215 209;
+    --accent-rgb: 215 111 78;
+    --accent-strong-rgb: 185 84 53;
+    --grid-rgb: 231 227 221;
+
+    color-scheme: light;
+  }
+
+  /* Dark theme channels for the same Tailwind utilities. */
+  html.dark,
+  html[data-theme="dark"] {
+    --surface-rgb: 33 30 27;
+    --surface-1-rgb: 33 30 27;
+    --surface-2-rgb: 42 38 34;
+    --surface-3-rgb: 52 47 42;
+    --text-rgb: 243 236 229;
+    --text-muted-rgb: 181 168 158;
+    --text-dim-rgb: 142 130 120;
+    --border-rgb: 52 48 45;
+    --border-bright-rgb: 67 63 59;
+    --accent-rgb: 221 128 98;
+    --accent-strong-rgb: 199 100 69;
+    --grid-rgb: 52 48 45;
   }
 
   /* ═════════════════════════════════════════

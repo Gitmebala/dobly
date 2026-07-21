@@ -507,7 +507,7 @@ html[data-theme="dark"] .dashboard-shell.app-shell {
   margin-left: auto;
   border-radius: 50%;
   color: var(--app-rust);
-  background: #fff0e7;
+  background: color-mix(in srgb, var(--app-rust) 12%, var(--app-paper));
   font-size: 10px;
 }
 .dashboard-shell .is-active .dobly-count { color: var(--app-rust); background: var(--app-paper); }
@@ -649,15 +649,15 @@ html[data-theme="dark"] .dashboard-shell.app-shell {
   font-weight: 650;
 }
 .ref-button.primary { color: white; background: linear-gradient(180deg,#f3682e,#df450f); }
-.ref-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; color: var(--app-rust); background: #fff1e8; }
+.ref-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; color: var(--app-rust); background: color-mix(in srgb, var(--app-rust) 12%, var(--app-paper)); }
 .ref-icon svg { width: 20px; height: 20px; }
 .ref-muted { color: var(--app-muted); }
 .ref-table { width: 100%; border-collapse: collapse; }
 .ref-table th { padding: 11px 12px; color: var(--app-muted); font-size: 10px; font-weight: 550; text-align: left; }
 .ref-table td { padding: 12px; border-top: 1px solid var(--app-line); font-size: 12px; }
-.ref-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; color: #a94215; background: #fff0e7; font-size: 10px; }
-.ref-pill.green { color: #287749; background: #edf7ed; }
-.ref-pill.amber { color: #c07110; background: #fff5df; }
+.ref-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; color: var(--app-rust-dark); background: color-mix(in srgb, var(--app-rust) 12%, var(--app-paper)); font-size: 10px; }
+.ref-pill.green { color: var(--app-green); background: color-mix(in srgb, var(--app-green) 12%, var(--app-paper)); }
+.ref-pill.amber { color: var(--app-gold); background: color-mix(in srgb, var(--app-gold) 14%, var(--app-paper)); }
 .ref-input { width: 100%; min-height: 44px; padding: 0 14px; border: 1px solid var(--app-line); border-radius: 8px; color: var(--app-text); background: var(--app-paper); outline: none; }
 .ref-input:focus { border-color: rgba(236,82,24,.55); box-shadow: 0 0 0 3px rgba(236,82,24,.08); }
 .ref-mascot-card { position: relative; min-height: 112px; overflow: hidden; padding: 22px; }
@@ -674,7 +674,7 @@ html[data-theme="dark"] .dashboard-shell.app-shell {
 .ref-mini-list { margin-top: 18px; }
 .ref-mini-list strong, .ref-mini-list small { display: block; font-size: 11px; }
 .ref-mini-list small { margin-top: 4px; color: var(--app-muted); }
-.ref-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: #f2dccc; box-shadow: 0 0 0 4px #fff7f1; }
+.ref-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: color-mix(in srgb, var(--app-rust) 30%, var(--app-paper)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--app-rust) 8%, var(--app-paper)); }
 .ref-command { min-height: 66px; display: grid; grid-template-columns: 24px minmax(0,1fr) 44px; align-items: center; gap: 12px; padding: 7px 9px 7px 18px; border: 1px solid #efcbb7; border-radius: 13px; background: var(--app-paper); box-shadow: 0 9px 25px rgba(120,58,20,.06); }
 .ref-command > svg { width: 20px; height: 20px; color: var(--app-rust); }
 .ref-command input { min-width: 0; border: 0; outline: 0; color: var(--app-text); background: transparent; font-size: 15px; }
@@ -731,7 +731,7 @@ html[data-theme="dark"] .dashboard-shell.app-shell {
 .ref-table td:first-child { display: flex; align-items: center; gap: 9px; }
 .ref-table tr { cursor: pointer; }
 .ref-table tr.selected { background: rgba(236,82,24,.045); }
-.ref-icon.green { color: var(--app-green); background: #eff8ed; }
+.ref-icon.green { color: var(--app-green); background: color-mix(in srgb, var(--app-green) 12%, var(--app-paper)); }
 .ref-answer { min-height: 220px; display: grid; grid-template-columns: 110px 1fr; gap: 22px; padding: 22px; }
 .ref-answer > .ref-icon { width: 110px; height: 110px; border-radius: 12px; }
 .ref-answer h2 { max-width: 650px; margin: 12px 0 18px; font-size: 20px; line-height: 1.45; font-weight: 500; }
@@ -747,7 +747,7 @@ html[data-theme="dark"] .dashboard-shell.app-shell {
 .ref-search-box svg { width: 17px; color: var(--app-muted); }
 .ref-search-box input { width: 100%; border: 0; outline: 0; background: transparent; }
 .ref-app-logo { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 9px; color: white; background: linear-gradient(135deg,#4a8df6,#ef4d31,#f9c43a); font-weight: 800; }
-.ref-button.connected { border-color: #bddbb9; color: var(--app-green); background: #f3f9ef; }
+.ref-button.connected { border-color: color-mix(in srgb, var(--app-green) 34%, var(--app-line-strong)); color: var(--app-green); background: color-mix(in srgb, var(--app-green) 12%, var(--app-paper)); }
 .ref-person { min-height: 62px; display: grid; grid-template-columns: 42px minmax(0,1fr) 90px 100px 20px; gap: 12px; align-items: center; padding: 8px 16px; border-top: 1px solid var(--app-line); }
 .ref-person:first-of-type { border-top: 0; }
 .ref-person strong, .ref-person small { display: block; font-size: 11px; }
@@ -763,12 +763,12 @@ html[data-theme="dark"] .dashboard-shell.app-shell {
 .ref-settings-layout { display: grid; grid-template-columns: 165px 1fr; border: 1px solid var(--app-line); border-radius: 11px; overflow: hidden; }
 .ref-settings-layout > nav { padding: 12px 8px; background: var(--app-paper-2); }
 .ref-settings-layout > nav button { width: 100%; min-height: 42px; border: 0; border-radius: 7px; text-align: left; padding: 0 12px; color: var(--app-text); background: transparent; }
-.ref-settings-layout > nav button.active { color: var(--app-rust); background: #fff1e8; }
+.ref-settings-layout > nav button.active { color: var(--app-rust); background: color-mix(in srgb, var(--app-rust) 12%, var(--app-paper)); }
 .ref-settings-layout > .ref-stack { padding: 14px; }
 .ref-profile-fields { display: grid; grid-template-columns: 64px 1fr 1fr; gap: 14px; align-items: center; margin-top: 20px; }
 .ref-setting-row { min-height: 44px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--app-line); font-size: 12px; }
 .ref-theme { min-height: 66px; border: 1px solid var(--app-line); border-radius: 8px; color: var(--app-text); background: var(--app-paper); }
-.ref-theme.active { border-color: var(--app-rust); color: var(--app-rust); background: #fff5ed; }
+.ref-theme.active { border-color: var(--app-rust); color: var(--app-rust); background: color-mix(in srgb, var(--app-rust) 10%, var(--app-paper)); }
 .ref-billing-grid { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 18px; }
 .ref-plan { display: grid; grid-template-columns: 1fr 160px; }
 .ref-plan h2 { margin: 18px 0 8px; font-size: 18px; }
@@ -845,7 +845,7 @@ html[data-theme="dark"] .ref-theme.active { background: rgba(236,82,24,.12); }
 .ref-onboarding-step-top { display: flex; align-items: center; gap: 9px; }
 .ref-onboarding-number,
 .ref-onboarding-step-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; }
-.ref-onboarding-number { color: var(--app-rust); background: #fff0e6; font-size: 11px; font-weight: 750; }
+.ref-onboarding-number { color: var(--app-rust); background: color-mix(in srgb, var(--app-rust) 12%, var(--app-paper)); font-size: 11px; font-weight: 750; }
 .ref-onboarding-step.is-done .ref-onboarding-number { color: white; background: var(--app-green); }
 .ref-onboarding-step-icon { color: var(--app-rust); background: rgba(236,82,24,.07); }
 .ref-onboarding-step-icon svg { width: 16px; height: 16px; }
@@ -2915,39 +2915,47 @@ html.theme-transitioning * {
 }
 
 /* Product completion pass: one warm, quiet workspace language across every route. */
+/* This block adds the semantic status tokens (success / warning /
+   info). It used to also restate the whole palette in a cool
+   green-grey, and because it lands after the definition at the top of
+   this file it silently won: the app rendered cool while the landing
+   and auth rendered warm cream. The palette below is now the same
+   warm one defined at the top; only the status tokens are new. */
 .dashboard-shell.app-shell {
-  --app-bg: #f3f5f2;
-  --app-paper: #fffefa;
-  --app-paper-2: #e9eeea;
-  --app-text: #232824;
-  --app-muted: #667069;
-  --app-line: rgba(35, 40, 36, .1);
-  --app-line-strong: rgba(35, 40, 36, .17);
-  --app-rust: #d2674d;
-  --app-rust-dark: #af4f38;
-  --app-green: #4f8066;
-  --app-blue: #55789c;
-  --app-gold: #a87935;
-  --app-shadow: 0 12px 30px rgba(39, 47, 41, .055);
+  --app-bg: #f4eee7;
+  --app-paper: #fbf8f3;
+  --app-paper-2: #f0e8df;
+  --app-text: #27221e;
+  --app-muted: #796d64;
+  --app-line: rgba(69, 53, 42, .11);
+  --app-line-strong: rgba(69, 53, 42, .17);
+  --app-rust: #d76f4e;
+  --app-rust-dark: #b95435;
+  --app-green: #4f8766;
+  --app-blue: #5b7d9c;
+  --app-gold: #a8792f;
+  --app-shadow: 0 12px 34px rgba(79, 52, 34, .055);
   --ui-success: var(--app-green);
   --ui-warning: var(--app-gold);
   --ui-info: var(--app-blue);
 }
 
-html[data-theme="dark"] .dashboard-shell.app-shell {
-  --app-bg: #171a18;
-  --app-paper: #202421;
-  --app-paper-2: #292f2a;
-  --app-text: #f2f3ee;
-  --app-muted: #a8b0aa;
-  --app-line: rgba(242, 243, 238, .09);
-  --app-line-strong: rgba(242, 243, 238, .16);
-  --app-rust: #e17c61;
-  --app-rust-dark: #f09578;
-  --app-green: #78a88a;
-  --app-blue: #7f9fc0;
+/* Same correction for dark: warm charcoal, not green-black. */
+html[data-theme="dark"] .dashboard-shell.app-shell,
+html.dark .dashboard-shell.app-shell {
+  --app-bg: #191715;
+  --app-paper: #211e1b;
+  --app-paper-2: #2a2622;
+  --app-text: #f3ece5;
+  --app-muted: #b5a89e;
+  --app-line: rgba(244, 234, 226, .09);
+  --app-line-strong: rgba(244, 234, 226, .16);
+  --app-rust: #dd8062;
+  --app-rust-dark: #c76445;
+  --app-green: #6ca27f;
+  --app-blue: #8aa6c2;
   --app-gold: #c69a58;
-  --app-shadow: 0 16px 36px rgba(0, 0, 0, .18);
+  --app-shadow: 0 16px 44px rgba(0, 0, 0, .17);
 }
 
 .dashboard-shell *,
