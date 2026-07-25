@@ -82,6 +82,7 @@ export default function DoblyDashboardClient({
   onboarding,
   firstName,
   team = [],
+  justOnboarded = false,
 }: {
   recentWorkflows: WorkflowRecord[];
   latestRuns: RunRecord[];
@@ -96,9 +97,11 @@ export default function DoblyDashboardClient({
   };
   firstName?: string;
   team?: TeamMember[];
+  justOnboarded?: boolean;
 }) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
+  const [showWelcome, setShowWelcome] = useState(justOnboarded);
   const name = firstName || "there";
   const setupComplete = onboarding.hasBusinessContext && onboarding.hasConnection && onboarding.hasWorkflow;
   const quickPrompts = [
@@ -121,6 +124,13 @@ export default function DoblyDashboardClient({
 
   return (
     <div className="ref-page home-editorial">
+      {showWelcome ? (
+        <div className="home-welcome-banner dobly-anim-rise">
+          <Sparkles size={16} />
+          <span>Your workspace is live. This is Homebase — everything your team does shows up here from now on.</span>
+          <button type="button" onClick={() => setShowWelcome(false)} aria-label="Dismiss">Got it</button>
+        </div>
+      ) : null}
       <div className="ref-page-grid">
         <main className="ref-page-main">
           <header className="home-masthead">

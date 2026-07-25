@@ -649,7 +649,7 @@ async function buildDeterministicTaskResult(userId: string, taskId: string, task
     taskId,
     task,
   });
-  const executionPlan = buildOfficeWorkerExecutionPlan(task);
+  const executionPlan = await buildOfficeWorkerExecutionPlan(task);
   const tool = agentLoop.tool;
 
   await recordUsageEvent({

@@ -61,7 +61,13 @@ function formatConnectionMeta(value: string) {
   return value.replaceAll("_", " ");
 }
 
-export default function OperatorHandleBar({ compact = false }: { compact?: boolean }) {
+export default function OperatorHandleBar({
+  compact = false,
+  onDeployed,
+}: {
+  compact?: boolean;
+  onDeployed?: (result: { operatorId: string; operatorName: string; approvalMode: string }) => void;
+}) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [proposal, setProposal] = useState<ProposalRecord | null>(null);
@@ -111,7 +117,15 @@ export default function OperatorHandleBar({ compact = false }: { compact?: boole
     setError(null);
     startTransition(async () => {
       try {
-        await requestJson(`/api/operators/proposals/${proposal.id}/deploy`, { method: "POST" });
+        const data = await requestJson(`/api/operators/proposals/${proposal.id}/deploy`, { method: "POST" });
+        if (onDeployed && data.operator?.id) {
+          onDeployed({
+            operatorId: data.operator.id,
+            operatorName: data.operator.name ?? proposal.proposal.name,
+            approvalMode: data.operator.approval_mode ?? proposal.proposal.approvalMode,
+          });
+          return;
+        }
         router.refresh();
         router.push("/dashboard/coworkers");
       } catch (err) {

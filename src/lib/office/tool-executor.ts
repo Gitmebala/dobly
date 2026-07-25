@@ -2,6 +2,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { executeAgentToolOperation } from "@/lib/agents/tool-operation";
 import { sendCommunicationReply } from "@/lib/communications/runtime";
 import { getDecryptedConnectionSecrets } from "@/lib/connections";
+import { executeRealInternalTool } from "@/lib/office/internal-tool-handlers";
 
 export type OfficeToolExecutionStatus = "completed" | "needs_connection" | "unsupported" | "failed";
 
@@ -175,16 +176,7 @@ async function executeCommunicationReplyTool(input: OfficeToolExecutionInput): P
 }
 
 async function executeInternalTool(input: OfficeToolExecutionInput, toolName: string): Promise<OfficeToolExecutionResult> {
-  return {
-    status: "completed",
-    summary: `${toolName.replaceAll("_", " ")} completed with Homebase data.`,
-    output: {
-      toolName,
-      taskId: input.taskId,
-      payload: input.toolPayload,
-      executedAt: new Date().toISOString(),
-    },
-  };
+  return executeRealInternalTool(input, toolName);
 }
 
 async function findConnectionForTool(userId: string, toolName: string) {

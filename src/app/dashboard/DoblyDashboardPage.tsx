@@ -6,7 +6,12 @@ import { listDoblyOperators, type OperatorWithLoops } from "@/lib/dobly-operator
 import type { Approval, Connection, Workflow, WorkflowRun, WorkflowVersion } from "@/types";
 import DoblyDashboardClient from "./DoblyDashboardClient";
 
-export default async function DoblyDashboardPage() {
+export default async function DoblyDashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ justOnboarded?: string }>;
+}) {
+  const justOnboarded = (await searchParams)?.justOnboarded === "1";
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
@@ -75,6 +80,7 @@ export default async function DoblyDashboardPage() {
       onboarding={onboarding}
       firstName={firstName}
       team={team}
+      justOnboarded={justOnboarded}
     />
   );
 }

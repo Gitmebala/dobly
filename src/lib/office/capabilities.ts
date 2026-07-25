@@ -1,5 +1,6 @@
 import type { OfficeDepartmentId, OfficeRiskLevel } from "@/lib/office/types";
 import { formatPlaybookForArtifact } from "@/lib/office/vertical-playbooks";
+import { createConversationReply } from "@/lib/anthropic";
 
 export type OfficeExecutionArtifactKind =
   | "reply_draft"
@@ -58,133 +59,88 @@ function approvalReason(riskLevel: OfficeRiskLevel, workerKey: string) {
   return null;
 }
 
-function communicationArtifact(payload: Record<string, any>): OfficeExecutionArtifact {
-  const draft = payload?.draft?.suggestedReply ?? payload.body ?? "I prepared a response using current Homebase memory.";
-  return {
-    kind: "reply_draft",
-    title: "Customer-ready response",
-    body: String(draft),
-    confidence: payload?.draft?.riskLevel === "low" ? "high" : "medium",
-    nextAction: "Send after approval or route to the correct department.",
-  };
+interface ArtifactSpec {
+  kind: OfficeExecutionArtifactKind;
+  title: string;
+  guidance: string;
 }
 
-function leadScoreArtifact(payload: Record<string, any>): OfficeExecutionArtifact {
+function artifactSpecsForWorker(workerKey: string): ArtifactSpec[] {
+  const specs: ArtifactSpec[] = [];
+  if (/communication|front_desk|chatbot|whatsapp|sms|email|reception/.test(workerKey)) {
+    specs.push({ kind: "reply_draft", title: "Customer-ready response", guidance: "Write the actual reply Dobly would send, grounded only in the provided context. Ask a clarifying question instead of inventing missing facts." });
+  }
+  if (/lead|qualification/.test(workerKey)) {
+    specs.push({ kind: "lead_score", title: "Lead qualification", guidance: "Assess purchase/booking intent from the actual text. State what's missing to qualify and the concrete next step." });
+  }
+  if (/followup|follow_up|proposal|sales/.test(workerKey)) {
+    specs.push({ kind: "follow_up_plan", title: "Sales follow-up plan", guidance: "Propose a short, specific follow-up sequence grounded in the actual deal context given, not a generic 3-touch template." });
+  }
+  if (/invoice|payment|receipt|finance|reconciliation/.test(workerKey)) {
+    specs.push({ kind: "finance_check", title: "Finance check", guidance: "Using the actual amount, reference, and payer/invoice details given, describe the specific reconciliation or reminder action. Flag mismatches rather than forcing a match." });
+  }
+  if (/support|ticket|recovery|faq/.test(workerKey)) {
+    specs.push({ kind: "support_triage", title: "Support triage", guidance: "Assess the actual customer message for urgency and emotional sensitivity. If it reads as a complaint or refund/legal risk, say so explicitly and recommend escalation." });
+  }
+  if (/content|campaign|newsletter|social/.test(workerKey)) {
+    specs.push({ kind: "content_package", title: "Content package", guidance: "Turn the actual idea/context into a specific angle and 1-2 concrete asset ideas. Never invent offers, claims, testimonials, or pricing not present in context." });
+  }
+  if (/operations|supplier|order|task_coordination/.test(workerKey)) {
+    specs.push({ kind: "operations_plan", title: "Operations next-move plan", guidance: "Identify the actual owner, blocker, deadline, and customer impact from context, and the specific next move." });
+  }
+  if (/briefing|general_manager|board/.test(workerKey) || specs.length === 0) {
+    specs.push({ kind: "briefing", title: "Briefing", guidance: "Summarize what changed, what needs a decision, and the one next move the owner should consider, using only the actual context given." });
+  }
+  return specs;
+}
+
+function fallbackArtifact(spec: ArtifactSpec, payload: Record<string, any>): OfficeExecutionArtifact {
   const text = textFromPayload(payload);
-  const hot = /(urgent|today|now|price|quote|book|buy|available|call)/i.test(text);
   return {
-    kind: "lead_score",
-    title: hot ? "Hot lead detected" : "Lead needs qualification",
-    body: hot
-      ? "The lead shows purchase or booking intent. Ask one clarifying question, then move quickly to scheduling or proposal."
-      : "The lead is not fully qualified yet. Capture need, budget/timeline, location, and decision-maker before escalating.",
-    confidence: hot ? "high" : "medium",
-    nextAction: hot ? "Create a sales follow-up task within 15 minutes." : "Ask a qualification question.",
+    kind: spec.kind,
+    title: spec.title,
+    body: `${spec.guidance} Context: ${text.slice(0, 300)}`,
+    confidence: "low",
+    nextAction: "Review manually — automatic drafting was unavailable.",
   };
 }
 
-function followUpArtifact(payload: Record<string, any>): OfficeExecutionArtifact {
+async function generateArtifact(spec: ArtifactSpec, workerKey: string, departmentId: OfficeDepartmentId, task: Record<string, any>): Promise<OfficeExecutionArtifact> {
+  const payload = (task.tool_payload ?? {}) as Record<string, any>;
   const text = textFromPayload(payload);
-  return {
-    kind: "follow_up_plan",
-    title: "Sales follow-up sequence",
-    body: [
-      "Touch 1: helpful reply that confirms the need and asks for the next concrete step.",
-      "Touch 2: reminder with one proof point or example.",
-      "Touch 3: polite close-the-loop message if there is no response.",
-      `Context used: ${text.slice(0, 220)}`,
-    ].join("\n"),
-    confidence: "medium",
-    nextAction: "Send touch 1 now, then schedule follow-ups only inside the configured cadence.",
-  };
-}
-
-function financeArtifact(workerKey: string, payload: Record<string, any>): OfficeExecutionArtifact {
   const amount = moneyText(payload);
-  const title = workerKey.includes("reconciliation") || workerKey.includes("receipt")
-    ? "Payment reconciliation check"
-    : "Invoice/payment follow-up";
 
-  return {
-    kind: "finance_check",
-    title,
-    body: workerKey.includes("reconciliation") || workerKey.includes("receipt")
-      ? `Compare provider reference, payer, timestamp, and ${amount} against open invoices. Flag mismatch instead of forcing a match.`
-      : `Prepare a respectful reminder for ${amount}, mention the invoice/reference if available, and escalate disputes or promises to pay.`,
-    confidence: "medium",
-    nextAction: "Update invoice/payment status only when the match is clean.",
-  };
+  try {
+    const raw = await createConversationReply({
+      system: `You are producing one work artifact for a Dobly office worker ("${workerKey}", ${departmentId} department). ${spec.guidance} Ground every claim in the given context — never invent facts, offers, prices, or promises. Respond with ONLY valid JSON: {"body": string, "confidence": "low"|"medium"|"high", "nextAction": string}. body should be 1-4 sentences.`,
+      messages: [
+        {
+          role: "user",
+          content: `Task: ${String(task.title ?? "")}\nSummary: ${String(task.summary ?? "")}\nAmount (if relevant): ${amount}\nContext: ${text}`,
+        },
+      ],
+      maxTokens: 350,
+    });
+    const parsed = JSON.parse(raw) as { body: string; confidence: "low" | "medium" | "high"; nextAction: string };
+    return {
+      kind: spec.kind,
+      title: spec.title,
+      body: parsed.body,
+      confidence: parsed.confidence,
+      nextAction: parsed.nextAction,
+    };
+  } catch {
+    return fallbackArtifact(spec, payload);
+  }
 }
 
-function supportArtifact(payload: Record<string, any>): OfficeExecutionArtifact {
-  const text = textFromPayload(payload);
-  const angry = /(angry|terrible|refund|cancel|broken|complaint|lawsuit|legal)/i.test(text);
-  return {
-    kind: "support_triage",
-    title: angry ? "Sensitive support case" : "Support triage",
-    body: angry
-      ? "Acknowledge the customer, avoid blame or liability, gather order/account details, and escalate before compensation."
-      : "Answer from approved memory where possible, ask for missing details, and create a ticket if resolution needs follow-up.",
-    confidence: angry ? "high" : "medium",
-    nextAction: angry ? "Queue owner review before sending." : "Reply or route to support workflow.",
-  };
-}
-
-function contentArtifact(payload: Record<string, any>): OfficeExecutionArtifact {
-  const text = textFromPayload(payload);
-  return {
-    kind: "content_package",
-    title: "Content package",
-    body: [
-      "Angle: turn the business idea into a specific customer problem and outcome.",
-      "Assets: one short post, one longer caption/newsletter seed, and one visual brief.",
-      "Guardrail: do not invent offers, claims, testimonials, or pricing.",
-      `Idea/context: ${text.slice(0, 260)}`,
-    ].join("\n"),
-    confidence: "medium",
-    nextAction: "Queue draft for owner approval, then schedule only approved versions.",
-  };
-}
-
-function operationsArtifact(payload: Record<string, any>): OfficeExecutionArtifact {
-  return {
-    kind: "operations_plan",
-    title: "Operations next-move plan",
-    body: "Identify owner, blocker, deadline, dependency, and customer impact. Create or update the operational task before sending reminders.",
-    confidence: "medium",
-    nextAction: "Create the internal task and escalate any blocker affecting customer commitments.",
-  };
-}
-
-function briefingArtifact(departmentId: OfficeDepartmentId): OfficeExecutionArtifact {
-  return {
-    kind: "briefing",
-    title: `${departmentId.replaceAll("_", " ")} briefing`,
-    body: "Summarize what changed, what needs a decision, what risk is building, and the one next move the owner should consider.",
-    confidence: "medium",
-    nextAction: "Attach briefing to Homebase and surface it in the General Manager feed.",
-  };
-}
-
-export function buildOfficeWorkerExecutionPlan(task: Record<string, any>): OfficeWorkerExecutionPlan {
+export async function buildOfficeWorkerExecutionPlan(task: Record<string, any>): Promise<OfficeWorkerExecutionPlan> {
   const workerKey = String(task.worker_key ?? "unknown_worker");
   const departmentId = String(task.department_id ?? "general_manager") as OfficeDepartmentId;
   const riskLevel = String(task.risk_level ?? "medium") as OfficeRiskLevel;
-  const payload = (task.tool_payload ?? {}) as Record<string, any>;
-  const artifacts: OfficeExecutionArtifact[] = [];
+  const specs = artifactSpecsForWorker(workerKey);
 
-  if (/communication|front_desk|chatbot|whatsapp|sms|email|reception/.test(workerKey)) {
-    artifacts.push(communicationArtifact(payload));
-  }
-  if (/lead|qualification/.test(workerKey)) artifacts.push(leadScoreArtifact(payload));
-  if (/followup|follow_up|proposal|sales/.test(workerKey)) artifacts.push(followUpArtifact(payload));
-  if (/invoice|payment|receipt|finance|reconciliation/.test(workerKey)) artifacts.push(financeArtifact(workerKey, payload));
-  if (/support|ticket|recovery|faq/.test(workerKey)) artifacts.push(supportArtifact(payload));
-  if (/content|campaign|newsletter|social/.test(workerKey)) artifacts.push(contentArtifact(payload));
-  if (/operations|supplier|order|task_coordination/.test(workerKey)) artifacts.push(operationsArtifact(payload));
-  if (/briefing|general_manager|board/.test(workerKey) || artifacts.length === 0) {
-    artifacts.push(briefingArtifact(departmentId));
-  }
+  const artifacts = await Promise.all(specs.map((spec) => generateArtifact(spec, workerKey, departmentId, task)));
 
   return {
     workerKey,

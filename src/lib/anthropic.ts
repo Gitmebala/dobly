@@ -141,6 +141,111 @@ async function createGenerationMessage(input: {
   return createAnthropicMessage(input);
 }
 
+async function createGroqConversation(input: {
+  model?: string;
+  maxTokens: number;
+  system: string;
+  messages: Array<{ role: "user" | "assistant"; content: string }>;
+}) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error("GROQ_API_KEY is not configured.");
+  }
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: input.model || process.env.DOBLY_GENERATION_MODEL || process.env.DOBLY_STANDARD_MODEL || "llama-3.3-70b-versatile",
+      max_tokens: input.maxTokens,
+      temperature: 0.4,
+      messages: [{ role: "system", content: input.system }, ...input.messages],
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | {
+        choices?: Array<{ message?: { content?: string } }>;
+        error?: { message?: string };
+        message?: string;
+      }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(data?.error?.message || data?.message || `Groq request failed with status ${response.status}.`);
+  }
+
+  const text = data?.choices?.[0]?.message?.content?.trim();
+  if (!text) {
+    throw new Error("Unexpected Groq response: no text content returned.");
+  }
+
+  return text;
+}
+
+async function createAnthropicConversation(input: {
+  model?: string;
+  maxTokens: number;
+  system: string;
+  messages: Array<{ role: "user" | "assistant"; content: string }>;
+}) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY is not configured.");
+  }
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: input.model || process.env.DOBLY_STANDARD_MODEL || "claude-sonnet-4-20250514",
+      max_tokens: input.maxTokens,
+      system: input.system,
+      messages: input.messages,
+    }),
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const errorMessage =
+      typeof data?.error?.message === "string"
+        ? data.error.message
+        : typeof data?.message === "string"
+          ? data.message
+          : `Anthropic request failed with status ${response.status}.`;
+    throw new Error(errorMessage);
+  }
+
+  return extractAnthropicText(data);
+}
+
+/**
+ * Multi-turn conversational reply, honoring the same provider fallback used
+ * for generation: DOBLY_GENERATION_PROVIDER=anthropic forces Anthropic,
+ * otherwise Groq is used when GROQ_API_KEY is set.
+ */
+export async function createConversationReply(input: {
+  model?: string;
+  maxTokens: number;
+  system: string;
+  messages: Array<{ role: "user" | "assistant"; content: string }>;
+}): Promise<string> {
+  const preferredProvider = process.env.DOBLY_GENERATION_PROVIDER?.toLowerCase();
+
+  if (preferredProvider !== "anthropic" && process.env.GROQ_API_KEY) {
+    return createGroqConversation(input);
+  }
+
+  return createAnthropicConversation(input);
+}
+
 const SYSTEM_PROMPT = `You are Dobly's AI workflow architect.
 
 Your job is to turn plain English work requests into permanent Dobly systems for business owners, freelancers, and individuals.

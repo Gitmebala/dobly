@@ -4,6 +4,7 @@ import { requireDoblyAdmin } from "@/lib/admin/access";
 import { DOBLY_PLANS } from "@/lib/billing/plans";
 import { buildExecutiveDashboardData } from "@/lib/executive-reporting";
 import { getCoverageSummary } from "@/lib/use-case-coverage";
+import { buildStartupReadinessSnapshot } from "@/lib/startup-readiness";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 
 async function safeCount(supabase: any, table: string) {
@@ -29,6 +30,8 @@ export default async function AdminPage() {
     safeCount(supabase, "office_events"),
     user ? buildExecutiveDashboardData({ userId: user.id }).catch(() => null) : Promise.resolve(null),
   ]);
+
+  const readiness = await buildStartupReadinessSnapshot().catch(() => null);
 
   const [{ data: recentTasks }, { data: recentRuns }] = await Promise.all([
     supabase
@@ -80,6 +83,45 @@ export default async function AdminPage() {
           <Metric label="Capacity available" value={`KSh ${(walletAvailable / 100).toLocaleString()}`} />
           <Metric label="Active provider rails" value={(providerAccounts ?? []).filter((provider: any) => provider.status === "active").length} />
         </section>
+
+        {readiness ? (
+          <section className="card">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-display text-2xl">Launch readiness</h2>
+              <span className="badge-muted text-xs">{readiness.score}% ready</span>
+            </div>
+            {readiness.blockers.length > 0 ? (
+              <div className="mt-4">
+                <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--dobly-text-dim)]">Blockers</div>
+                <div className="mt-2 grid gap-2 md:grid-cols-2">
+                  {readiness.blockers.map((item) => (
+                    <div key={item.id} className="rounded-2xl border border-[rgba(196,80,26,0.25)] bg-[rgba(196,80,26,0.06)] p-3 text-sm">
+                      <div className="font-medium">{item.label}</div>
+                      <p className="mt-1 text-xs text-[var(--dobly-text-muted)]">{item.summary}</p>
+                      <p className="mt-1 text-xs text-[var(--dobly-text-dim)]">{item.action}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {readiness.watches.length > 0 ? (
+              <div className="mt-4">
+                <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--dobly-text-dim)]">Watch</div>
+                <div className="mt-2 grid gap-2 md:grid-cols-2">
+                  {readiness.watches.map((item) => (
+                    <div key={item.id} className="rounded-2xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.025)] p-3 text-sm">
+                      <div className="font-medium">{item.label}</div>
+                      <p className="mt-1 text-xs text-[var(--dobly-text-muted)]">{item.summary}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {readiness.blockers.length === 0 && readiness.watches.length === 0 ? (
+              <p className="mt-4 text-sm text-[var(--dobly-text-muted)]">No blockers or watch items right now.</p>
+            ) : null}
+          </section>
+        ) : null}
 
         {executive ? (
           <section className="grid gap-4 md:grid-cols-5">

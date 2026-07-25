@@ -1,6 +1,6 @@
 import { DeepgramStreamHandler, getDeepgramConfig, TranscriptionResult } from "./deepgram";
 import { ElevenLabsSynthesizer, getElevenLabsConfig } from "./elevenlabs";
-import { anthropic } from "@/lib/anthropic";
+import { createConversationReply } from "@/lib/anthropic";
 import { initializeVoiceSession, endVoiceSession, getVoiceSession, type VoiceSession } from "./runtime";
 import { reserveOperatingCapacity, settleOperatingCapacity } from "@/lib/billing/economy";
 import { failedProviderCharge } from "@/lib/billing/economy-core";
@@ -203,18 +203,12 @@ Respond naturally as if in a phone conversation.`;
 
     // Build messages from conversation history (last 10 turns)
     const recentHistory = this.conversationHistory.slice(-10);
-    const messages: Array<{ role: "user" | "assistant"; content: string }> = [
-      { role: "user", content: systemPrompt },
-      ...recentHistory,
-    ];
 
-    const response = await anthropic.messages.create({
-      model: "llama-3.3-70b-versatile",
-      max_tokens: 150,
-      messages,
+    return createConversationReply({
+      system: systemPrompt,
+      messages: recentHistory,
+      maxTokens: 150,
     });
-
-    return response.content[0]?.type === "text" ? response.content[0].text : "";
   }
 
   /**

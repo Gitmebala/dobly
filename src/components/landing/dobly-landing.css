@@ -19,11 +19,30 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  background: var(--paper);
+  position: relative;
+  background:
+    radial-gradient(ellipse 60% 46% at 82% -6%, color-mix(in srgb, var(--rust) 13%, transparent), transparent 70%),
+    radial-gradient(ellipse 54% 40% at 6% 18%, color-mix(in srgb, var(--rust) 6%, transparent), transparent 65%),
+    var(--paper);
   color: var(--ink);
   font-family: var(--font-body), Arial, sans-serif;
   overflow-x: hidden;
 }
+
+/* Fixed grain — breaks the flat digital vector look without adding color */
+.dl2::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: .5;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 140px 140px;
+}
+
+.dl2 > * { position: relative; z-index: 2; }
 
 /* System-preference fallback (before an explicit toggle choice) */
 @media (prefers-color-scheme: dark) {
@@ -214,6 +233,7 @@ html[data-theme="dark"] .dl2 {
 
 /* ---------- Hero ---------- */
 .dl2-hero {
+  position: relative;
   display: grid;
   grid-template-columns: 1.08fr .92fr;
   gap: 56px;
@@ -222,14 +242,25 @@ html[data-theme="dark"] .dl2 {
   padding-bottom: 84px;
 }
 
+.dl2-hero-field {
+  position: absolute;
+  inset: -40px -5vw;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.dl2-hero-lede, .dl2-composer { position: relative; z-index: 1; }
+
 .dl2-hero-lede h1 {
   font-size: clamp(38px, 5vw, 62px);
   line-height: 1.04;
   letter-spacing: -.015em;
 }
+.dl2-hero-line { display: block; }
 .dl2-hero-lede h1 em {
   color: var(--rust);
   line-height: 1.1;
+  font-style: italic;
 }
 
 .dl2-dek {
@@ -364,33 +395,143 @@ html[data-theme="dark"] .dl2 {
   padding: 4px 11px;
 }
 
-/* ---------- Dispatch strip ---------- */
+/* ---------- Dispatch: what a coworker can do ---------- */
 .dl2-dispatch {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  padding-top: 22px;
-  padding-bottom: 22px;
+  padding-top: 40px;
+  padding-bottom: 40px;
   border-top: 1px solid var(--ink);
   border-bottom: 1px solid var(--rule);
 }
 .dl2-dispatch-label {
+  display: block;
+  margin-bottom: 22px;
   font-family: var(--font-mono), monospace;
   font-size: 11px;
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--muted);
-  flex-shrink: 0;
 }
-.dl2-dispatch-words {
+.dl2-dispatch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+.dl2-dispatch-card {
+  padding: 22px;
+  background: var(--paper);
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px 26px;
+  flex-direction: column;
+  gap: 10px;
 }
-.dl2-dispatch-words span {
+.dl2-dispatch-card svg {
+  width: 19px; height: 19px;
+  color: var(--rust);
+}
+.dl2-dispatch-card strong {
   font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  font-size: 20px;
+  color: var(--ink);
+}
+.dl2-dispatch-card p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.55; }
+
+/* ---------- Departments ---------- */
+.dl2-depts-section { padding-top: 88px; padding-bottom: 88px; border-top: 1px solid var(--rule); }
+.dl2-depts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.dl2-dept-card {
+  padding: 20px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--paper-2);
+  transition: border-color .2s var(--ease), transform .2s var(--ease);
+}
+.dl2-dept-card:hover { border-color: var(--rust); transform: translateY(-2px); }
+.dl2-dept-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.dl2-dept-card-top svg { width: 18px; height: 18px; color: var(--rust); }
+.dl2-dept-trust {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.dl2-dept-card h3 {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
   font-size: 21px;
   color: var(--ink);
+  margin: 0 0 8px;
+}
+.dl2-dept-card p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+
+/* ---------- Hero headline: CSS-only entrance ---------- */
+.dl2-hero-line-in {
+  opacity: 0;
+  transform: translateY(20px);
+  filter: blur(5px);
+  animation: dl2-hero-line-reveal .8s var(--ease) forwards;
+  animation-delay: .15s;
+}
+@keyframes dl2-hero-line-reveal {
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+/* ---------- Record supporting points ---------- */
+.dl2-record-points { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.dl2-record-points li { display: flex; align-items: flex-start; gap: 10px; }
+.dl2-record-points svg { width: 16px; height: 16px; color: var(--rust); flex-shrink: 0; margin-top: 2px; }
+.dl2-record-points span { color: var(--ink-soft); font-size: 14.5px; line-height: 1.5; }
+
+/* ---------- World backdrop: cheap, persistent, page-length atmosphere ---------- */
+/* ".dl2 > .dl2-world" (2 classes) beats the earlier ".dl2 > *" reveal-stacking
+   rule (1 class) at equal-or-higher specificity regardless of source order —
+   without this, position:relative/z-index:2 from that rule would win and
+   break the backdrop's absolute positioning. */
+.dl2 > .dl2-world {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.dl2-world-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  background: radial-gradient(circle, color-mix(in srgb, var(--rust) 22%, transparent), transparent 70%);
+  will-change: transform;
+}
+.dl2-world-orb-1 { width: 46vw; height: 46vw; top: -10%; right: -10%; animation: dl2-orb-drift-1 34s ease-in-out infinite; }
+.dl2-world-orb-2 { width: 32vw; height: 32vw; top: 60vh; left: -8%; animation: dl2-orb-drift-2 40s ease-in-out infinite; }
+.dl2-world-orb-3 { width: 38vw; height: 38vw; top: 140vh; right: -6%; animation: dl2-orb-drift-1 46s ease-in-out infinite reverse; }
+
+@keyframes dl2-orb-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-6%, 5%) scale(1.08); }
+}
+@keyframes dl2-orb-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(5%, -4%) scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dl2-hero-line-in { animation: none; opacity: 1; transform: none; filter: none; }
+  .dl2-world-orb { animation: none; }
 }
 
 /* ---------- Section heads ---------- */
@@ -523,7 +664,9 @@ html[data-theme="dark"] .dl2 {
   border-top: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
   padding: 92px 0;
-  background: var(--paper-2);
+  background:
+    radial-gradient(ellipse 70% 90% at 100% 50%, color-mix(in srgb, var(--rust) 8%, transparent), transparent 72%),
+    var(--paper-2);
 }
 .dl2-manifesto blockquote {
   font-size: clamp(26px, 3.6vw, 44px);
@@ -579,7 +722,10 @@ html[data-theme="dark"] .dl2 {
 
 /* ---------- Final CTA ---------- */
 .dl2-final {
-  background: var(--rust);
+  background:
+    radial-gradient(ellipse 65% 120% at 12% 0%, rgba(255, 255, 255, .1), transparent 60%),
+    radial-gradient(ellipse 65% 120% at 88% 100%, rgba(0, 0, 0, .08), transparent 60%),
+    var(--rust);
   padding: 96px 0;
   text-align: center;
 }

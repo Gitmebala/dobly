@@ -17,31 +17,16 @@ export function AuthShell({
 }) {
   return (
     <main className="dl-auth">
-      <aside className="dl-auth-aside">
-        <div className="dl-auth-aside-top">
+      <section className="dl-auth-main">
+        <header className="dl-auth-topbar">
           <Link href="/" className="dl-auth-brand" aria-label="Dobly home">
             <span className="dl-auth-brand-mark">D</span>
             <span className="dl-auth-brand-name">Dobly</span>
           </Link>
-          <p className="dl-auth-edition">Vol. 01 — The hiring interface for AI coworkers</p>
-        </div>
-
-        <div className="dl-auth-aside-body">
-          <h2>Hire the coworker.<br />Keep the work on one page.</h2>
-          <ol className="dl-auth-ledger">
-            <li><span>01</span><p>Describe an outcome. Dobly drafts the Operator for it.</p></li>
-            <li><span>02</span><p>Watch a first piece of real work before you commit.</p></li>
-            <li><span>03</span><p>Everything it does stays recorded, dated, and yours.</p></li>
-          </ol>
-        </div>
-
-        <p className="dl-auth-aside-foot">Set the standard. Dobly runs the rest.</p>
-      </aside>
-
-      <section className="dl-auth-main">
-        <header className="dl-auth-topbar">
-          <Link href="/" className="dl-auth-back"><ArrowLeft size={16} /> Back to home</Link>
-          <ThemeToggle compact />
+          <div className="dl-auth-topbar-actions">
+            <ThemeToggle compact />
+            <Link href="/" className="dl-auth-back"><ArrowLeft size={16} /> Back to home</Link>
+          </div>
         </header>
 
         <div className="dl-auth-form-wrap">

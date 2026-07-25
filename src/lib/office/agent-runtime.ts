@@ -1,4 +1,5 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
+import { createConversationReply } from "@/lib/anthropic";
 import { buildAgentCognitionCycle, type RichContextItem } from "@/lib/agents/cognition";
 import { buildMemorySearchText, normalizeMemoryTags, type BusinessMemoryItem } from "@/lib/business-memory";
 import { executeOfficeTool, type OfficeToolExecutionResult } from "@/lib/office/tool-executor";
@@ -238,11 +239,12 @@ function parseSourceRecord(task: Record<string, any>, sourceEvent: OfficeEventRe
   return null;
 }
 
-function buildDraftMessage(task: Record<string, any>, sourceRecord: JsonRecord | null) {
+async function buildDraftMessage(task: Record<string, any>, context: ContextPack) {
   const payload = isRecord(task.tool_payload) ? task.tool_payload : {};
   const existing = typeof payload.body === "string" ? payload.body.trim() : "";
   if (existing) return existing;
 
+  const sourceRecord = context.sourceRecord;
   const recipient =
     asText(sourceRecord?.contact_name) ||
     asText(sourceRecord?.full_name) ||
@@ -250,14 +252,49 @@ function buildDraftMessage(task: Record<string, any>, sourceRecord: JsonRecord |
     "there";
   const summary = asText(task.summary).replace(/\s+/g, " ").trim();
   const title = asText(task.title).replace(/\s+/g, " ").trim();
+  const businessName = asText(context.businessProfile?.business_name, "the business");
+  const memoryContext = context.memoryItems
+    .slice(0, 4)
+    .map((item) => `- ${item.title}: ${item.body}`.slice(0, 240))
+    .join("\n");
+  const inboundText = payloadInboundText(sourceRecord, task);
 
-  return `Hi ${recipient}, Dobly is following up about "${title}". ${summary || "We wanted to keep this moving and make sure nothing is blocked."} Please reply here if you need anything from us.`;
+  const fallback = `Hi ${recipient}, following up about "${title}". ${summary || "Wanted to keep this moving and make sure nothing is blocked."} Reply here if you need anything.`;
+
+  try {
+    const draft = await createConversationReply({
+      system: `You write short, warm, human customer messages on behalf of ${businessName} through Dobly. Keep it under 80 words, no corporate jargon, no invented facts, offers, prices, or promises not present in the context below. If the context is thin, keep the message general and ask a clarifying question instead of guessing.`,
+      messages: [
+        {
+          role: "user",
+          content: `Recipient: ${recipient}\nTask: ${title}\nContext: ${summary}\n${inboundText ? `Their message: ${inboundText}\n` : ""}${memoryContext ? `Business notes:\n${memoryContext}` : ""}\n\nWrite the reply message only, no preamble.`,
+        },
+      ],
+      maxTokens: 200,
+    });
+    return draft.trim() || fallback;
+  } catch {
+    return fallback;
+  }
 }
 
-function buildPlannerOutput(params: {
+function payloadInboundText(sourceRecord: JsonRecord | null, task: Record<string, any>) {
+  const payload = isRecord(task.tool_payload) ? task.tool_payload : {};
+  const candidates = [
+    (payload as JsonRecord)?.inbound && isRecord((payload as JsonRecord).inbound)
+      ? ((payload as JsonRecord).inbound as JsonRecord).body
+      : null,
+    sourceRecord?.last_message,
+    sourceRecord?.body,
+  ];
+  const found = candidates.find((value) => typeof value === "string" && value.trim().length > 0);
+  return typeof found === "string" ? found.slice(0, 600) : "";
+}
+
+async function buildPlannerOutput(params: {
   task: Record<string, any>;
   context: ContextPack;
-}): PlannerOutput {
+}): Promise<PlannerOutput> {
   const { task, context } = params;
   const availableTools = cleanList([
     asText(task.tool_name) || null,
@@ -293,7 +330,7 @@ function buildPlannerOutput(params: {
   confidence = clamp(confidence, 5, 98);
 
   const draftMessage =
-    asText(task.tool_name) === "communication_reply" ? buildDraftMessage(task, context.sourceRecord) : null;
+    asText(task.tool_name) === "communication_reply" ? await buildDraftMessage(task, context) : null;
 
   const proposedAction: PlannerOutput["proposed_action"] =
     cognition.decision.mode === "ask_owner"
@@ -789,7 +826,7 @@ export async function runOfficeTaskAgentLoop(params: {
     },
   });
 
-  const plannerOutput = buildPlannerOutput({ task, context: contextPack });
+  const plannerOutput = await buildPlannerOutput({ task, context: contextPack });
   await logStep({
     runId,
     taskId,

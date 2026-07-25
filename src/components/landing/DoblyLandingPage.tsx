@@ -4,18 +4,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
+import HeroField from "@/components/landing/HeroField";
 import {
   ArrowRight,
   ArrowUpRight,
   BarChart3,
+  Briefcase,
+  Building2,
   Code2,
   CircleDollarSign,
   FlaskConical,
   Headphones,
   Megaphone,
+  MessageCircle,
   Radar,
   Search,
   Settings2,
+  ShieldCheck,
+  Sparkles,
   Users,
   Workflow,
   type LucideIcon,
@@ -52,6 +58,24 @@ const roster: Array<{ name: string; domain: string; line: string; icon: LucideIc
   { name: "Whatever you need", domain: "Custom", line: "Describe a role that isn't here. Dobly composes it.", icon: Settings2 },
 ];
 
+const capabilities: Array<{ word: string; body: string; icon: LucideIcon }> = [
+  { word: "Communicate", body: "Calls, chat, email, and follow-up, in the tone the business actually uses.", icon: MessageCircle },
+  { word: "Research", body: "Finds the evidence, compares the options, and writes the brief before you ask.", icon: Search },
+  { word: "Create", body: "Documents, campaigns, reports, and drafts, ready for review, not a blank page.", icon: Sparkles },
+  { word: "Coordinate", body: "Routes work, chases dependencies, and keeps handoffs from silently dropping.", icon: Workflow },
+  { word: "Act", body: "Uses the connected software you already run, inside the boundary you set.", icon: ShieldCheck },
+  { word: "Monitor", body: "Watches the business and escalates only what actually needs a decision.", icon: Radar },
+];
+
+const departments: Array<{ name: string; outcome: string; trust: string }> = [
+  { name: "Reception", outcome: "Answer, qualify, book, and route every inbound moment.", trust: "Approval required" },
+  { name: "Sales", outcome: "Qualify leads, follow up, keep pipeline work moving.", trust: "Approval required" },
+  { name: "Marketing", outcome: "Plan, draft, repurpose, route content through approval.", trust: "Draft, propose" },
+  { name: "Finance", outcome: "Chase invoices, match payments, brief cash risk.", trust: "Human only" },
+  { name: "Support", outcome: "Answer FAQs, triage tickets, recover unhappy customers.", trust: "Approval required" },
+  { name: "Operations", outcome: "Coordinate tasks, suppliers, orders, and blockers.", trust: "Safe auto-run" },
+];
+
 const faqs: Array<[string, string]> = [
   ["Is this just a chatbot with a nicer coat of paint?", "No. Chat is where you talk to your Operators. The work itself, every call, document, reconciliation, and decision, happens underneath and is recorded in that same conversation, dated, so you can read any day like a page."],
   ["Will it act behind my back?", "Only inside the lines you draw. Routine work runs on its own. Anything customer-facing, financial, or otherwise consequential stops and waits for your approval, with the full context attached."],
@@ -61,19 +85,36 @@ const faqs: Array<[string, string]> = [
 
 export default function DoblyLandingPage() {
   useReveal();
+
   return (
     <main className="dl2">
+      <WorldBackdrop />
       <Masthead />
       <Hero />
       <Dispatch />
       <TimeSpine />
       <WorkRecord />
       <Roster />
+      <Departments />
       <Manifesto />
       <Ledgerlines />
       <FinalCta />
       <Colophon />
     </main>
+  );
+}
+
+/* ---------- A persistent, cheap, page-length atmosphere: slow CSS-only
+   drifting gradient fields. No JS per frame, no scroll dependency — this
+   is what makes it feel like one continuous world instead of a decorated
+   hero bolted onto a plain page. ---------- */
+function WorldBackdrop() {
+  return (
+    <div className="dl2-world" aria-hidden="true">
+      <span className="dl2-world-orb dl2-world-orb-1" />
+      <span className="dl2-world-orb dl2-world-orb-2" />
+      <span className="dl2-world-orb dl2-world-orb-3" />
+    </div>
   );
 }
 
@@ -129,11 +170,12 @@ function Masthead() {
 function Hero() {
   return (
     <section className="dl2-wrap dl2-hero">
+      <HeroField />
       <div className="dl2-hero-lede dl2-reveal">
         <p className="dl2-kicker">Hiring, not configuring</p>
         <h1>
-          Say what you need done.<br />
-          <em>Dobly hires the coworker</em> who does it.
+          <span className="dl2-hero-line dl2-hero-line-in">Say what you need done.</span>
+          <span className="dl2-hero-line dl2-hero-line-in" style={{ transitionDelay: "110ms" }}><em>Dobly hires the coworker</em> who does it.</span>
         </h1>
         <p className="dl2-dek">
           Not a workflow to build. A coworker to hire. Describe the outcome, watch Dobly draft an
@@ -216,12 +258,17 @@ function LiveComposer() {
 }
 
 function Dispatch() {
-  const words = ["Communicate", "Research", "Create", "Coordinate", "Act", "Monitor"];
   return (
-    <section className="dl2-wrap dl2-dispatch dl2-reveal">
-      <span className="dl2-dispatch-label">What a coworker can do</span>
-      <div className="dl2-dispatch-words">
-        {words.map((w) => <span key={w}>{w}</span>)}
+    <section className="dl2-wrap dl2-dispatch">
+      <span className="dl2-dispatch-label dl2-reveal">What a coworker can do</span>
+      <div className="dl2-dispatch-grid">
+        {capabilities.map(({ word, body, icon: Icon }, i) => (
+          <div key={word} className="dl2-dispatch-card dl2-reveal" style={{ transitionDelay: `${i * 60}ms` }}>
+            <Icon aria-hidden="true" />
+            <strong>{word}</strong>
+            <p>{body}</p>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -261,6 +308,10 @@ function WorkRecord() {
           it wrote, the decisions it paused for. Pick any date and read that day like a page in a
           ledger.
         </p>
+        <ul className="dl2-record-points">
+          <li><Briefcase aria-hidden="true" /><span>Every run, every draft, every call, dated and searchable.</span></li>
+          <li><ShieldCheck aria-hidden="true" /><span>Approvals and rejections become memory the next run reads.</span></li>
+        </ul>
       </div>
       <figure className="dl2-plate dl2-reveal">
         <div className="dl2-plate-frame">
@@ -291,7 +342,7 @@ function Roster() {
       </header>
       <ol className="dl2-roster">
         {roster.map(({ name, domain, line, icon: Icon }, i) => (
-          <li key={name} className="dl2-roster-row dl2-reveal">
+          <li key={name} className="dl2-roster-row dl2-reveal" style={{ transitionDelay: `${Math.min(i, 8) * 45}ms` }}>
             <span className="dl2-roster-num">{String(i + 1).padStart(2, "0")}</span>
             <Icon className="dl2-roster-icon" aria-hidden="true" />
             <div className="dl2-roster-body">
@@ -302,6 +353,33 @@ function Roster() {
           </li>
         ))}
       </ol>
+    </section>
+  );
+}
+
+function Departments() {
+  return (
+    <section className="dl2-wrap dl2-depts-section">
+      <header className="dl2-section-head dl2-reveal">
+        <span className="dl2-section-index">04</span>
+        <h2>Fourteen departments, not one chatbot.</h2>
+        <p className="dl2-section-dek">
+          Every Operator you hire runs inside a real department with its own autonomy boundary.
+          Nothing acts past the trust level you've given it.
+        </p>
+      </header>
+      <div className="dl2-depts-grid">
+        {departments.map((dept) => (
+          <div key={dept.name} className="dl2-dept-card dl2-reveal">
+            <div className="dl2-dept-card-top">
+              <Building2 aria-hidden="true" />
+              <span className="dl2-dept-trust">{dept.trust}</span>
+            </div>
+            <h3>{dept.name}</h3>
+            <p>{dept.outcome}</p>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -326,7 +404,7 @@ function Ledgerlines() {
   return (
     <section className="dl2-wrap dl2-faq">
       <header className="dl2-section-head dl2-reveal">
-        <span className="dl2-section-index">04</span>
+        <span className="dl2-section-index">05</span>
         <h2>Straight answers.</h2>
       </header>
       <div className="dl2-faq-list">

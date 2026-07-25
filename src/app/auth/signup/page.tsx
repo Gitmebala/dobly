@@ -7,6 +7,7 @@ import { CheckCircle2, Eye, EyeOff, Loader2, LockKeyhole, Mail, ShieldCheck, Use
 // success is handled by a full redirect to onboarding; no in-page success state
 import GoogleLogo from "@/components/GoogleLogo";
 import { AuthShell, AuthField } from "@/components/auth/AuthShell";
+import { createClient } from "@/lib/supabase/client";
 import "../reference-auth.css";
 
 export default function SignupPage() {
@@ -60,7 +61,24 @@ export default function SignupPage() {
   }
 
   async function handleGoogleSignUp() {
-    setError("Google sign-up will be enabled when the production auth project is connected. Use email for this local build.");
+    setError("");
+    setLoading(true);
+
+    try {
+      const supabase = createClient();
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`,
+        },
+      });
+
+      if (oauthError) setError(oauthError.message);
+    } catch {
+      setError("Google sign-up could not reach the authentication service.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
