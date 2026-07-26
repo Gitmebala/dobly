@@ -34,7 +34,7 @@ grant execute on function public.dobly_workspace_can_write(uuid) to authenticate
 
 do $$
 declare
-  table_name text;
+  v_table_name text;
   tables text[] := array[
     'workspace_tasks', 'workspace_projects', 'workspace_documents',
     'business_memory_items', 'dobly_operators', 'dobly_operator_loops',
@@ -43,16 +43,16 @@ declare
     'operator_messages', 'operator_chat_messages', 'operator_chat_events'
   ];
 begin
-  foreach table_name in array tables loop
-    if to_regclass('public.' || table_name) is not null and exists (
+  foreach v_table_name in array tables loop
+    if to_regclass('public.' || v_table_name) is not null and exists (
       select 1 from information_schema.columns
-      where table_schema = 'public' and information_schema.columns.table_name = table_name and column_name = 'workspace_id'
+      where table_schema = 'public' and information_schema.columns.table_name = v_table_name and column_name = 'workspace_id'
     ) then
-      execute format('alter table public.%I enable row level security', table_name);
-      execute format('drop policy if exists "Workspace members can view %s" on public.%I', table_name, table_name);
-      execute format('create policy "Workspace members can view %s" on public.%I for select using (workspace_id is not null and public.dobly_workspace_can_view(workspace_id))', table_name, table_name);
-      execute format('drop policy if exists "Workspace operators can write %s" on public.%I', table_name, table_name);
-      execute format('create policy "Workspace operators can write %s" on public.%I for all using (workspace_id is not null and public.dobly_workspace_can_write(workspace_id)) with check (workspace_id is not null and public.dobly_workspace_can_write(workspace_id))', table_name, table_name);
+      execute format('alter table public.%I enable row level security', v_table_name);
+      execute format('drop policy if exists "Workspace members can view %s" on public.%I', v_table_name, v_table_name);
+      execute format('create policy "Workspace members can view %s" on public.%I for select using (workspace_id is not null and public.dobly_workspace_can_view(workspace_id))', v_table_name, v_table_name);
+      execute format('drop policy if exists "Workspace operators can write %s" on public.%I', v_table_name, v_table_name);
+      execute format('create policy "Workspace operators can write %s" on public.%I for all using (workspace_id is not null and public.dobly_workspace_can_write(workspace_id)) with check (workspace_id is not null and public.dobly_workspace_can_write(workspace_id))', v_table_name, v_table_name);
     end if;
   end loop;
 end $$;
