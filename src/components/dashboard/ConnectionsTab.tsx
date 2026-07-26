@@ -13,11 +13,7 @@ import {
   Workflow,
   Wrench,
 } from "lucide-react";
-import {
-  CONNECTION_GROUPS,
-  getLaunchReadyConnectionProviders,
-  getOptionalLaunchConnectionProviders,
-} from "@/lib/connection-catalog";
+import { CONNECTION_GROUPS, CONNECTION_PROVIDERS } from "@/lib/connection-catalog";
 import { getConnectionReadiness } from "@/lib/connection-readiness";
 import { getWorkflowConnectionStrategy } from "@/lib/provider-strategy";
 import type { Connection, PlanId } from "@/types";
@@ -28,23 +24,48 @@ function formatConnectionMeta(value: string) {
 
 export default function ConnectionsTab({
   planId: initialPlanId = "free",
+  launchReadyProviderIds,
+  optionalLaunchProviderIds,
 }: {
   planId?: PlanId;
+  /**
+   * Provider readiness depends on server-only credential env vars
+   * (e.g. GOOGLE_CLIENT_ID). This is a client component, so it can never
+   * read those directly without a server/client hydration mismatch
+   * (the server sees the secret, the browser bundle never does) - that
+   * mismatch was silently making React drop event handlers on this page.
+   * Server callers should pass the ids down; callers that can't (fully
+   * client pages) fall back to fetching them from /api/connections below.
+   */
+  launchReadyProviderIds?: string[];
+  optionalLaunchProviderIds?: string[];
 }) {
   const searchParams = useSearchParams();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [planId] = useState<PlanId>(initialPlanId);
-  const launchReadyProviders = useMemo(() => getLaunchReadyConnectionProviders(), []);
-  const optionalLaunchProviders = useMemo(() => getOptionalLaunchConnectionProviders(), []);
+  const [fetchedLaunchReadyIds, setFetchedLaunchReadyIds] = useState<string[]>([]);
+  const [fetchedOptionalIds, setFetchedOptionalIds] = useState<string[]>([]);
+
+  const launchReadyProviders = useMemo(() => {
+    const idSet = new Set(launchReadyProviderIds ?? fetchedLaunchReadyIds);
+    return CONNECTION_PROVIDERS.filter((provider) => idSet.has(provider.id));
+  }, [launchReadyProviderIds, fetchedLaunchReadyIds]);
+  const optionalLaunchProviders = useMemo(() => {
+    const idSet = new Set(optionalLaunchProviderIds ?? fetchedOptionalIds);
+    return CONNECTION_PROVIDERS.filter((provider) => idSet.has(provider.id));
+  }, [optionalLaunchProviderIds, fetchedOptionalIds]);
 
   useEffect(() => {
     fetch("/api/connections")
       .then((response) => response.json())
       .then((connectionsData) => {
         setConnections(connectionsData.connections ?? []);
+        if (!launchReadyProviderIds) setFetchedLaunchReadyIds(connectionsData.launchReadyProviderIds ?? []);
+        if (!optionalLaunchProviderIds) setFetchedOptionalIds(connectionsData.optionalLaunchProviderIds ?? []);
       })
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const accordionProviders = useMemo(

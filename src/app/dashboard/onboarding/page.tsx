@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getLaunchReadyConnectionProviders, getOptionalLaunchConnectionProviders } from "@/lib/connection-catalog";
 import { isConnectionOperational } from "@/lib/connection-readiness";
 import { listDoblyOperators, type OperatorWithLoops } from "@/lib/dobly-operators";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -41,6 +42,8 @@ export default async function OnboardingPage() {
       operator={
         latestOperator ? { id: latestOperator.id, name: latestOperator.name, approvalMode: latestOperator.approval_mode } : null
       }
+      launchReadyProviderIds={getLaunchReadyConnectionProviders().map((provider) => provider.id)}
+      optionalLaunchProviderIds={getOptionalLaunchConnectionProviders().map((provider) => provider.id)}
     />
   );
 }

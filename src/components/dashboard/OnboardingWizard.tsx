@@ -41,6 +41,8 @@ export default function OnboardingWizard({
   businessProfile,
   planId,
   operator,
+  launchReadyProviderIds,
+  optionalLaunchProviderIds,
 }: {
   firstName: string;
   hasBusinessContext: boolean;
@@ -49,6 +51,8 @@ export default function OnboardingWizard({
   businessProfile: BusinessProfile | null;
   planId: PlanId;
   operator: { id: string; name: string; approvalMode: string } | null;
+  launchReadyProviderIds?: string[];
+  optionalLaunchProviderIds?: string[];
 }) {
   const router = useRouter();
   const [deployedOperator, setDeployedOperator] = useState(operator);
@@ -137,7 +141,11 @@ export default function OnboardingWizard({
               copy="Pick the one system your first outcome actually needs. Everything else can wait."
             />
             <div className="onboard-step-body">
-              <ConnectionsTab planId={planId} />
+              <ConnectionsTab
+                planId={planId}
+                launchReadyProviderIds={launchReadyProviderIds}
+                optionalLaunchProviderIds={optionalLaunchProviderIds}
+              />
             </div>
             <p className="onboard-step-note">Connecting a provider opens its sign-in elsewhere. Come back to this tab afterward and continue.</p>
             <StepFooter onContinue={recheck} continueLabel="I've connected — continue" />

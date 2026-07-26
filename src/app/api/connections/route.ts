@@ -3,7 +3,11 @@ import { getRequestIp } from "@/lib/api-security";
 import { rateLimits } from "@/lib/rate-limit";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { connectionCreateSchema } from "@/lib/validations";
-import { isConnectionProviderLaunchReady } from "@/lib/connection-catalog";
+import {
+  isConnectionProviderLaunchReady,
+  getLaunchReadyConnectionProviders,
+  getOptionalLaunchConnectionProviders,
+} from "@/lib/connection-catalog";
 
 const CONNECTION_PUBLIC_COLUMNS = "id,user_id,provider,label,status,account_identifier,scopes,metadata,created_at,updated_at";
 
@@ -33,7 +37,11 @@ export async function GET() {
   }
 
   return NextResponse.json(
-    { connections: data ?? [] },
+    {
+      connections: data ?? [],
+      launchReadyProviderIds: getLaunchReadyConnectionProviders().map((provider) => provider.id),
+      optionalLaunchProviderIds: getOptionalLaunchConnectionProviders().map((provider) => provider.id),
+    },
     { headers: { "Cache-Control": "no-store, max-age=0", Pragma: "no-cache" } }
   );
 }

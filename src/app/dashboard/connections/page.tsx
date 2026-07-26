@@ -1,5 +1,6 @@
 ﻿import { redirect } from "next/navigation";
 import ConnectionsTab from "@/components/dashboard/ConnectionsTab";
+import { getLaunchReadyConnectionProviders, getOptionalLaunchConnectionProviders } from "@/lib/connection-catalog";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { PlanId } from "@/types";
 
@@ -22,7 +23,11 @@ export default async function ConnectionsPage() {
 
   return (
     <div className="connections-page mx-auto max-w-6xl">
-      <ConnectionsTab planId={(profile?.plan ?? "free") as PlanId} />
+      <ConnectionsTab
+        planId={(profile?.plan ?? "free") as PlanId}
+        launchReadyProviderIds={getLaunchReadyConnectionProviders().map((provider) => provider.id)}
+        optionalLaunchProviderIds={getOptionalLaunchConnectionProviders().map((provider) => provider.id)}
+      />
     </div>
   );
 }
