@@ -91,18 +91,25 @@ const leashModes = [
   { value: "trusted", label: "autonomous", copy: "Full run of the job. Guardrails still hard-stop it." },
 ] as const;
 
+function humanizeGuardrailKey(key: string) {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .toLowerCase();
+}
+
 function guardrailPills(guardrails?: JsonRecord): Array<{ label: string; tone: string }> {
   if (!guardrails) return [];
   const pills: Array<{ label: string; tone: string }> = [];
   for (const [key, value] of Object.entries(guardrails)) {
     if (Array.isArray(value)) {
       for (const item of value.slice(0, 4)) {
-        if (typeof item === "string" && item.length < 48) pills.push({ label: item.toLowerCase(), tone: "danger" });
+        if (typeof item === "string" && item.length < 48) pills.push({ label: humanizeGuardrailKey(item), tone: "danger" });
       }
     } else if (typeof value === "string" && value.length < 48) {
-      pills.push({ label: value.toLowerCase(), tone: "warning" });
+      pills.push({ label: humanizeGuardrailKey(value), tone: "warning" });
     } else if (value === true) {
-      pills.push({ label: key.replace(/_/g, " ").toLowerCase(), tone: "warning" });
+      pills.push({ label: humanizeGuardrailKey(key), tone: "warning" });
     }
   }
   return pills.slice(0, 6);
@@ -910,10 +917,16 @@ function OperatorThinking({ message }: { message: ChatMessage }) {
   const metadata = message.metadata ?? {};
   const plan = Array.isArray(metadata.plan) ? metadata.plan : [];
   const autonomy = metadata.autonomy as JsonRecord | undefined;
-  const risk = metadata.riskAssessment;
-  const missingInfo = metadata.missingInfo;
+  const risk = metadata.riskAssessment as JsonRecord | undefined;
+  const missingInfoRaw = metadata.missingInfo as JsonRecord | undefined;
+  const missingRequired = Array.isArray(missingInfoRaw?.required) ? (missingInfoRaw.required as string[]) : [];
+  const missingHelpful = Array.isArray(missingInfoRaw?.helpful) ? (missingInfoRaw.helpful as string[]) : [];
+  const missingQuestions = Array.isArray(missingInfoRaw?.questions) ? (missingInfoRaw.questions as string[]) : [];
+  const hasMissingInfo = missingRequired.length > 0 || missingHelpful.length > 0 || missingQuestions.length > 0;
   const tripped = Array.isArray(autonomy?.guardrailsTripped) ? (autonomy.guardrailsTripped as string[]) : [];
-  if (!plan.length && !autonomy && !risk && !missingInfo && !message.job_id && !message.brain_trace_id) return null;
+  const riskTriggers = Array.isArray(risk?.triggers) ? (risk.triggers as string[]) : [];
+  const hasRisk = Boolean(risk?.level) || riskTriggers.length > 0;
+  if (!plan.length && !autonomy && !hasRisk && !hasMissingInfo && !message.job_id && !message.brain_trace_id) return null;
 
   return (
     <>
@@ -945,9 +958,57 @@ function OperatorThinking({ message }: { message: ChatMessage }) {
             ))}
           </ol>
         ) : null}
-        {autonomy ? <InfoBlock title="Autonomy" data={autonomy} /> : null}
-        {risk ? <InfoBlock title="Risk" data={risk} /> : null}
-        {missingInfo ? <InfoBlock title="Missing info" data={missingInfo} /> : null}
+        {autonomy ? (
+          <div className="ledger-info-block">
+            <span>Autonomy</span>
+            <p>
+              {String(autonomy.decision ?? "decision pending")}
+              {autonomy.riskLevel ? ` · ${String(autonomy.riskLevel)} risk` : ""}
+            </p>
+            {autonomy.reason ? <p className="ledger-info-block-detail">{String(autonomy.reason)}</p> : null}
+          </div>
+        ) : null}
+        {hasRisk ? (
+          <div className="ledger-info-block">
+            <span>Risk</span>
+            <p>
+              {String(risk?.level ?? "unknown")} risk
+              {risk?.needsHumanApproval ? " · needs your approval" : ""}
+            </p>
+            {riskTriggers.length ? (
+              <ul>
+                {riskTriggers.map((trigger) => (
+                  <li key={trigger}>{trigger}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+        {hasMissingInfo ? (
+          <div className="ledger-info-block">
+            <span>Missing info</span>
+            {missingRequired.length ? (
+              <>
+                <p className="ledger-info-block-detail">Needed before this can go further:</p>
+                <ul>
+                  {missingRequired.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            {missingHelpful.length ? (
+              <>
+                <p className="ledger-info-block-detail">Would help, but not blocking:</p>
+                <ul>
+                  {missingHelpful.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </div>
+        ) : null}
         {message.job_id || message.brain_trace_id ? (
           <p className="ledger-workings-refs">
             {message.job_id ? <>Job <code>{message.job_id.slice(0, 8)}</code></> : null}
@@ -975,14 +1036,6 @@ function MessageArtifactPreview({ message }: { message: ChatMessage }) {
   );
 }
 
-function InfoBlock({ title, data }: { title: string; data: unknown }) {
-  return (
-    <div className="ledger-info-block">
-      <span>{title}</span>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
-    </div>
-  );
-}
 
 function ControlCard({ icon: Icon, title, value, children }: { icon: React.ComponentType<{ className?: string }>; title: string; value: string; children: React.ReactNode }) {
   return (

@@ -26,6 +26,30 @@ export function isPaystackConfigured() {
   return Boolean(process.env.PAYSTACK_SECRET_KEY);
 }
 
+export async function validatePaystackCredentials(input: { secretKey: string; publicKey?: string | null }) {
+  const secretKey = input.secretKey.trim();
+  if (!/^sk_(live|test)_/.test(secretKey)) {
+    throw new Error("That doesn't look like a Paystack secret key. It should start with sk_live_ or sk_test_.");
+  }
+  if (input.publicKey && !/^pk_(live|test)_/.test(input.publicKey.trim())) {
+    throw new Error("That doesn't look like a Paystack public key. It should start with pk_live_ or pk_test_.");
+  }
+
+  const response = await fetch("https://api.paystack.co/transaction/totals", {
+    headers: { Authorization: `Bearer ${secretKey}` },
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (response.status === 401) {
+    throw new Error("Paystack rejected that secret key. Double-check you copied the live secret key correctly.");
+  }
+  if (!response.ok) {
+    throw new Error(`Paystack could not verify that key right now (status ${response.status}). Try again shortly.`);
+  }
+
+  return true;
+}
+
 export function getPrimaryBillingProvider(): "paystack" | "stripe" {
   const configured = process.env.BILLING_PROVIDER?.toLowerCase();
   if (configured === "stripe") return "stripe";

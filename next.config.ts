@@ -74,6 +74,4 @@ export default withSentryConfig(nextConfig, {
   project: "dobly",
   silent: true,
   widenClientFileUpload: true,
-  disableLogger: true,
-  automaticVercelMonitors: true,
 });

@@ -186,10 +186,40 @@ export function getIntegrationContract(providerId: string) {
   } satisfies IntegrationContract;
 }
 
+// OAuth providers where Dobly's own platform app credentials gate whether
+// the "Connect" flow can reach a real consent screen at all.
+const OAUTH_PLATFORM_CREDENTIAL_ENV_VARS: Record<string, [string, string]> = {
+  google: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+  slack: ["SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"],
+  hubspot: ["HUBSPOT_CLIENT_ID", "HUBSPOT_CLIENT_SECRET"],
+  canva: ["CANVA_CLIENT_ID", "CANVA_CLIENT_SECRET"],
+};
+
+// Providers whose "Connect" flow collects the customer's own credentials
+// (a Paystack secret key, Daraja keys, a WhatsApp/Meta token, a phone
+// number) never depend on Dobly's own platform credentials - the flow is
+// ready as soon as the submission code path exists and validates them.
+const CUSTOMER_SUPPLIED_CREDENTIAL_PROVIDERS = new Set([
+  "paystack",
+  "mpesa",
+  "whatsapp",
+  "kenya_local_comms",
+  "webhook",
+]);
+
 export function isProviderVerifiedLive(providerId: string) {
   const contract = getIntegrationContract(providerId);
   if (contract.readiness === "verified_live") return true;
   if (contract.readiness !== "code_ready") return false;
+
+  const normalized = normalizeConnectionProviderId(providerId);
+
+  if (CUSTOMER_SUPPLIED_CREDENTIAL_PROVIDERS.has(normalized)) return true;
+
+  const requiredEnvVars = OAUTH_PLATFORM_CREDENTIAL_ENV_VARS[normalized];
+  if (requiredEnvVars) {
+    return requiredEnvVars.every((key) => Boolean(process.env[key]));
+  }
 
   const verified = new Set(
     (process.env.NEXT_PUBLIC_DOBLY_VERIFIED_PROVIDERS ?? "")
@@ -197,7 +227,7 @@ export function isProviderVerifiedLive(providerId: string) {
       .map((value) => normalizeConnectionProviderId(value.trim()))
       .filter(Boolean),
   );
-  if (verified.has(normalizeConnectionProviderId(providerId))) return true;
+  if (verified.has(normalized)) return true;
 
   return process.env.NODE_ENV !== "production";
 }

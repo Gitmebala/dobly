@@ -106,8 +106,8 @@ export default function ProviderConnectClient({
         return;
       }
 
-      const useSecureSetup =
-        showAdvanced || (provider.id === "mpesa" && !showAdvanced && flow.method === "guided");
+      const hasSecretField = visibleFields.some((field) => field.secret);
+      const useSecureSetup = showAdvanced || (flow.method === "guided" && hasSecretField);
 
       const response = await fetch(useSecureSetup ? "/api/connections/secure-setup" : "/api/connections", {
         method: "POST",

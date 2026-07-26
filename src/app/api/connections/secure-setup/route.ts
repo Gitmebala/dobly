@@ -5,6 +5,7 @@ import { upsertConnection, storeConnectionSecrets } from "@/lib/connections";
 import { rateLimits } from "@/lib/rate-limit";
 import { secureConnectionSetupSchema } from "@/lib/validations";
 import { validateDarajaCredentials } from "@/lib/mpesa/daraja";
+import { validatePaystackCredentials } from "@/lib/paystack";
 import { isConnectionProviderLaunchReady } from "@/lib/connection-catalog";
 
 export async function POST(req: NextRequest) {
@@ -71,6 +72,22 @@ export async function POST(req: NextRequest) {
       metadata.environment = environment;
       metadata.provider = "daraja";
       metadata.callbackUrl = callbackUrl;
+    }
+
+    if (parsed.data.provider === "paystack") {
+      if (!parsed.data.secret) {
+        return NextResponse.json(
+          { error: "Paystack setup requires your secret key." },
+          { status: 400 }
+        );
+      }
+
+      await validatePaystackCredentials({
+        secretKey: parsed.data.secret,
+        publicKey: parsed.data.accessToken,
+      });
+
+      metadata.provider = "paystack";
     }
 
     if (parsed.data.provider === "whatsapp") {
