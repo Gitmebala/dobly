@@ -1,0 +1,36 @@
+{
+  "uid": "Dobly_app",
+  "type": "app",
+  "config": {
+    "description": "Dobly hires AI coworkers that act inside the tools you already run. This connection lets a Dobly Operator read and follow up on your HubSpot contacts.",
+    "name": "Dobly",
+    "distribution": "marketplace",
+    "auth": {
+      "type": "oauth",
+      "redirectUrls": [
+        "http://localhost:3000/api/oauth/hubspot/callback",
+        "https://dobly-dev.vercel.app/api/oauth/hubspot/callback"
+      ],
+      "requiredScopes": [
+        "oauth",
+        "crm.objects.contacts.read",
+        "crm.objects.contacts.write"
+      ],
+      "optionalScopes": [],
+      "conditionallyRequiredScopes": []
+    },
+    "permittedUrls": {
+      "fetch": [
+        "https://api.hubapi.com"
+      ],
+      "iframe": [],
+      "img": []
+    },
+    "support": {
+      "supportEmail": "balamichael254@gmail.com",
+      "documentationUrl": "https://dobly-dev.vercel.app/terms",
+      "supportUrl": "https://dobly-dev.vercel.app",
+      "supportPhone": "+18005555555"
+    }
+  }
+}
