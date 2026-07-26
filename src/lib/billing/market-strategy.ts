@@ -44,7 +44,8 @@ const commonRoutes: Pick<
   ],
   research: [
     { provider: "dobly_web", mode: "self_hosted", priority: 1, paidRail: false, note: "Direct-source fetch, public datasets, extraction, ranking, and citations." },
-    { provider: "perplexity", mode: "managed", priority: 2, paidRail: true, note: "Premium fallback for deep web research." },
+    { provider: "tavily", mode: "managed", priority: 2, paidRail: false, note: "Free-tier AI search API for deep, cited web research." },
+    { provider: "perplexity", mode: "managed", priority: 3, paidRail: true, note: "Premium fallback for deep web research." },
   ],
   language_model: [
     { provider: "dobly_economy_model", mode: "managed", priority: 1, paidRail: true, note: "Small model route for routine classification, drafting, and extraction." },

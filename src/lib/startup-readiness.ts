@@ -138,8 +138,8 @@ function envSections(): StartupReadinessSection[] {
           id: "research",
           label: "Research runtime",
           status: "ready",
-          summary: "Direct public sources and indexes are the baseline; Perplexity and Firecrawl are premium fallbacks.",
-          action: "Add PERPLEXITY_API_KEY only for premium deep research and FIRECRAWL_API_KEY only when crawling is needed.",
+          summary: "Direct public sources and indexes are the baseline; Tavily is the free deep-research fallback, Perplexity and Firecrawl are premium fallbacks.",
+          action: "Add TAVILY_API_KEY for free deep research, PERPLEXITY_API_KEY only if you want the paid alternative, and FIRECRAWL_API_KEY only when crawling is needed.",
         }),
         item({
           id: "memory",

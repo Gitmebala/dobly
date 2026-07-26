@@ -1,7 +1,9 @@
 import "server-only";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { inferCapabilitiesFromText, getCapabilityDefinition, type DoblyCapability } from "@/lib/runtime/capabilities";
-import { listUniversalConnectorDefinitions } from "@/lib/connectors/universal-catalog";
+import { listUniversalConnectorDefinitions, getUniversalConnectorDefinition } from "@/lib/connectors/universal-catalog";
+import { getActiveConnectionForProvider } from "@/lib/connections";
+import { getSoftwareExecutionToolStatus } from "@/lib/software-execution";
 import { createDoblyOperator, runDoblyOperator, type DoblyLoopCadence, type DoblyOperatorKind } from "@/lib/dobly-operators";
 import { appendOperatorChatMessage, ensureOperatorConversation, recordOperatorChatEvent } from "@/lib/operator-chat";
 import { checkUsageEntitlement, recordUsageEvent } from "@/lib/billing/entitlements";
@@ -524,6 +526,40 @@ export async function createOperatorProposal(input: {
   return data as JsonRecord;
 }
 
+// Universal-catalog "mcp" connectors don't carry a direct reference to the
+// software-execution tool registry, so map the small, known set by hand.
+const MCP_PROVIDER_TO_TOOL_ID: Record<string, string> = {
+  figma: "figma_design",
+  github: "github_repo_ops",
+  canva: "creative_media_ops",
+  notion: "notion_workspace_ops",
+};
+
+async function checkConnectionReadiness(userId: string, connection: OperatorProposal["requiredConnections"][number]) {
+  const definition = getUniversalConnectorDefinition(connection.id);
+  const kind = definition?.kind ?? "oauth";
+
+  if (kind === "mcp") {
+    const toolId = MCP_PROVIDER_TO_TOOL_ID[connection.provider];
+    const status = toolId ? getSoftwareExecutionToolStatus(toolId) : null;
+    if (!status) {
+      return { ready: false, detail: `${connection.label} routes through Dobly's software execution layer, which isn't mapped for this provider yet.` };
+    }
+    return status.configured
+      ? { ready: true, detail: `${connection.label} is reachable through Dobly's configured tool gateway.` }
+      : { ready: false, detail: `${connection.label} needs ${status.serverUrlEnv} (or a shared tool gateway) configured before Dobly can act on it.` };
+  }
+
+  if (kind === "local_bridge") {
+    return { ready: false, detail: `${connection.label} requires a local bridge to be installed and running — Dobly can't verify this automatically.` };
+  }
+
+  const active = await getActiveConnectionForProvider(userId, connection.provider).catch(() => null);
+  return active
+    ? { ready: true, detail: `${connection.label} is connected and active.` }
+    : { ready: false, detail: `${connection.label} isn't connected yet. Connect it from Connections before this Operator can act live.` };
+}
+
 export async function testOperatorProposal(input: {
   userId: string;
   proposalId: string;
@@ -538,17 +574,37 @@ export async function testOperatorProposal(input: {
   if (error || !record) throw new Error(error?.message ?? "Operator proposal not found.");
 
   const proposal = record.proposal as OperatorProposal;
+
+  const connectionReadiness = await Promise.all(
+    proposal.requiredConnections.map(async (connection) => {
+      const readiness = await checkConnectionReadiness(input.userId, connection);
+      return { id: connection.id, label: connection.label, provider: connection.provider, ...readiness };
+    }),
+  );
+
+  const missing = connectionReadiness.filter((item) => !item.ready);
+  const allReady = missing.length === 0;
+
   const results = {
-    status: "passed",
+    status: allReady ? "passed" : "needs_setup",
     testedAt: new Date().toISOString(),
+    connectionReadiness,
     scenarios: proposal.testScenarios.map((scenario) => ({
       ...scenario,
-      status: scenario.risk === "high" ? "needs_approval_guard_passed" : "passed",
-      observed: scenario.risk === "high"
-        ? "The proposal routes this action through approvals before execution."
-        : "The proposal has a clear loop, context policy, and chat-visible output path.",
+      status: !allReady
+        ? "blocked_on_setup"
+        : scenario.risk === "high"
+          ? "needs_approval_guard_passed"
+          : "passed",
+      observed: !allReady
+        ? "This scenario can't run live until the connections below are set up. Dobly will not fake a result."
+        : scenario.risk === "high"
+          ? "The proposal routes this action through approvals before execution."
+          : "The proposal has a clear loop, context policy, and chat-visible output path.",
     })),
-    summary: "Proposal is ready for supervised deployment. Risky actions remain approval-gated.",
+    summary: allReady
+      ? "Proposal is ready for supervised deployment. Risky actions remain approval-gated."
+      : `Ready to hire, but not ready to act live yet: ${missing.map((item) => item.label).join(", ")} still ${missing.length === 1 ? "needs" : "need"} to be connected.`,
   };
 
   const { data: updated, error: updateError } = await admin

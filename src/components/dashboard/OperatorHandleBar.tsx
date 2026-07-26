@@ -48,6 +48,7 @@ type ProposalRecord = {
     status?: string;
     summary?: string;
     scenarios?: Array<{ title: string; status: string; observed: string }>;
+    connectionReadiness?: Array<{ id: string; label: string; provider: string; ready: boolean; detail: string }>;
   };
 };
 
@@ -249,7 +250,23 @@ export default function OperatorHandleBar({
           </div>
 
           {proposal.test_results?.summary ? (
-            <div className="hire-test-result dobly-anim-rise">{proposal.test_results.summary}</div>
+            <div className="hire-test-result dobly-anim-rise" data-status={proposal.test_results.status}>
+              {proposal.test_results.summary}
+            </div>
+          ) : null}
+
+          {proposal.test_results?.connectionReadiness?.some((item) => !item.ready) ? (
+            <div className="hire-readiness dobly-anim-rise">
+              <div className="hire-panel-title">Not connected yet</div>
+              {proposal.test_results.connectionReadiness
+                .filter((item) => !item.ready)
+                .map((item) => (
+                  <div key={item.id} className="hire-readiness-row">
+                    <PlugZap aria-hidden="true" />
+                    <span>{item.detail}</span>
+                  </div>
+                ))}
+            </div>
           ) : null}
 
           {error ? <p className="hire-error" role="alert">{error}</p> : null}

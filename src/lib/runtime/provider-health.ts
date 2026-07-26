@@ -43,6 +43,7 @@ export function getRuntimeProviderHealth(): RuntimeProviderHealth[] {
     },
     provider("intasend", "IntaSend Kenya Checkout", ["INTASEND_PUBLISHABLE_KEY", "INTASEND_SECRET_KEY"], "Kenya-first hosted M-Pesa and card checkout."),
     provider("mpesa_billing", "Managed M-Pesa Billing", ["DOBLY_MPESA_CONSUMER_KEY", "DOBLY_MPESA_CONSUMER_SECRET", "DOBLY_MPESA_PASSKEY", "DOBLY_MPESA_SHORTCODE", "DOBLY_MPESA_CALLBACK_URL"], "One-tap STK subscription payments and renewal requests."),
+    provider("tavily", "Tavily Research", ["TAVILY_API_KEY"], "Free-tier AI search API for deep, cited web research."),
     provider("perplexity", "Perplexity Research", ["PERPLEXITY_API_KEY"], "Fresh web research and cited answers."),
     provider("firecrawl", "Firecrawl Web Extraction", ["FIRECRAWL_API_KEY"], "Website crawling, scraping, and source extraction."),
     provider("elevenlabs", "ElevenLabs Voice", ["ELEVENLABS_API_KEY"], "Voice synthesis and voice-agent audio."),

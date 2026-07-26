@@ -1,5 +1,8 @@
 import { executeClaudeMcpStep, type ClaudeMcpExecutionResult } from "@/lib/claude-mcp";
 import { getClaudeMcpTool, listClaudeMcpTools, type ClaudeMcpToolDefinition } from "@/lib/mcp-registry";
+import { estimateCapabilityCost } from "@/lib/billing/cost-catalog";
+import { reserveOperatingCapacity, settleOperatingCapacity } from "@/lib/billing/economy";
+import { failedProviderCharge } from "@/lib/billing/economy-core";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -117,7 +120,23 @@ export async function runSoftwareExecution(input: SoftwareExecutionRequest): Pro
     };
   }
 
+  const estimate = estimateCapabilityCost({
+    capability: "software.write",
+    preferredProvider: "dobly_mcp_gateway",
+  });
+  let reservation: any = null;
   try {
+    reservation = await reserveOperatingCapacity({
+      userId: input.userId,
+      workspaceId: input.workspaceId,
+      capability: "software.write",
+      provider: estimate.route.provider,
+      estimatedMinor: estimate.estimatedMinor,
+      idempotencyKey: `software-execution:${input.toolId}:${Date.now()}`,
+      coworkerId: typeof input.context?.operatorId === "string" ? (input.context.operatorId as string) : null,
+      metadata: { toolId: input.toolId },
+    });
+
     const result = await executeClaudeMcpStep({
       task: input.task,
       context: {
@@ -131,6 +150,13 @@ export async function runSoftwareExecution(input: SoftwareExecutionRequest): Pro
       allowedTools: input.allowedTools ?? null,
     });
 
+    await settleOperatingCapacity({
+      reservationId: reservation.id,
+      actualMinor: estimate.estimatedMinor,
+      status: "succeeded",
+      metadata: { toolId: input.toolId },
+    });
+
     return {
       status: "completed",
       tool: status,
@@ -142,6 +168,14 @@ export async function runSoftwareExecution(input: SoftwareExecutionRequest): Pro
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Software execution failed.";
+    if (reservation?.id) {
+      await settleOperatingCapacity({
+        reservationId: reservation.id,
+        actualMinor: failedProviderCharge({ paidRail: estimate.route.paidRail, estimatedMinor: estimate.estimatedMinor, errorMessage: message }),
+        status: "failed",
+        metadata: { toolId: input.toolId, error: message },
+      }).catch(() => undefined);
+    }
     return {
       status: "failed",
       tool: status,

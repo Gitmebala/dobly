@@ -67,6 +67,48 @@ async function runDirectSourceResearch(query: string) {
   return { answer, citations: sources.map((source) => source.url), sources, raw: { wikipedia, openAlex, crossref } };
 }
 
+async function runTavilyQuery(query: string, context: JsonRecord) {
+  requireRuntimeProvider("tavily");
+  const response = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
+    },
+    body: JSON.stringify({
+      query,
+      search_depth: "advanced",
+      include_answer: true,
+      max_results: 8,
+      ...(Array.isArray(context?.includeDomains) ? { include_domains: context.includeDomains } : {}),
+    }),
+    signal: AbortSignal.timeout(45_000),
+  });
+
+  const data = (await response.json().catch(() => null)) as JsonRecord | null;
+  if (!response.ok) {
+    throw new Error(String((data as JsonRecord | null)?.detail ?? `Tavily failed with ${response.status}`));
+  }
+
+  const results = Array.isArray(data?.results) ? (data.results as JsonRecord[]) : [];
+  return {
+    answer: String(data?.answer ?? (results.length ? `Dobly found ${results.length} sources for this query.` : "")),
+    citations: results.map((item) => String(item.url ?? "")).filter(Boolean),
+    sources: results.map((item) => ({
+      title: String(item.title ?? ""),
+      snippet: String(item.content ?? ""),
+      url: String(item.url ?? ""),
+      source: "Tavily",
+    })),
+    raw: data ?? {},
+  };
+}
+
+function deepResearchProvider(): "tavily" | "perplexity" {
+  if (process.env.TAVILY_API_KEY) return "tavily";
+  return "perplexity";
+}
+
 async function runPerplexityQuery(query: string, context: JsonRecord) {
   requireRuntimeProvider("perplexity");
   const response = await fetch("https://api.perplexity.ai/chat/completions", {
@@ -143,11 +185,12 @@ export async function runResearchRuntime(input: ResearchRuntimeInput) {
     },
     availability: { runtimes: { research: true } },
   });
+  const deepProvider = input.mode === "deep" ? deepResearchProvider() : null;
   const run = await createDurableRuntimeRun({
     userId: input.userId,
     workspaceId: input.workspaceId ?? null,
-    toolId: input.mode === "crawl" ? "firecrawl_research" : input.mode === "deep" ? "perplexity_research" : "dobly_direct_research",
-    toolLabel: input.mode === "crawl" ? "Firecrawl Research Runtime" : input.mode === "deep" ? "Perplexity Deep Research" : "Dobly Direct Research",
+    toolId: input.mode === "crawl" ? "firecrawl_research" : input.mode === "deep" ? `${deepProvider}_research` : "dobly_direct_research",
+    toolLabel: input.mode === "crawl" ? "Firecrawl Research Runtime" : input.mode === "deep" ? (deepProvider === "tavily" ? "Tavily Deep Research" : "Perplexity Deep Research") : "Dobly Direct Research",
     toolFamily: "research",
     task: input.query,
     riskLevel: "low",
@@ -158,7 +201,7 @@ export async function runResearchRuntime(input: ResearchRuntimeInput) {
   const estimate = estimateCapabilityCost({
     capability: input.mode === "deep" ? "research.deep" : "research.standard",
     market: "KE",
-    preferredProvider: input.mode === "deep" ? "perplexity" : "dobly_web",
+    preferredProvider: input.mode === "deep" ? deepProvider : "dobly_web",
   });
   let reservation: any = null;
   try {
@@ -178,7 +221,9 @@ export async function runResearchRuntime(input: ResearchRuntimeInput) {
         ? await Promise.all((input.urls ?? []).slice(0, 6).map((url) => scrapeWithFirecrawl(url)))
         : [];
     const research = input.mode === "deep"
-      ? await runPerplexityQuery(input.query, input.context ?? {})
+      ? deepProvider === "tavily"
+        ? await runTavilyQuery(input.query, input.context ?? {})
+        : await runPerplexityQuery(input.query, input.context ?? {})
       : input.mode === "crawl"
         ? null
         : await runDirectSourceResearch(input.query);

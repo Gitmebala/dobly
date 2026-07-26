@@ -4708,6 +4708,35 @@ html[data-theme="dark"] .hire-error {
   font-size: 13.5px;
   line-height: 1.55;
 }
+.hire-test-result[data-status="needs_setup"] {
+  border-color: color-mix(in srgb, var(--app-rust) 36%, var(--app-line));
+  background: color-mix(in srgb, var(--app-rust) 7%, var(--app-paper));
+}
+
+.hire-readiness {
+  padding: 13px 16px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  background: var(--app-paper-2);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.hire-readiness-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--app-text);
+}
+.hire-readiness-row svg {
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  color: var(--app-muted);
+  flex-shrink: 0;
+}
 
 .hire-actions {
   display: flex;
