@@ -2547,13 +2547,28 @@ html.theme-transitioning * {
   grid-template-columns: minmax(0, 1fr) 330px;
 }
 
+/* Flexbox, not grid: the number of header sections above the thread
+   (stats, leash, guardrails, shift tape) varies, and a fixed grid-row
+   count silently mis-assigns which element gets the flexible/scrollable
+   slot whenever a section is added or removed. Every child keeps its
+   natural height except .operator-chat-thread, which is the one region
+   that actually scrolls. */
 .operator-conversation {
   min-width: 0;
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border-right: 1px solid var(--app-line);
+}
+
+.operator-conversation > * {
+  flex-shrink: 0;
+}
+
+.operator-conversation > .operator-chat-thread {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .operator-conversation-header {
@@ -3604,10 +3619,6 @@ html.dark .dashboard-shell.app-shell {
   grid-template-columns: minmax(0, 1fr) !important;
 }
 
-.operator-conversation {
-  grid-template-rows: auto minmax(0, 1fr) auto;
-}
-
 .operator-conversation-header {
   min-height: 106px;
   padding: 17px 24px;
@@ -4128,10 +4139,6 @@ html.dark .dashboard-shell.app-shell {
    The thread is the coworker's complete day: conversation and
    activity merged, grouped by day, viewable for any date.
    ═══════════════════════════════════════════════════════════════ */
-
-.operator-conversation {
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
-}
 
 /* ── Date controls: pick any day, see everything they did ─────── */
 .operator-thread-controls {
