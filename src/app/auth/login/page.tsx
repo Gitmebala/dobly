@@ -61,9 +61,19 @@ export default function LoginPage() {
         },
       });
 
-      if (oauthError) setError(oauthError.message);
-    } catch {
-      setError("Google sign in could not reach the authentication service.");
+      if (oauthError) {
+        console.error("[auth/login] Google sign-in failed", oauthError);
+        setError(oauthError.message);
+      }
+    } catch (cause) {
+      // Never swallow this silently: a failure here looks identical to a
+      // dead button, which is impossible to diagnose from a bug report.
+      console.error("[auth/login] Google sign-in threw", cause);
+      setError(
+        cause instanceof Error
+          ? `Google sign in failed: ${cause.message}`
+          : "Google sign in could not reach the authentication service.",
+      );
     } finally {
       setLoading(false);
     }

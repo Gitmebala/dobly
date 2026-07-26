@@ -10,7 +10,7 @@ const contentSecurityPolicy = [
   "img-src 'self' blob: data: https:",
   "media-src 'self' blob: https:",
   "frame-src https://js.stripe.com https://hooks.stripe.com https://payment.intasend.com",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.openai.com https://api.deepgram.com wss://api.deepgram.com https://api.stripe.com https://payment.intasend.com https://api.intasend.com https://us.i.posthog.com https://eu.i.posthog.com https://o4511802195509248.ingest.de.sentry.io",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.openai.com https://api.deepgram.com wss://api.deepgram.com https://api.stripe.com https://payment.intasend.com https://api.intasend.com https://us.i.posthog.com https://eu.i.posthog.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com https://o4511802195509248.ingest.de.sentry.io",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self' https://payment.intasend.com",

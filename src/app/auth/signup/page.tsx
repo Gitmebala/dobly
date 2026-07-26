@@ -73,9 +73,17 @@ export default function SignupPage() {
         },
       });
 
-      if (oauthError) setError(oauthError.message);
-    } catch {
-      setError("Google sign-up could not reach the authentication service.");
+      if (oauthError) {
+        console.error("[auth/signup] Google sign-up failed", oauthError);
+        setError(oauthError.message);
+      }
+    } catch (cause) {
+      console.error("[auth/signup] Google sign-up threw", cause);
+      setError(
+        cause instanceof Error
+          ? `Google sign-up failed: ${cause.message}`
+          : "Google sign-up could not reach the authentication service.",
+      );
     } finally {
       setLoading(false);
     }
