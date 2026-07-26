@@ -47,9 +47,14 @@ export default function ConnectionsTab({
       .finally(() => setLoading(false));
   }, []);
 
+  const accordionProviders = useMemo(
+    () => [...launchReadyProviders, ...optionalLaunchProviders],
+    [launchReadyProviders, optionalLaunchProviders],
+  );
+
   const providerStatus = useMemo(() => {
     return new Map(
-      launchReadyProviders.map((provider) => {
+      accordionProviders.map((provider) => {
         const active = connections.find(
           (connection) => connection.provider === provider.id,
         );
@@ -277,7 +282,7 @@ export default function ConnectionsTab({
       </section>
 
       {CONNECTION_GROUPS.map((group) => {
-        const providers = launchReadyProviders.filter((provider) => provider.category === group.id);
+        const providers = accordionProviders.filter((provider) => provider.category === group.id);
         if (providers.length === 0) return null;
 
         return (
