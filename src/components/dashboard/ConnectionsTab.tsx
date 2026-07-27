@@ -30,6 +30,7 @@ export default function ConnectionsTab({
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState("");
   const [planId] = useState<PlanId>(initialPlanId);
   const [fetchedLaunchReadyIds, setFetchedLaunchReadyIds] = useState<string[]>([]);
   const [fetchedOptionalIds, setFetchedOptionalIds] = useState<string[]>([]);
@@ -83,9 +84,14 @@ export default function ConnectionsTab({
 
   async function handleRemove(id: string) {
     setRemovingId(id);
+    setRemoveError("");
     const response = await fetch(`/api/connections/${id}`, { method: "DELETE" }).catch(() => null);
     if (response?.ok) {
       setConnections((current) => current.filter((connection) => connection.id !== id));
+    } else {
+      // Never optimistically drop it on failure: the row reappearing on the
+      // next reload is exactly how this bug stayed invisible before.
+      setRemoveError("Could not remove that connection. Try again.");
     }
     setRemovingId(null);
   }
@@ -110,6 +116,12 @@ export default function ConnectionsTab({
       {errorMessage ? (
         <div className="rounded-lg border border-red-500/24 bg-red-500/10 px-3 py-2 text-xs text-red-300">
           Request failed. Try again.
+        </div>
+      ) : null}
+
+      {removeError ? (
+        <div className="rounded-lg border border-red-500/24 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+          {removeError}
         </div>
       ) : null}
 

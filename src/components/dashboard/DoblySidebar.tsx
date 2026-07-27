@@ -20,7 +20,6 @@ import {
   Menu,
   MoreHorizontal,
   RadioTower,
-  Search,
   Settings,
   Users,
   WalletCards,
@@ -162,22 +161,8 @@ export default function DoblySidebar({
           <span className="dobly-brand-name">Dobly</span>
         </Link>
 
-        <button
-          type="button"
-          className="dobly-palette-trigger"
-          onClick={() =>
-            window.dispatchEvent(
-              new KeyboardEvent("keydown", { key: "k", metaKey: true, ctrlKey: true, bubbles: true }),
-            )
-          }
-          aria-label="Search pages and coworkers"
-          title="Search (Ctrl+K)"
-        >
-          <Search className="dobly-nav-icon" />
-          <span className="dobly-nav-label">Search</span>
-          <code>⌘K</code>
-        </button>
-
+        {/* Search lives in the top bar only. Duplicating it here cost a row of
+            sidebar height for a control that already exists one row away. */}
         <nav className="dobly-nav-scroll" aria-label="Workspace navigation">
           <span className="dobly-nav-eyebrow">Workspace</span>
           {workspaceItems.map((item) => (

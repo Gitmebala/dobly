@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestIp } from "@/lib/api-security";
 import { rateLimits } from "@/lib/rate-limit";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminSupabaseClient, createServerSupabaseClient } from "@/lib/supabase/server";
 import { connectionUpdateSchema } from "@/lib/validations";
 
 export async function PATCH(
@@ -89,13 +89,19 @@ export async function DELETE(
     return NextResponse.json({ error: "Connection not found" }, { status: 404 });
   }
 
-  const { error } = await supabase
+  // Ownership is already verified above. Delete through the admin client and
+  // assert the row count: a user-scoped delete silently affects zero rows if
+  // RLS has no delete policy, which made "Remove" report success while the
+  // connection came straight back on reload.
+  const admin = createAdminSupabaseClient();
+  const { data: deleted, error } = await admin
     .from("connections")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select("id");
 
-  if (error) {
+  if (error || !deleted?.length) {
     return NextResponse.json({ error: "Failed to delete connection" }, { status: 500 });
   }
 

@@ -12,19 +12,33 @@ export async function upsertConnection(params: {
   metadata?: Record<string, unknown>;
 }) {
   const admin = createAdminSupabaseClient();
-  const { data, error } = await admin
+  const row = {
+    user_id: params.userId,
+    provider: params.provider,
+    label: params.label,
+    status: params.status ?? "pending",
+    account_identifier: params.accountIdentifier ?? null,
+    scopes: params.scopes ?? [],
+    metadata: params.metadata ?? {},
+    updated_at: new Date().toISOString(),
+  };
+
+  // Reconnecting the same account must update the existing row, not stack a
+  // duplicate. Match on the same key as the unique index so a user who
+  // re-runs an OAuth flow ends up with one connection, not one per attempt.
+  const { data: existing } = await admin
     .from("connections")
-    .insert({
-      user_id: params.userId,
-      provider: params.provider,
-      label: params.label,
-      status: params.status ?? "pending",
-      account_identifier: params.accountIdentifier ?? null,
-      scopes: params.scopes ?? [],
-      metadata: params.metadata ?? {},
-    })
-    .select("*")
-    .single();
+    .select("id")
+    .eq("user_id", params.userId)
+    .eq("provider", params.provider)
+    .eq("account_identifier", params.accountIdentifier ?? null)
+    .maybeSingle();
+
+  const query = existing?.id
+    ? admin.from("connections").update(row).eq("id", existing.id)
+    : admin.from("connections").insert(row);
+
+  const { data, error } = await query.select("*").single();
 
   if (error || !data) {
     throw new Error("Failed to create connection.");
