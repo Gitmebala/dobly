@@ -2241,7 +2241,9 @@ html.theme-transitioning * {
 .coworker-console-page {
   width: 100%;
   height: calc(100dvh - 158px);
-  min-height: 620px;
+  /* Was 620px, which exceeded the available height on any window shorter than
+     ~778px and pushed the console past the viewport with nothing to scroll. */
+  min-height: 420px;
   display: grid;
   grid-template-rows: 58px minmax(0, 1fr);
   gap: 10px;
@@ -2474,7 +2476,13 @@ html.theme-transitioning * {
 .coworker-active-workspace {
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  /* The detail pane (stats, leash, guardrails, shift tape) is taller than the
+     fixed-height console on most screens. With `overflow: hidden` the bottom
+     of it was simply clipped and unreachable - no scrollbar, no way to get to
+     it. Scroll vertically instead; children that manage their own internal
+     scrolling (the chat console) still constrain themselves via min-height:0. */
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--app-paper);
 }
 

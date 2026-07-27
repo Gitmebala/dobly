@@ -4,6 +4,7 @@ import { sendCommunicationReply } from "@/lib/communications/runtime";
 import { getDecryptedConnectionSecrets } from "@/lib/connections";
 import { executeRealInternalTool } from "@/lib/office/internal-tool-handlers";
 import { executeNativeConnectorTool, findNativeExecutorId } from "@/lib/office/native-tool-bridge";
+import { connectionMatchesProvider } from "@/lib/provider-aliases";
 
 export type OfficeToolExecutionStatus = "completed" | "needs_connection" | "unsupported" | "failed";
 
@@ -39,35 +40,6 @@ const INTERNAL_TOOLS = new Set([
   "order_processor",
 ]);
 
-const PROVIDER_TOOL_ALIASES: Record<string, string[]> = {
-  gmail: ["gmail", "email", "google", "google workspace"],
-  email: ["gmail", "outlook", "microsoft", "resend", "email"],
-  google_calendar: ["google", "calendar", "calendly"],
-  website_chat: ["website_chat", "web chat", "intercom", "crisp", "tawk", "chat"],
-  sms: ["sms", "kenya_local_comms", "africas_talking", "twilio"],
-  whatsapp: ["whatsapp", "wati", "respond.io", "meta"],
-  paystack: ["paystack"],
-  stripe: ["stripe"],
-  mpesa: ["mpesa", "m-pesa", "daraja"],
-  shopify: ["shopify"],
-  crm: ["hubspot", "salesforce", "pipedrive", "zoho", "airtable", "crm"],
-  hubspot: ["hubspot"],
-  salesforce: ["salesforce"],
-  zendesk: ["zendesk"],
-  freshdesk: ["freshdesk"],
-  intercom: ["intercom"],
-  slack: ["slack"],
-  notion: ["notion"],
-  asana: ["asana"],
-  trello: ["trello"],
-  jira: ["jira"],
-  linear: ["linear"],
-  facebook: ["facebook", "meta"],
-  instagram: ["instagram", "meta"],
-  canva: ["canva"],
-  mailchimp: ["mailchimp"],
-  quickbooks: ["quickbooks"],
-};
 
 export async function executeOfficeTool(input: OfficeToolExecutionInput): Promise<OfficeToolExecutionResult> {
   if (input.toolName?.startsWith("claude_mcp:") || input.toolName === "agent_tool_operation") {
@@ -209,7 +181,6 @@ async function executeInternalTool(input: OfficeToolExecutionInput, toolName: st
 
 async function findConnectionForTool(userId: string, toolName: string) {
   const admin = createAdminSupabaseClient();
-  const aliases = PROVIDER_TOOL_ALIASES[toolName] ?? [toolName];
   const { data, error } = await admin
     .from("connections")
     .select("*")
@@ -219,10 +190,9 @@ async function findConnectionForTool(userId: string, toolName: string) {
 
   if (error) return null;
 
-  return (data ?? []).find((connection: Record<string, unknown>) => {
-    const provider = String(connection.provider ?? "").toLowerCase();
-    return aliases.some((alias) => provider.includes(alias));
-  }) as Record<string, unknown> | undefined;
+  return (data ?? []).find((connection: Record<string, unknown>) =>
+    connectionMatchesProvider(connection.provider, toolName),
+  ) as Record<string, unknown> | undefined;
 }
 
 async function executeConnectedTool(

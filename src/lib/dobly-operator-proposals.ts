@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { inferCapabilitiesFromText, getCapabilityDefinition, type DoblyCapability } from "@/lib/runtime/capabilities";
 import { listUniversalConnectorDefinitions, getUniversalConnectorDefinition } from "@/lib/connectors/universal-catalog";
-import { getActiveConnectionForProvider } from "@/lib/connections";
+import { findLiveConnectionForProvider } from "@/lib/provider-aliases";
 import { getSoftwareExecutionToolStatus } from "@/lib/software-execution";
 import { createDoblyOperator, runDoblyOperator, type DoblyLoopCadence, type DoblyOperatorKind } from "@/lib/dobly-operators";
 import { appendOperatorChatMessage, ensureOperatorConversation, recordOperatorChatEvent } from "@/lib/operator-chat";
@@ -554,7 +554,11 @@ async function checkConnectionReadiness(userId: string, connection: OperatorProp
     return { ready: false, detail: `${connection.label} requires a local bridge to be installed and running — Dobly can't verify this automatically.` };
   }
 
-  const active = await getActiveConnectionForProvider(userId, connection.provider).catch(() => null);
+  // Alias-aware: a coworker asking for "gmail" must resolve against a stored
+  // "google" connection, which is how the tool executor already behaves. An
+  // exact provider match here meant a working Google account still reported
+  // "Gmail isn't connected yet".
+  const active = await findLiveConnectionForProvider(userId, connection.provider);
   return active
     ? { ready: true, detail: `${connection.label} is connected and active.` }
     : { ready: false, detail: `${connection.label} isn't connected yet. Connect it from Connections before this Operator can act live.` };
