@@ -70,9 +70,18 @@ async function createHostedProviderSetupConnection(input: {
   metadata?: JsonRecord;
 }) {
   const admin = createAdminSupabaseClient();
-  const { data, error } = await admin
+
+  // Clicking Connect used to INSERT unconditionally, so every attempt stacked
+  // another placeholder row for the same provider. Reuse the existing row.
+  const { data: existing } = await admin
     .from("connections")
-    .insert({
+    .select("id")
+    .eq("user_id", input.userId)
+    .eq("provider", input.definition.provider)
+    .eq("account_identifier", input.definition.provider)
+    .maybeSingle();
+
+  const row = {
       user_id: input.userId,
       provider: input.definition.provider,
       label: input.definition.label,
@@ -95,9 +104,13 @@ async function createHostedProviderSetupConnection(input: {
         rollbackSupport: input.definition.rollbackSupport,
         ...(input.metadata ?? {}),
       },
-    })
-    .select("*")
-    .single();
+  };
+
+  const query = existing?.id
+    ? admin.from("connections").update(row).eq("id", existing.id)
+    : admin.from("connections").insert(row);
+
+  const { data, error } = await query.select("*").single();
   if (error || !data) throw new Error(error?.message ?? "Failed to create hosted connector setup.");
   return asJsonRecord(data);
 }
