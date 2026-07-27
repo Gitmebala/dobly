@@ -4,6 +4,8 @@ import { inferCapabilitiesFromText, getCapabilityDefinition, type DoblyCapabilit
 import { logRuntimeAuditEvent } from "@/lib/runtime/audit";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
 import { assertSafeOutboundUrl, safeOutboundFetch } from "@/lib/security/safe-fetch";
+import { findNativeExecutorId } from "@/lib/office/native-tool-bridge";
+import { findLiveConnectionForProvider } from "@/lib/provider-aliases";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -266,6 +268,41 @@ function scoreTool(capability: DoblyCapability, tool: McpDiscoveredToolRecord, c
   return score;
 }
 
+// Capability -> the coworker tool name that serves it. The tool name is what
+// the native bridge and the office tool executor both key off, so a capability
+// only counts as natively servable if that tool exists AND the user has a live
+// connection an alias-match can reach.
+const CAPABILITY_NATIVE_TOOL: Partial<Record<DoblyCapability, string>> = {
+  send_message: "gmail",
+  create_document: "google_docs",
+  edit_spreadsheet: "google_sheets",
+};
+
+async function resolveNativeCapabilityPath(
+  userId: string,
+  capability: DoblyCapability,
+): Promise<UniversalExecutionPath | null> {
+  const toolName = CAPABILITY_NATIVE_TOOL[capability];
+  if (!toolName || !findNativeExecutorId(toolName)) return null;
+
+  const connection = await findLiveConnectionForProvider(userId, toolName).catch(() => null);
+  if (!connection) return null;
+
+  const definition = getCapabilityDefinition(capability);
+  const label = String((connection as Record<string, unknown>).label ?? toolName);
+  return {
+    kind: "native",
+    capability,
+    label: `${definition?.label ?? capability} via ${label}`,
+    score: 60,
+    riskLevel: definition?.riskLevel ?? "medium",
+    // Still gated by the operator's own leash/guardrails downstream; this only
+    // says a real, safe execution route exists.
+    approvalRequired: false,
+    reason: `Connected ${label} can run ${definition?.label ?? capability} through Dobly's native connector.`,
+  };
+}
+
 export async function resolveUniversalExecutionPaths(input: {
   userId: string;
   workspaceId?: string | null;
@@ -317,6 +354,20 @@ export async function resolveUniversalExecutionPaths(input: {
       });
     } else {
       const definition = getCapabilityDefinition(capability);
+
+      // Before declaring a high-risk fallback, check whether a real native
+      // connector can serve this capability. This function only ever queried
+      // mcp_connections, so a live OAuth account in `connections` (with a
+      // working native executor behind it) was invisible here - every such
+      // capability became a high-risk fallback, which the brain then reports
+      // as "missing_safe_tool_path" and refuses to act on. The "native" kind
+      // existed in the type but nothing ever produced it.
+      const native = await resolveNativeCapabilityPath(input.userId, capability);
+      if (native) {
+        paths.push(native);
+        continue;
+      }
+
       paths.push({
         kind: "fallback",
         capability,
