@@ -3,6 +3,7 @@ import { executeAgentToolOperation } from "@/lib/agents/tool-operation";
 import { sendCommunicationReply } from "@/lib/communications/runtime";
 import { getDecryptedConnectionSecrets } from "@/lib/connections";
 import { executeRealInternalTool } from "@/lib/office/internal-tool-handlers";
+import { executeNativeConnectorTool, findNativeExecutorId } from "@/lib/office/native-tool-bridge";
 
 export type OfficeToolExecutionStatus = "completed" | "needs_connection" | "unsupported" | "failed";
 
@@ -111,6 +112,33 @@ export async function executeOfficeTool(input: OfficeToolExecutionInput): Promis
       output: { toolName: input.toolName, preparedPayload: input.toolPayload },
     };
     return logToolExecution(input, input.toolName, result);
+  }
+
+  // Prefer a real native executor (Gmail send, Sheets append, Slack post, ...)
+  // over the webhook/base_url fallback. Without this, a genuinely connected
+  // OAuth account still fell through to "prepared_not_sent" because an OAuth
+  // connection has neither a webhook_url nor a base_url in its metadata.
+  if (findNativeExecutorId(normalizedTool)) {
+    const native = await executeNativeConnectorTool({
+      userId: input.userId,
+      taskId: input.taskId,
+      toolName: normalizedTool,
+      toolPayload: input.toolPayload,
+    });
+
+    if (native.ok) {
+      return logToolExecution(input, native.provider, {
+        status: "completed",
+        summary: `${input.toolName} ran for real via ${native.provider}.`,
+        output: native.output,
+      });
+    }
+
+    return logToolExecution(input, String(connection.provider ?? normalizedTool), {
+      status: "failed",
+      summary: `${input.toolName} could not complete: ${native.error}`,
+      output: { toolName: input.toolName, error: native.error, payload: input.toolPayload },
+    });
   }
 
   const result = await executeConnectedTool(input, connection);
