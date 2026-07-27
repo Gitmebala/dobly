@@ -47,6 +47,15 @@ export default function ProviderConnectClient({
         return;
       }
 
+      // Guided/otp/email-link flows have no OAuth account picker to force the
+      // issue, so a required field left blank used to save silently anyway -
+      // the connection looked successful but had nothing real behind it.
+      const missingField = visibleFields.find((field) => !values[field.key]?.trim());
+      if (missingField) {
+        setMessage(`Enter ${missingField.label.toLowerCase()} first.`);
+        return;
+      }
+
       const metadata: Record<string, unknown> = {
         guided: !showAdvanced,
         setup_method: showAdvanced ? "advanced" : flow.method,
@@ -127,7 +136,14 @@ export default function ProviderConnectClient({
                 provider: provider.id,
                 label: values.accountIdentifier || provider.label,
                 accountIdentifier: values.accountIdentifier || null,
-                status: flow.method === "otp" || flow.method === "guided" || flow.method === "email-link" ? "pending" : "active",
+                // "guided" flows collect everything they need in one synchronous
+                // submit, so they're active immediately. Only otp/email-link stay
+                // "pending" - those have a real second step (verify-code,
+                // verify-link) that promotes them to active. Nothing promotes a
+                // "pending" guided connection, so leaving it pending here made
+                // every guided connection permanently invisible to the tool
+                // executor, which only runs connections with status active/connected.
+                status: flow.method === "otp" || flow.method === "email-link" ? "pending" : "active",
                 metadata,
               }
         ),
@@ -139,11 +155,7 @@ export default function ProviderConnectClient({
         return;
       }
 
-      if (!useSecureSetup && flow.method === "guided") {
-        setMessage(`${provider.label} setup request saved. Dobly will continue the secure connection flow.`);
-      } else {
-        setMessage(`${provider.label} connected.`);
-      }
+      setMessage(`${provider.label} connected.`);
     } finally {
       setLoading(false);
     }

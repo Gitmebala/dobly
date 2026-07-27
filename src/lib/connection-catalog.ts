@@ -1339,17 +1339,23 @@ export const CONNECTION_PROVIDERS: ConnectionProviderDefinition[] = [
     useCases: ["Custom API calls", "Internal tools", "Long-tail integrations"],
     starterFlow: {
       method: "guided",
-      title: "Request a custom connection",
-      description: "Starter users do not need raw webhook setup. Tell Dobly what tool you need and we guide the safest next step.",
-      ctaLabel: "Request custom connection",
-      fields: [{ key: "accountIdentifier", label: "Tool name", placeholder: "My internal booking app" }],
+      title: "Connect a webhook or API",
+      description: "Tell Dobly the endpoint URL you want it to call. No developer setup needed.",
+      ctaLabel: "Connect webhook",
+      fields: [
+        { key: "accountIdentifier", label: "Connection label", placeholder: "My internal booking app" },
+        { key: "baseUrl", label: "Endpoint URL", placeholder: "https://api.example.com/webhook" },
+      ],
     },
     proFlow: {
       method: "guided",
       title: "Set up a custom webhook or API",
-      description: "Use guided setup first. Pro and Agency can reveal advanced webhook details when they need them.",
-      ctaLabel: "Start custom setup",
-      fields: [{ key: "accountIdentifier", label: "Connection label", placeholder: "Main internal API" }],
+      description: "Give Dobly the endpoint URL. Pro and Agency can reveal advanced details like a shared secret when they need them.",
+      ctaLabel: "Connect webhook",
+      fields: [
+        { key: "accountIdentifier", label: "Connection label", placeholder: "Main internal API" },
+        { key: "baseUrl", label: "Endpoint URL", placeholder: "https://api.example.com/webhook" },
+      ],
     },
     advancedFields: [
       { key: "accountIdentifier", label: "Connection label", placeholder: "Main internal API" },
