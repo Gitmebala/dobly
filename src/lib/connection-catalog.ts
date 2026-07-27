@@ -647,6 +647,7 @@ export const CONNECTION_PROVIDERS: ConnectionProviderDefinition[] = [
     id: "hubspot",
     label: "HubSpot",
     category: "sales-crm",
+    launchReady: true,
     description: "Use CRM records and deal movement as workflow triggers without scaring normal users away.",
     useCases: ["Lead routing", "Deal updates", "CRM sync"],
     starterFlow: {
