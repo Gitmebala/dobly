@@ -268,39 +268,50 @@ function scoreTool(capability: DoblyCapability, tool: McpDiscoveredToolRecord, c
   return score;
 }
 
-// Capability -> the coworker tool name that serves it. The tool name is what
-// the native bridge and the office tool executor both key off, so a capability
-// only counts as natively servable if that tool exists AND the user has a live
-// connection an alias-match can reach.
-const CAPABILITY_NATIVE_TOOL: Partial<Record<DoblyCapability, string>> = {
-  send_message: "gmail",
-  create_document: "google_docs",
-  edit_spreadsheet: "google_sheets",
+// Capability -> the coworker tool name(s) that can serve it, tried in order.
+// The tool name is what the native bridge and the office tool executor both
+// key off, so a capability only counts as natively servable if that tool
+// exists AND the user has a live connection an alias-match can reach.
+const CAPABILITY_NATIVE_TOOLS: Partial<Record<DoblyCapability, string[]>> = {
+  send_message: ["gmail"],
+  create_document: ["google_docs"],
+  edit_spreadsheet: ["google_sheets"],
+  // Same shape of bug as send_message, just for finance: collect_payment and
+  // create_invoice are "high" risk by default, so before this they always
+  // became a fallback path even with a real, validated M-Pesa/Paystack
+  // connection sitting right there - the finance department could never act.
+  collect_payment: ["mpesa", "paystack"],
+  create_invoice: ["mpesa", "paystack"],
+  update_crm: ["hubspot"],
 };
 
 async function resolveNativeCapabilityPath(
   userId: string,
   capability: DoblyCapability,
 ): Promise<UniversalExecutionPath | null> {
-  const toolName = CAPABILITY_NATIVE_TOOL[capability];
-  if (!toolName || !findNativeExecutorId(toolName)) return null;
+  const toolNames = CAPABILITY_NATIVE_TOOLS[capability];
+  if (!toolNames?.length) return null;
 
-  const connection = await findLiveConnectionForProvider(userId, toolName).catch(() => null);
-  if (!connection) return null;
+  for (const toolName of toolNames) {
+    if (!findNativeExecutorId(toolName)) continue;
+    const connection = await findLiveConnectionForProvider(userId, toolName).catch(() => null);
+    if (!connection) continue;
 
-  const definition = getCapabilityDefinition(capability);
-  const label = String((connection as Record<string, unknown>).label ?? toolName);
-  return {
-    kind: "native",
-    capability,
-    label: `${definition?.label ?? capability} via ${label}`,
-    score: 60,
-    riskLevel: definition?.riskLevel ?? "medium",
-    // Still gated by the operator's own leash/guardrails downstream; this only
-    // says a real, safe execution route exists.
-    approvalRequired: false,
-    reason: `Connected ${label} can run ${definition?.label ?? capability} through Dobly's native connector.`,
-  };
+    const definition = getCapabilityDefinition(capability);
+    const label = String((connection as Record<string, unknown>).label ?? toolName);
+    return {
+      kind: "native",
+      capability,
+      label: `${definition?.label ?? capability} via ${label}`,
+      score: 60,
+      riskLevel: definition?.riskLevel ?? "medium",
+      // Still gated by the operator's own leash/guardrails downstream; this
+      // only says a real, safe execution route exists.
+      approvalRequired: false,
+      reason: `Connected ${label} can run ${definition?.label ?? capability} through Dobly's native connector.`,
+    };
+  }
+  return null;
 }
 
 export async function resolveUniversalExecutionPaths(input: {
