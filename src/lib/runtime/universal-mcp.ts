@@ -6,6 +6,7 @@ import { decryptSecret, encryptSecret } from "@/lib/crypto";
 import { assertSafeOutboundUrl, safeOutboundFetch } from "@/lib/security/safe-fetch";
 import { findNativeExecutorId } from "@/lib/office/native-tool-bridge";
 import { findLiveConnectionForProvider } from "@/lib/provider-aliases";
+import { isVoiceCallingConfigured } from "@/lib/voice/elevenlabs-convai";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -289,6 +290,24 @@ async function resolveNativeCapabilityPath(
   userId: string,
   capability: DoblyCapability,
 ): Promise<UniversalExecutionPath | null> {
+  // Outbound calling is backed by platform-level credentials (Twilio +
+  // ElevenLabs env vars), not a per-user connections-table row, so it can't
+  // go through the same findLiveConnectionForProvider check as everything
+  // else here.
+  if (capability === "make_call") {
+    if (!findNativeExecutorId("make_call") || !isVoiceCallingConfigured()) return null;
+    const definition = getCapabilityDefinition(capability);
+    return {
+      kind: "native",
+      capability,
+      label: `${definition?.label ?? capability} via Dobly's phone line`,
+      score: 60,
+      riskLevel: definition?.riskLevel ?? "high",
+      approvalRequired: false,
+      reason: "Dobly's connected phone line can place this call through a live conversational agent.",
+    };
+  }
+
   const toolNames = CAPABILITY_NATIVE_TOOLS[capability];
   if (!toolNames?.length) return null;
 

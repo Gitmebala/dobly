@@ -5,6 +5,19 @@ import { getDecryptedConnectionSecrets } from "@/lib/connections";
 import { executeRealInternalTool } from "@/lib/office/internal-tool-handlers";
 import { executeNativeConnectorTool, findNativeExecutorId } from "@/lib/office/native-tool-bridge";
 import { connectionMatchesProvider } from "@/lib/provider-aliases";
+import { isVoiceCallingConfigured } from "@/lib/voice/elevenlabs-convai";
+
+// Tools backed by platform-level credentials (env vars) rather than a
+// per-user OAuth connection row. findConnectionForTool below only ever
+// queries the `connections` table, so gating these tools on it the same way
+// as Gmail/Slack would mean they can never run - there is no per-user
+// "voice" connection to find. Check platform readiness directly instead.
+const PLATFORM_CONFIGURED_TOOLS: Record<string, () => boolean> = {
+  make_call: isVoiceCallingConfigured,
+  phone_call: isVoiceCallingConfigured,
+  call_customer: isVoiceCallingConfigured,
+  voice_call: isVoiceCallingConfigured,
+};
 
 export type OfficeToolExecutionStatus = "completed" | "needs_connection" | "unsupported" | "failed";
 
@@ -74,6 +87,39 @@ export async function executeOfficeTool(input: OfficeToolExecutionInput): Promis
   if (INTERNAL_TOOLS.has(normalizedTool)) {
     const result = await executeInternalTool(input, normalizedTool);
     return logToolExecution(input, normalizedTool, result);
+  }
+
+  const platformCheck = PLATFORM_CONFIGURED_TOOLS[normalizedTool];
+  if (platformCheck) {
+    if (!platformCheck()) {
+      const result: OfficeToolExecutionResult = {
+        status: "needs_connection",
+        summary: `${input.toolName} is not configured yet.`,
+        output: { toolName: input.toolName, preparedPayload: input.toolPayload },
+      };
+      return logToolExecution(input, input.toolName, result);
+    }
+
+    const native = await executeNativeConnectorTool({
+      userId: input.userId,
+      taskId: input.taskId,
+      toolName: normalizedTool,
+      toolPayload: input.toolPayload,
+    });
+
+    if (native.ok) {
+      return logToolExecution(input, native.provider, {
+        status: "completed",
+        summary: `${input.toolName} ran for real via ${native.provider}.`,
+        output: native.output,
+      });
+    }
+
+    return logToolExecution(input, normalizedTool, {
+      status: "failed",
+      summary: `${input.toolName} could not complete: ${native.error}`,
+      output: { toolName: input.toolName, error: native.error, payload: input.toolPayload },
+    });
   }
 
   const connection = await findConnectionForTool(input.userId, normalizedTool);

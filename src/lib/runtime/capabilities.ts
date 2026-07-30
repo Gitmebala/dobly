@@ -22,6 +22,7 @@ export type DoblyCapability =
   | "edit_spreadsheet"
   | "manage_calendar"
   | "send_message"
+  | "make_call"
   | "monitor_market"
   | "book_travel"
   | "operate_software";
@@ -55,6 +56,7 @@ export const DOBLY_CAPABILITIES: CapabilityDefinition[] = [
   { id: "edit_spreadsheet", label: "Edit spreadsheet", aliases: ["spreadsheet", "sheet", "excel", "forecast", "model"], riskLevel: "medium" },
   { id: "manage_calendar", label: "Manage calendar", aliases: ["calendar", "meeting", "appointment", "schedule"], riskLevel: "medium" },
   { id: "send_message", label: "Send message", aliases: ["email", "message", "send", "whatsapp", "sms"], riskLevel: "high" },
+  { id: "make_call", label: "Make a phone call", aliases: ["call", "phone", "ring", "dial", "voice call"], riskLevel: "high" },
   { id: "monitor_market", label: "Monitor market", aliases: ["stock", "crypto", "market", "price", "coindesk", "coinbase"], riskLevel: "medium" },
   { id: "book_travel", label: "Book travel", aliases: ["flight", "hotel", "trip", "travel", "itinerary"], riskLevel: "high" },
   { id: "operate_software", label: "Operate software", aliases: ["use app", "operate", "software", "account", "workspace"], riskLevel: "high" },

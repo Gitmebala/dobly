@@ -6,6 +6,7 @@ import { googleGmailSendExecutor, googleDocsCreateExecutor, googleSheetsAppendEx
 import { mpesaStkPushExecutor } from "@/lib/connectors/native/mpesa";
 import { orchestratorDocumentExecutor } from "@/lib/connectors/native/orchestrator";
 import { slackSendMessageExecutor } from "@/lib/connectors/native/slack";
+import { voiceOutboundCallExecutor } from "@/lib/connectors/native/voice";
 import { shopifyTagCustomerExecutor, shopifyCreateDraftOrderExecutor } from "@/lib/connectors/native/shopify";
 import { whatsappSendMessageExecutor } from "@/lib/connectors/native/whatsapp";
 import { mailchimpAddSubscriberExecutor, mailchimpSendCampaignExecutor } from "@/lib/connectors/native/mailchimp";
@@ -95,6 +96,8 @@ const EXECUTORS = new Map<string, ConnectorExecutor>([
   [orchestratorDocumentExecutor.id, orchestratorDocumentExecutor],
   // Slack
   [slackSendMessageExecutor.id, slackSendMessageExecutor],
+  // Voice
+  [voiceOutboundCallExecutor.id, voiceOutboundCallExecutor],
   // Shopify
   [shopifyTagCustomerExecutor.id, shopifyTagCustomerExecutor],
   [shopifyCreateDraftOrderExecutor.id, shopifyCreateDraftOrderExecutor],

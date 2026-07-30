@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { normalizePhoneIdentifier, resolveUserByChannelIdentifier } from "@/lib/communications/channel-resolver";
 import { recordOfficeEvent } from "@/lib/office/events";
+import { upsertVoiceCallRecord } from "@/lib/runtime/voice-production";
 import { isWebhookSecurityDisabledForDev, verifySharedSecret } from "@/lib/webhooks/security";
+
+const TERMINAL_STATUSES = new Set(["completed", "failed", "busy", "no-answer", "canceled"]);
 
 export async function POST(req: NextRequest) {
   const allowed =
@@ -17,12 +20,22 @@ export async function POST(req: NextRequest) {
   const status = String(form.get("CallStatus") ?? "unknown");
   const duration = String(form.get("CallDuration") ?? "");
 
-  const owner = await resolveUserByChannelIdentifier({
-    channelId: "business_phone",
-    identifier: to,
-  });
+  // Inbound calls: the business number is `to`. Outbound calls: the business
+  // number is `from`. This only ever checked `to`, so status updates for
+  // outbound calls (the ones this session added) silently found no owner.
+  const owner =
+    (await resolveUserByChannelIdentifier({ channelId: "business_phone", identifier: to })) ??
+    (await resolveUserByChannelIdentifier({ channelId: "business_phone", identifier: from }));
 
   if (owner) {
+    await upsertVoiceCallRecord({
+      userId: owner.userId,
+      workspaceId: owner.workspaceId,
+      providerCallId: callSid || null,
+      status: TERMINAL_STATUSES.has(status) ? (status === "completed" ? "completed" : "failed") : "active",
+      telemetry: { twilioStatus: status, duration: duration || null },
+    }).catch(() => undefined);
+
     await recordOfficeEvent({
       workspaceId: owner.workspaceId,
       userId: owner.userId,

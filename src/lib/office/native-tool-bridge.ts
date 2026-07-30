@@ -37,6 +37,12 @@ const TOOL_TO_EXECUTOR: Record<string, string> = {
   whatsapp: "native.whatsapp.send",
   whatsapp_send: "native.whatsapp.send",
 
+  // Voice - real outbound calls via ElevenLabs Conversational AI + Twilio.
+  make_call: "native.voice.outbound-call",
+  phone_call: "native.voice.outbound-call",
+  call_customer: "native.voice.outbound-call",
+  voice_call: "native.voice.outbound-call",
+
   // Payments
   mpesa: "native.mpesa.stk-push",
   mpesa_stk_push: "native.mpesa.stk-push",

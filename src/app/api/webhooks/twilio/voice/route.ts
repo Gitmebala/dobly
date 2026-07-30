@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { normalizePhoneIdentifier, resolveUserByChannelIdentifier } from "@/lib/communications/channel-resolver";
 import { isWebhookSecurityDisabledForDev, verifySharedSecret, verifyTwilioSignature } from "@/lib/webhooks/security";
-import { getDeepgramConfig } from "@/lib/voice/deepgram";
-import { getElevenLabsConfig } from "@/lib/voice/elevenlabs";
 
 function escapeXml(value: string) {
   return value.replace(/[<>&'"]/g, (char) => {
@@ -52,13 +50,18 @@ export async function POST(req: NextRequest) {
     return twiml("<Say voice=\"alice\">Thanks for calling. This number is not connected to Dobly yet.</Say>");
   }
 
-  // Check if voice runtime is configured
-  const deepgramConfig = getDeepgramConfig();
-  const elevenLabsConfig = getElevenLabsConfig();
-  const mediaStreamUrl = process.env.TWILIO_MEDIA_STREAM_URL;
-  const useVoiceRuntime = Boolean(mediaStreamUrl && deepgramConfig && elevenLabsConfig);
+  // The real-time media-stream path requires an external WebSocket-capable
+  // worker to actually terminate the Twilio stream - this Next.js app can't
+  // (see /api/webhooks/twilio/voice/stream, which unconditionally returns
+  // 501). DEEPGRAM_API_KEY, the ElevenLabs config, and TWILIO_MEDIA_STREAM_URL
+  // were all set in production, so this branch looked "configured" and was
+  // being selected for every real inbound call - which then hit the 501 and
+  // broke. Force the Gather/Say fallback below, which is fully self-contained
+  // and genuinely works, until a real external streaming worker exists.
+  const useVoiceRuntime = false;
 
   if (useVoiceRuntime) {
+    const mediaStreamUrl = process.env.TWILIO_MEDIA_STREAM_URL;
     const streamBase = mediaStreamUrl || origin;
     const streamUrl = `${streamBase.replace(/\/$/, "")}/api/webhooks/twilio/voice/stream?to=${encodeURIComponent(to)}&from=${encodeURIComponent(from)}&callSid=${encodeURIComponent(callSid)}`;
     return twiml(`
