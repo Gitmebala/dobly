@@ -124,9 +124,22 @@ const operatorControlPrompts = [
   "Summarize what changed since the last run.",
 ];
 
+// `Intl.DateTimeFormat(undefined, ...)` and a bare `new Date()` "today"
+// resolve against whatever locale/timezone/clock the runtime happens to have.
+// The server (Node on Vercel) and the browser rendering the initial
+// hydration pass can legitimately disagree on both, which makes the
+// server-rendered HTML and the client's first render produce different
+// text for the same timestamp. React treats that as a hydration failure
+// (minified error #418) and aborts hydrating the mismatched subtree -
+// here, that subtree was the message list, so real messages that fetched
+// and rendered correctly on the server silently disappeared on the client.
+// Fixed locale/timeZone makes the output byte-identical everywhere.
+const DISPLAY_LOCALE = "en-US";
+const DISPLAY_TIME_ZONE = "Africa/Nairobi";
+
 function formatTime(value?: string | null) {
   if (!value) return "Not yet";
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+  return new Intl.DateTimeFormat(DISPLAY_LOCALE, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: DISPLAY_TIME_ZONE }).format(new Date(value));
 }
 
 function heldFor(value?: string | null) {
@@ -139,23 +152,23 @@ function heldFor(value?: string | null) {
 
 function formatClock(value?: string | null) {
   if (!value) return "";
-  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+  return new Intl.DateTimeFormat(DISPLAY_LOCALE, { hour: "2-digit", minute: "2-digit", timeZone: DISPLAY_TIME_ZONE }).format(new Date(value));
 }
 
 function dayKey(iso: string) {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  // Deliberately not using Date getters (they read the runtime's local
+  // timezone, which is the same server/client mismatch as above) - slice
+  // the ISO string instead, which is timezone-free and identical everywhere.
+  return iso.slice(0, 10);
 }
 
-function formatDayLabel(iso: string) {
-  const date = new Date(iso);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  const same = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-  if (same(date, today)) return "Today";
-  if (same(date, yesterday)) return "Yesterday";
-  return new Intl.DateTimeFormat(undefined, { weekday: "long", month: "short", day: "numeric" }).format(date);
+function formatDayLabel(iso: string, todayKey: string) {
+  const key = dayKey(iso);
+  if (key === todayKey) return "Today";
+  const yesterday = new Date(`${todayKey}T00:00:00Z`);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  if (key === dayKey(yesterday.toISOString())) return "Yesterday";
+  return new Intl.DateTimeFormat(DISPLAY_LOCALE, { weekday: "long", month: "short", day: "numeric", timeZone: DISPLAY_TIME_ZONE }).format(new Date(iso));
 }
 
 type TimelineEntry =
@@ -283,12 +296,13 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
       .map((event) => ({ kind: "event", at: String(event.created_at), event }));
     const all = [...messageEntries, ...eventEntries].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
     const visible = dateFilter ? all.filter((entry) => dayKey(entry.at) === dateFilter) : all;
+    const todayKey = new Date().toISOString().slice(0, 10);
     const groups: TimelineGroup[] = [];
     for (const entry of visible) {
       const key = dayKey(entry.at);
       const last = groups[groups.length - 1];
       if (last && last.day === key) last.entries.push(entry);
-      else groups.push({ day: key, label: formatDayLabel(entry.at), entries: [entry] });
+      else groups.push({ day: key, label: formatDayLabel(entry.at, todayKey), entries: [entry] });
     }
     return groups;
   }, [messages, props.events, dateFilter]);
@@ -581,7 +595,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
             <span className="operator-thread-controls-label">
               <CalendarDays aria-hidden="true" />
               Shift tape
-              <code>{dateFilter ? formatDayLabel(`${dateFilter}T12:00:00`).toLowerCase() : "full history"}</code>
+              <code>{dateFilter ? formatDayLabel(`${dateFilter}T12:00:00`, new Date().toISOString().slice(0, 10)).toLowerCase() : "full history"}</code>
             </span>
             <div className="operator-thread-controls-actions">
               <input
