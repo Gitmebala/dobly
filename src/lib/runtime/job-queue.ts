@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import type { QueueJob } from "@/types";
 
@@ -37,6 +38,29 @@ async function enqueueRuntimeJob(input: {
       if (existing) return existing as QueueJob;
     }
     throw new Error(error?.message ?? `Failed to enqueue ${input.type}.`);
+  }
+
+  // There is no cron or external scheduler that ever calls
+  // /api/internal/worker in this deployment (no vercel.json, and the
+  // provisioned Trigger.dev credentials are unused anywhere in the
+  // codebase). Every job was being enqueued correctly and then sitting in
+  // job_queue forever - the coworker would plan a real run, judge real
+  // tools, and then never execute a single step. Trigger a claim attempt for
+  // this specific job right after the response is sent, so work starts
+  // immediately without depending on any scheduler existing at all. This
+  // does not replace a real cron/worker for jobs enqueued with a future
+  // available_at (personal watchers, retries) - those still need one.
+  try {
+    after(async () => {
+      const { processQueue } = await import("@/lib/queue");
+      // Small batch, not just this job: with no scheduler ever running, this
+      // is also the only thing that will drain any backlog that queued up
+      // before this fix existed.
+      await processQueue(5, "inline-trigger").catch(() => undefined);
+    });
+  } catch {
+    // after() requires a request-scoped context; if this was ever called
+    // from somewhere without one, don't let that break enqueueing itself.
   }
 
   return data as QueueJob;
