@@ -1,7 +1,7 @@
 import "server-only";
 import type { DoblyExecutionIntent } from "@/lib/dobly-inference";
 import { generateOutcomeContractForJob } from "@/lib/outcome-contracts";
-import { executeRuntimeCommandPlan } from "@/lib/runtime/multi-step-command";
+import { executeRuntimeCommandPlan, type RuntimeCommandEvent } from "@/lib/runtime/multi-step-command";
 import { evaluatePersonalWatcher } from "@/lib/runtime/personal-watchers";
 import { executeSoftwareExecutionRun } from "@/lib/software-execution-runs";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
@@ -14,6 +14,57 @@ import { decryptSecret } from "@/lib/crypto";
 
 export function isRuntimeQueueJob(job: QueueJob) {
   return ["runtime.command", "runtime.approval_resume", "personal_watcher.evaluate", "outcome_contract.generate"].includes(job.type);
+}
+
+// Shared by the initial "runtime.command" job and the "runtime.approval_resume"
+// job's runtime_command branch - a resumed run used to call
+// executeRuntimeCommandPlan with no onEvent callback at all, so nothing about
+// what happened after approval (thinking, tool calls, the final result) ever
+// reached the chat. The user would approve something and see silence, even
+// though the action was genuinely running server-side.
+function buildOperatorChatEventForwarder(input: {
+  userId: string;
+  workspaceId: string | null;
+  operatorId: string | null;
+  conversationId: string | null;
+  sourceMessageId: string | null;
+}) {
+  return async (event: RuntimeCommandEvent) => {
+    if (!input.operatorId || !input.conversationId) return;
+    await recordOperatorChatEvent({
+      conversationId: input.conversationId,
+      messageId: input.sourceMessageId,
+      userId: input.userId,
+      workspaceId: input.workspaceId,
+      operatorId: input.operatorId,
+      runId: event.runId ?? null,
+      eventType: event.eventType,
+      title: event.title,
+      summary: event.summary,
+      severity: event.severity,
+      payload: event.payload ?? {},
+    }).catch(() => undefined);
+
+    if (["approval_requested", "artifact_created", "run_completed", "run_failed"].includes(event.eventType)) {
+      await appendOperatorChatMessage({
+        conversationId: input.conversationId,
+        userId: input.userId,
+        workspaceId: input.workspaceId,
+        operatorId: input.operatorId,
+        role: event.eventType === "approval_requested" ? "approval" : event.eventType === "artifact_created" ? "artifact" : "run",
+        intent: event.eventType === "approval_requested" ? "approval" : event.eventType === "artifact_created" ? "artifact" : "run_update",
+        body: event.summary ? `${event.title}: ${event.summary}` : event.title,
+        runId: event.runId ?? null,
+        approvalId: event.approvalId ?? null,
+        artifactId: event.artifactId ?? null,
+        metadata: {
+          source: "runtime_worker",
+          eventType: event.eventType,
+          payload: event.payload ?? {},
+        },
+      }).catch(() => undefined);
+    }
+  };
 }
 
 export async function processRuntimeQueueJob(job: QueueJob, workerId: string) {
@@ -38,42 +89,13 @@ export async function processRuntimeQueueJob(job: QueueJob, workerId: string) {
       approved: Boolean(payload.approved),
       intent,
       workerId,
-      onEvent: async (event) => {
-        if (!operatorId || !conversationId) return;
-        await recordOperatorChatEvent({
-          conversationId,
-          messageId: sourceMessageId,
-          userId: job.user_id!,
-          workspaceId,
-          operatorId,
-          runId: event.runId ?? null,
-          eventType: event.eventType,
-          title: event.title,
-          summary: event.summary,
-          severity: event.severity,
-          payload: event.payload ?? {},
-        }).catch(() => undefined);
-
-        if (["approval_requested", "artifact_created", "run_completed", "run_failed"].includes(event.eventType)) {
-          await appendOperatorChatMessage({
-            conversationId,
-            userId: job.user_id!,
-            workspaceId,
-            operatorId,
-            role: event.eventType === "approval_requested" ? "approval" : event.eventType === "artifact_created" ? "artifact" : "run",
-            intent: event.eventType === "approval_requested" ? "approval" : event.eventType === "artifact_created" ? "artifact" : "run_update",
-            body: event.summary ? `${event.title}: ${event.summary}` : event.title,
-            runId: event.runId ?? null,
-            approvalId: event.approvalId ?? null,
-            artifactId: event.artifactId ?? null,
-            metadata: {
-              source: "runtime_worker",
-              eventType: event.eventType,
-              payload: event.payload ?? {},
-            },
-          }).catch(() => undefined);
-        }
-      },
+      onEvent: buildOperatorChatEventForwarder({
+        userId: job.user_id,
+        workspaceId,
+        operatorId,
+        conversationId,
+        sourceMessageId,
+      }),
     });
     if (operatorId) {
       await recordOperatorOutcome({
@@ -158,14 +180,26 @@ export async function processRuntimeQueueJob(job: QueueJob, workerId: string) {
     }
 
     if (resume.type === "runtime_command") {
+      const resumeWorkspaceId = typeof approval.workspace_id === "string" ? approval.workspace_id : null;
+      const resumeContext = typeof resume.context === "object" && resume.context ? (resume.context as Record<string, unknown>) : {};
+      const operatorId = typeof resumeContext.operatorId === "string" ? resumeContext.operatorId : null;
+      const conversationId = typeof resumeContext.conversationId === "string" ? resumeContext.conversationId : null;
+      const sourceMessageId = typeof resumeContext.sourceMessageId === "string" ? resumeContext.sourceMessageId : null;
       const result = await executeRuntimeCommandPlan({
         userId: job.user_id,
-        workspaceId: typeof approval.workspace_id === "string" ? approval.workspace_id : null,
+        workspaceId: resumeWorkspaceId,
         prompt: String(resume.prompt ?? ""),
-        context: typeof resume.context === "object" && resume.context ? (resume.context as Record<string, unknown>) : {},
+        context: resumeContext,
         approved: true,
         intent: typeof resume.intent === "object" && resume.intent ? (resume.intent as DoblyExecutionIntent) : null,
         workerId,
+        onEvent: buildOperatorChatEventForwarder({
+          userId: job.user_id,
+          workspaceId: resumeWorkspaceId,
+          operatorId,
+          conversationId,
+          sourceMessageId,
+        }),
       });
       return { runId: result.run.id };
     }
