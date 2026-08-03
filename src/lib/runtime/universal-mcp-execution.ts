@@ -185,13 +185,13 @@ async function extractNativeToolArguments(input: {
       model: process.env.DOBLY_TOOL_MODEL || process.env.DOBLY_PREMIUM_MODEL || "claude-sonnet-4-20250514",
       max_tokens: 500,
       system:
-        "Extract structured arguments for a software action from the user's request. Reply with ONLY a single JSON object matching the given shape - no prose, no markdown fences. Use ISO 8601 for any dates/times, resolving relative dates (e.g. \"tomorrow\") against the current time. Omit optional fields you cannot fill confidently rather than guessing.",
+        "Extract structured arguments for a software action from the user's request. Reply with ONLY a single JSON object matching the given shape - no prose, no markdown fences. Fields described as required must always be filled - resolve relative dates/times (\"tomorrow\", \"next Monday\", \"2pm\") against the current time given below; if the user didn't state a timezone, use the current time's own UTC offset rather than leaving the field out. Only omit fields explicitly marked optional/omittable, and only when truly nothing in the request or prior context suggests a value.",
       messages: [
         {
           role: "user",
           content: [
             `Current time: ${new Date().toISOString()}`,
-            `Target shape: ${schema}`,
+            `Target shape (fields not marked optional/omittable are required): ${schema}`,
             `User request: ${input.prompt}`,
             `Prior step results (may contain ids to reuse, e.g. a fileId from a just-created document): ${JSON.stringify(input.context ?? {}).slice(0, 4000)}`,
           ].join("\n\n"),
@@ -205,7 +205,11 @@ async function extractNativeToolArguments(input: {
     const jsonText = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
     const parsed = JSON.parse(jsonText);
     return typeof parsed === "object" && parsed !== null ? (parsed as JsonRecord) : {};
-  } catch {
+  } catch (error) {
+    // A silent {} here reads identically to "the model correctly found
+    // nothing to fill in" - it isn't. Log so a downstream "requires X and Y"
+    // failure can be told apart from an extraction call that never worked.
+    console.error(`extractNativeToolArguments failed for ${input.toolName}:`, error);
     return {};
   }
 }
