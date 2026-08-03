@@ -1,7 +1,7 @@
 import "server-only";
 import { completeDurableRuntimeRun, createDurableArtifact, createDurableRuntimeRun } from "@/lib/runtime/durable-runtime";
 import { executeDynamicClaudeMcpStep } from "@/lib/claude-mcp";
-import { decryptStoredMcpToken, resolveUniversalExecutionPaths, getCapabilityNativeToolNames, type UniversalExecutionPath } from "@/lib/runtime/universal-mcp";
+import { decryptStoredMcpToken, resolveUniversalExecutionPaths, getCapabilityNativeToolCandidates, type UniversalExecutionPath } from "@/lib/runtime/universal-mcp";
 import { logRuntimeAuditEvent } from "@/lib/runtime/audit";
 import type { DoblyExecutionIntent } from "@/lib/dobly-inference";
 import { reserveOperatingCapacity, settleOperatingCapacity } from "@/lib/billing/economy";
@@ -221,17 +221,17 @@ export async function executeNativeCapabilityPath(input: {
   assertEmergencyStopInactive("external_actions");
   const path = input.path;
 
-  const candidateToolNames = getCapabilityNativeToolNames(path.capability);
+  const candidates = getCapabilityNativeToolCandidates(path.capability);
   let toolName: string | null = null;
-  for (const candidate of candidateToolNames) {
-    if (!findNativeExecutorId(candidate)) continue;
-    if (candidate === "make_call") {
-      toolName = candidate;
+  for (const candidate of candidates) {
+    if (!findNativeExecutorId(candidate.toolName)) continue;
+    if (candidate.toolName === "make_call") {
+      toolName = candidate.toolName;
       break;
     }
-    const connection = await findLiveConnectionForProvider(input.userId, candidate).catch(() => null);
+    const connection = await findLiveConnectionForProvider(input.userId, candidate.provider).catch(() => null);
     if (connection) {
-      toolName = candidate;
+      toolName = candidate.toolName;
       break;
     }
   }

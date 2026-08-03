@@ -273,27 +273,41 @@ function scoreTool(capability: DoblyCapability, tool: McpDiscoveredToolRecord, c
 // The tool name is what the native bridge and the office tool executor both
 // key off, so a capability only counts as natively servable if that tool
 // exists AND the user has a live connection an alias-match can reach.
-const CAPABILITY_NATIVE_TOOLS: Partial<Record<DoblyCapability, string[]>> = {
-  send_message: ["gmail"],
-  create_document: ["google_docs"],
-  edit_spreadsheet: ["google_sheets"],
-  manage_calendar: ["google_calendar"],
-  check_availability: ["calendar_check_availability"],
-  organize_documents: ["google_drive"],
+// `provider` is what findLiveConnectionForProvider checks against the user's
+// stored connections (via provider-aliases.ts); `toolName` is the specific
+// action passed to the native-tool-bridge executor lookup. These used to be
+// a single string, which worked only by coincidence for every entry where
+// the provider and the action shared a name ("gmail", "hubspot", ...). Once
+// a provider needed a second, distinct action (google_calendar's create-event
+// vs. check-availability), reusing one string meant the connection check ran
+// against a bridge tool name that provider-aliases.ts had never heard of, so
+// it always reported "no live connection" and silently fell back.
+interface NativeToolCandidate {
+  provider: string;
+  toolName: string;
+}
+
+const CAPABILITY_NATIVE_TOOLS: Partial<Record<DoblyCapability, NativeToolCandidate[]>> = {
+  send_message: [{ provider: "gmail", toolName: "gmail" }],
+  create_document: [{ provider: "google_docs", toolName: "google_docs" }],
+  edit_spreadsheet: [{ provider: "google_sheets", toolName: "google_sheets" }],
+  manage_calendar: [{ provider: "google_calendar", toolName: "google_calendar" }],
+  check_availability: [{ provider: "google_calendar", toolName: "calendar_check_availability" }],
+  organize_documents: [{ provider: "google_drive", toolName: "google_drive" }],
   // Same shape of bug as send_message, just for finance: collect_payment and
   // create_invoice are "high" risk by default, so before this they always
   // became a fallback path even with a real, validated M-Pesa/Paystack
   // connection sitting right there - the finance department could never act.
-  collect_payment: ["mpesa", "paystack"],
-  create_invoice: ["mpesa", "paystack"],
-  update_crm: ["hubspot"],
+  collect_payment: [{ provider: "mpesa", toolName: "mpesa" }, { provider: "paystack", toolName: "paystack" }],
+  create_invoice: [{ provider: "mpesa", toolName: "mpesa" }, { provider: "paystack", toolName: "paystack" }],
+  update_crm: [{ provider: "hubspot", toolName: "hubspot" }],
 };
 
 // Exposed so a resolved `kind: "native"` path can be dispatched by its actual
 // execution engine later (see multi-step-command.ts / universal-mcp-execution.ts)
 // without duplicating this capability->tool-name table a second time.
-export function getCapabilityNativeToolNames(capability: DoblyCapability): string[] {
-  if (capability === "make_call") return ["make_call"];
+export function getCapabilityNativeToolCandidates(capability: DoblyCapability): NativeToolCandidate[] {
+  if (capability === "make_call") return [{ provider: "make_call", toolName: "make_call" }];
   return CAPABILITY_NATIVE_TOOLS[capability] ?? [];
 }
 
@@ -319,16 +333,16 @@ async function resolveNativeCapabilityPath(
     };
   }
 
-  const toolNames = CAPABILITY_NATIVE_TOOLS[capability];
-  if (!toolNames?.length) return null;
+  const candidates = CAPABILITY_NATIVE_TOOLS[capability];
+  if (!candidates?.length) return null;
 
-  for (const toolName of toolNames) {
+  for (const { provider, toolName } of candidates) {
     if (!findNativeExecutorId(toolName)) continue;
-    const connection = await findLiveConnectionForProvider(userId, toolName).catch(() => null);
+    const connection = await findLiveConnectionForProvider(userId, provider).catch(() => null);
     if (!connection) continue;
 
     const definition = getCapabilityDefinition(capability);
-    const label = String((connection as Record<string, unknown>).label ?? toolName);
+    const label = String((connection as Record<string, unknown>).label ?? provider);
     return {
       kind: "native",
       capability,
