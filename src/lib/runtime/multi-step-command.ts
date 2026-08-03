@@ -180,15 +180,31 @@ export async function executeRuntimeCommandPlan(input: {
   const nativePaths = universalResolution.paths.filter((path) => path.kind === "native");
   const customApiPaths = customApiResolution.paths.filter((path) => path.kind === "custom_api");
   const bestConnectedPath = mcpPaths[0] ?? nativePaths[0];
-  if (bestConnectedPath && !steps.some((step) => step.type === "software_execution")) {
-    steps.splice(Math.min(steps.length, 1), 0, {
+  if (bestConnectedPath) {
+    // dobly-inference.ts's routeIntentToExecution() unconditionally assigns a
+    // static legacy tool (browser_software_ops, crm_sales_ops, ...) for any
+    // "task"/"message"-shaped request, before this function ever learns
+    // whether a real, live connection exists - so buildRuntimeCommandPlan's
+    // own route.toolId frequently already occupies the one software_execution
+    // slot with a guess that's usually an unconfigured ANTHROPIC_MCP_* tool
+    // (e.g. "browser_software_ops"), and the check here used to back off
+    // entirely whenever that slot was already taken. A confirmed live
+    // connection is strictly more trustworthy than a static guess, so replace
+    // that step instead of yielding to it.
+    const connectedStep: RuntimePlanStep = {
       id: "step_universal_mcp",
       type: "software_execution",
       title: "Use connected software",
       task: input.prompt,
       toolId: `universal:${bestConnectedPath.capability}`,
       requiresApproval: bestConnectedPath.approvalRequired,
-    });
+    };
+    const existingIndex = steps.findIndex((step) => step.type === "software_execution");
+    if (existingIndex >= 0) {
+      steps[existingIndex] = connectedStep;
+    } else {
+      steps.splice(Math.min(steps.length, 1), 0, connectedStep);
+    }
   }
   if (customApiPaths.length > 0 && !steps.some((step) => step.type === "software_execution" || step.type === "custom_api")) {
     steps.splice(Math.min(steps.length, 1), 0, {
