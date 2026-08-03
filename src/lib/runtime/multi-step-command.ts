@@ -14,6 +14,7 @@ import type { DoblyCapability } from "@/lib/runtime/capabilities";
 import { executeUniversalMcpPath, executeNativeCapabilityPath } from "@/lib/runtime/universal-mcp-execution";
 import { resolveCustomApiExecutionPaths, executeCustomApiAction } from "@/lib/runtime/custom-api";
 import type { CustomApiExecutionPath } from "@/lib/runtime/custom-api";
+import { executePublishingRuntime } from "@/lib/runtime/publishing-execution";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -455,53 +456,101 @@ export async function executeRuntimeCommandPlan(input: {
       }
 
       if (step.type === "approval") {
-        const approval = await createRuntimeApproval({
-          userId: input.userId,
-          workspaceId: input.workspaceId ?? null,
-          runId: parentRun.id,
-          title: "Approve external action",
-          message: `Dobly prepared work for: ${input.prompt}. Approve before Dobly sends, publishes, pays, or changes an external system.`,
-          actionLabel: "Approve and resume",
-          riskLevel: "high",
-          metadata: {
-            resume: {
-              type: "runtime_command",
-              prompt: input.prompt,
-              context: input.context ?? {},
-              intent: commandPlan.intent,
+        // This never checked input.approved, unlike every other approval gate
+        // in this file (software_execution's path.approvalRequired check,
+        // custom_api's result.approval check). Since resuming an approved run
+        // re-invokes this whole function and rebuilds the same plan from
+        // scratch (job-processor.ts's "runtime_command" resume handler), an
+        // unconditional gate here meant clicking "Approve" on any send/
+        // publish/pay/invoice-shaped request just created ANOTHER pending
+        // approval and broke again - the real action (the software_execution
+        // step spliced in right after this one, or delivery_package below)
+        // could never be reached, approved or not.
+        if (!input.approved) {
+          const approval = await createRuntimeApproval({
+            userId: input.userId,
+            workspaceId: input.workspaceId ?? null,
+            runId: parentRun.id,
+            title: "Approve external action",
+            message: `Dobly prepared work for: ${input.prompt}. Approve before Dobly sends, publishes, pays, or changes an external system.`,
+            actionLabel: "Approve and resume",
+            riskLevel: "high",
+            metadata: {
+              resume: {
+                type: "runtime_command",
+                prompt: input.prompt,
+                context: input.context ?? {},
+                intent: commandPlan.intent,
+              },
+              previousSteps: stepResults,
             },
-            previousSteps: stepResults,
-          },
-        });
-        stepResults.push({ step, approvalId: approval.id, status: "needs_approval" });
-        await input.onEvent?.({
-          eventType: "approval_requested",
-          title: approval.title,
-          summary: approval.message,
-          runId: parentRun.id,
-          approvalId: approval.id,
-          severity: "warning",
-          payload: { step, approval },
-        });
-        break;
+          });
+          stepResults.push({ step, approvalId: approval.id, status: "needs_approval" });
+          await input.onEvent?.({
+            eventType: "approval_requested",
+            title: approval.title,
+            summary: approval.message,
+            runId: parentRun.id,
+            approvalId: approval.id,
+            severity: "warning",
+            payload: { step, approval },
+          });
+          break;
+        }
+        stepResults.push({ step, status: "approved" });
       }
 
       if (step.type === "delivery_package") {
-        stepResults.push({
-          step,
-          status: "prepared",
-          result: {
-            note: "Delivery package prepared. Live sending/publishing should run only after approval and connector readiness checks.",
-          },
-        });
-        await input.onEvent?.({
-          eventType: "artifact_created",
-          title: "Delivery package prepared",
-          summary: "Dobly prepared the delivery package and kept external action approval-gated.",
-          runId: parentRun.id,
-          severity: "success",
-          payload: { step },
-        });
+        // Marketing's "publish" gap: content publishing has no connected-
+        // provider capability of its own (unlike send_message/manage_calendar/
+        // etc.), so it always fell through to this generic stub - which never
+        // called anything real even once the approval bug above was fixed.
+        // Dispatch to the real cross-platform publishing runtime (real HTTP
+        // calls to X/LinkedIn/Instagram/Facebook, using Dobly's own configured
+        // credentials) when the prompt is actually a publish request.
+        const lowerPrompt = input.prompt.toLowerCase();
+        const isPublishRequest = /\bpublish\b|\bpost\b|\bsocial media\b|\binstagram\b|\bfacebook\b|\blinkedin\b|\btiktok\b|\bx\.com\b|\btwitter\b|\byoutube\b/.test(lowerPrompt);
+        if (isPublishRequest) {
+          const allProviders: Array<"instagram" | "facebook" | "linkedin" | "x" | "youtube" | "tiktok"> = ["instagram", "facebook", "linkedin", "x", "youtube", "tiktok"];
+          const mentionedProviders = allProviders.filter((provider) =>
+            lowerPrompt.includes(provider) || (provider === "x" && /\btwitter\b|\bx\.com\b/.test(lowerPrompt)),
+          );
+          const providers = mentionedProviders.length ? mentionedProviders : (["instagram"] as const);
+          const mediaUrls = Array.isArray(input.context?.mediaUrls) ? (input.context!.mediaUrls as string[]) : [];
+          const publishResult = await executePublishingRuntime({
+            userId: input.userId,
+            workspaceId: input.workspaceId ?? null,
+            providers,
+            caption: input.prompt,
+            mediaUrls,
+            approved: input.approved ?? false,
+          });
+          stepResults.push({ step, runId: publishResult.run.id, status: publishResult.run.status, result: publishResult });
+          await input.onEvent?.({
+            eventType: "tool_call_completed",
+            title: "Publishing completed",
+            summary: publishResult.run.summary ?? "Cross-platform publishing runtime completed.",
+            runId: publishResult.run.id,
+            severity: publishResult.run.status === "failed" ? "danger" : "success",
+            payload: { step, result: publishResult },
+          });
+        } else {
+          stepResults.push({
+            step,
+            status: "prepared",
+            result: {
+              note: "Delivery package prepared. Live sending/publishing should run only after approval and connector readiness checks.",
+            },
+          });
+          await input.onEvent?.({
+            eventType: "artifact_created",
+            title: "Delivery package prepared",
+            summary: "Dobly prepared the delivery package and kept external action approval-gated.",
+            runId: parentRun.id,
+            severity: "success",
+            payload: { step },
+          });
+        }
       }
     }
 
