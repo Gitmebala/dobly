@@ -8,7 +8,13 @@ function getEncryptionKey() {
     throw new Error("ENCRYPTION_KEY is not configured.");
   }
 
-  const key = raw.length === 44 ? Buffer.from(raw, "base64") : Buffer.from(raw, "utf8");
+  // Prefer base64 whenever it decodes to exactly 32 bytes - unpadded base64
+  // (43 chars, no trailing "=") is valid and decodes correctly, but was
+  // previously only recognised at the padded 44-char length, so a real
+  // 32-byte key configured without padding fell through to being read as
+  // raw UTF-8 (43 bytes) and always failed the length check below.
+  const base64Key = Buffer.from(raw, "base64");
+  const key = base64Key.length === 32 ? base64Key : Buffer.from(raw, "utf8");
   if (key.length !== 32) {
     throw new Error("ENCRYPTION_KEY must be 32 bytes or base64 for 32 bytes.");
   }
