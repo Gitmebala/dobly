@@ -47,9 +47,12 @@ export async function POST(
       });
       await captureServerEvent({ event: "approval_decided", distinctId: user.id, properties: { decision: parsed.data.decision, approval_source: "runtime" } });
       return NextResponse.json({ approval, source: "runtime" });
-    } catch {
+    } catch (runtimeError) {
+      console.error("Failed to decide approval (workflow and runtime both failed):", { workflowError: error, runtimeError });
       return NextResponse.json(
-        { error: error instanceof Error ? error.message : "Failed to update approval." },
+        {
+          error: runtimeError instanceof Error ? runtimeError.message : "Failed to update approval.",
+        },
         { status: 400 }
       );
     }

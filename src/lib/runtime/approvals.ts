@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { logRuntimeAuditEvent } from "@/lib/runtime/audit";
 import { appendOperatorChatMessage, recordOperatorChatEvent } from "@/lib/operator-chat";
+import { enqueueRuntimeApprovalResume } from "@/lib/runtime/job-queue";
 
 export interface RuntimeApprovalRecord {
   id: string;
@@ -140,6 +141,24 @@ export async function decideRuntimeApproval(input: {
         payload: { approvalId: approval.id, decision: input.decision, note: input.note ?? null },
       }).catch(() => undefined),
     ]);
+  }
+
+  // The chat message above has always promised "I will resume the queued
+  // work" on approval, but nothing ever actually did - enqueueRuntimeApprovalResume
+  // existed with zero callers anywhere in the codebase. Approving a runtime
+  // command (send/publish/pay, a connected-software step, a custom API
+  // action) recorded the decision and said the right thing in chat, but the
+  // pending action itself never ran. Resume types the worker doesn't
+  // recognise (e.g. a memory-proposal approval, which is handled elsewhere)
+  // fail harmlessly in the background instead of blocking this response.
+  if (input.decision === "approved" && resume && typeof resume.type === "string") {
+    await enqueueRuntimeApprovalResume({
+      approvalId: approval.id,
+      userId: input.userId,
+      runId: approval.run_id,
+    }).catch((enqueueError) => {
+      console.error(`Failed to enqueue resume for approval ${approval.id}:`, enqueueError);
+    });
   }
 
   return approval;
