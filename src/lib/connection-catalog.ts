@@ -56,6 +56,8 @@ export const OPTIONAL_LAUNCH_PROVIDER_IDS = [
   "hubspot",
   "canva",
   "webhook",
+  "linkedin",
+  "meta",
 ] as const;
 
 const KENYA_BUDGET_LAUNCH_PROVIDER_SET = new Set<string>(KENYA_BUDGET_LAUNCH_PROVIDER_IDS);
@@ -1129,6 +1131,7 @@ export const CONNECTION_PROVIDERS: ConnectionProviderDefinition[] = [
     id: "meta",
     label: "Meta / Instagram",
     category: "marketing",
+    launchReady: true,
     description: "Connect your Instagram or Facebook business presence without sending customers into developer settings.",
     useCases: ["Comment workflows", "Lead capture", "Social replies"],
     starterFlow: {

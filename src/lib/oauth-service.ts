@@ -125,7 +125,12 @@ const OAUTH_PROVIDERS: Record<string, OAuthConfig> = {
     redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/linkedin/callback`,
     authorizationUrl: "https://www.linkedin.com/oauth/v2/authorization",
     tokenUrl: "https://www.linkedin.com/oauth/v2/accessToken",
-    scopes: ["w_member_social", "r_basicprofile"],
+    // r_basicprofile is legacy - LinkedIn retired it for most apps years ago
+    // in favor of "Sign In with LinkedIn using OpenID Connect" (openid +
+    // profile), which is what identity resolution below actually calls.
+    // w_member_social is the separate "Share on LinkedIn" product needed to
+    // post as the member.
+    scopes: ["openid", "profile", "w_member_social"],
   },
   meta: {
     clientId: process.env.META_OAUTH_CLIENT_ID || "",
@@ -133,7 +138,12 @@ const OAUTH_PROVIDERS: Record<string, OAuthConfig> = {
     redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/meta/callback`,
     authorizationUrl: "https://www.facebook.com/v18.0/dialog/oauth",
     tokenUrl: "https://graph.facebook.com/v18.0/oauth/access_token",
-    scopes: ["business_basic", "instagram_basic"],
+    // business_basic/instagram_basic alone can read identity but can't
+    // actually publish anything - pages_show_list is needed to discover which
+    // Page (and therefore which linked Instagram Business Account) the user
+    // manages, pages_manage_posts to post to that Page, and
+    // instagram_content_publish to post to the linked IG account.
+    scopes: ["business_basic", "instagram_basic", "pages_show_list", "pages_read_engagement", "pages_manage_posts", "instagram_content_publish"],
   },
   airtable: {
     clientId: process.env.AIRTABLE_OAUTH_CLIENT_ID || "",
@@ -233,6 +243,70 @@ export async function exchangeOAuthCode(
 }
 
 /**
+ * Publishing providers need more than a bare access token: LinkedIn posts
+ * are made as a specific member (a URN, not just "whoever the token
+ * belongs to"), and Meta posts go through a specific Page/Instagram
+ * Business Account, not the user's personal account directly - a user
+ * token alone cannot post. Resolve that real identity right after token
+ * exchange so publishing-execution.ts can post as *this* connected user
+ * instead of only ever being able to fall back to Dobly's own shared
+ * platform credentials. Never throws - a resolution failure (e.g. the
+ * Meta app isn't approved yet for these scopes for this user) still lets
+ * the base connection save; publishing just won't have a per-user path
+ * for that provider until it's resolved.
+ */
+async function resolveProviderPublishingIdentity(
+  provider: string,
+  accessToken: string,
+): Promise<{ metadata: Record<string, unknown>; pageAccessToken?: string }> {
+  if (provider === "linkedin") {
+    try {
+      const res = await fetch("https://api.linkedin.com/v2/userinfo", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) return { metadata: {} };
+      const profile = (await res.json()) as { sub?: string; name?: string };
+      if (!profile.sub) return { metadata: {} };
+      return { metadata: { personUrn: `urn:li:person:${profile.sub}`, name: profile.name ?? null } };
+    } catch {
+      return { metadata: {} };
+    }
+  }
+
+  if (provider === "meta") {
+    try {
+      const pagesRes = await fetch(
+        `https://graph.facebook.com/v18.0/me/accounts?access_token=${encodeURIComponent(accessToken)}`,
+      );
+      if (!pagesRes.ok) return { metadata: {} };
+      const pagesData = (await pagesRes.json()) as { data?: Array<{ id: string; name?: string; access_token: string }> };
+      const page = pagesData.data?.[0];
+      if (!page?.id || !page.access_token) return { metadata: {} };
+
+      const igRes = await fetch(
+        `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account,name&access_token=${encodeURIComponent(page.access_token)}`,
+      );
+      const igData = igRes.ok
+        ? ((await igRes.json()) as { instagram_business_account?: { id: string }; name?: string })
+        : {};
+
+      return {
+        metadata: {
+          pageId: page.id,
+          pageName: igData.name ?? page.name ?? null,
+          instagramBusinessAccountId: igData.instagram_business_account?.id ?? null,
+        },
+        pageAccessToken: page.access_token,
+      };
+    } catch {
+      return { metadata: {} };
+    }
+  }
+
+  return { metadata: {} };
+}
+
+/**
  * Complete OAuth flow: exchange code, save connection, store credentials
  */
 export async function completeOAuthFlow(params: {
@@ -252,20 +326,25 @@ export async function completeOAuthFlow(params: {
       params.additionalParams
     );
 
+    const identity = await resolveProviderPublishingIdentity(params.provider, tokenData.accessToken);
+
     // Create connection record
     const connection = await upsertConnection({
       userId: params.userId,
       provider: params.provider,
       label: params.label || `${params.provider} Connection`,
       status: "active",
-      metadata: tokenData.metadata,
+      metadata: { ...tokenData.metadata, ...identity.metadata },
     });
 
-    // Store encrypted credentials
+    // Store encrypted credentials. For Meta, the page access token (not the
+    // user token) is what can actually publish - stored in the secret slot
+    // since it's a real credential, not just an id.
     await storeConnectionSecrets({
       connectionId: connection.id,
       accessToken: tokenData.accessToken,
       refreshToken: tokenData.refreshToken,
+      secret: identity.pageAccessToken ?? null,
       expiresAt: tokenData.expiresIn
         ? new Date(Date.now() + tokenData.expiresIn * 1000).toISOString()
         : null,

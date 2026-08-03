@@ -8,6 +8,7 @@ import { createRuntimeApproval } from "@/lib/runtime/approvals";
 import { logRuntimeAuditEvent } from "@/lib/runtime/audit";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { assertEmergencyStopInactive } from "@/lib/feature-flags";
+import { getActiveConnectionForProvider, getDecryptedConnectionSecrets } from "@/lib/connections";
 
 type Provider = "instagram" | "facebook" | "linkedin" | "x" | "youtube" | "tiktok";
 type JsonRecord = Record<string, unknown>;
@@ -28,15 +29,76 @@ async function postJson(url: string, token: string, body: JsonRecord) {
   return data;
 }
 
+/**
+ * Every publish call used to run exclusively through Dobly's own shared
+ * platform credentials (X_ACCESS_TOKEN, META_ACCESS_TOKEN, ...) - a user
+ * had no way to post through their own connected account even after
+ * connecting one, because nothing here ever looked. Prefer a live
+ * per-user connection (see oauth-service.ts's resolveProviderPublishingIdentity
+ * for how the extra identity fields below get populated at connect time);
+ * fall back to the shared platform credential only when the user hasn't
+ * connected their own account for this provider.
+ */
+async function resolveLinkedInCredential(userId: string): Promise<{ accessToken: string; personUrn: string; source: "user" | "platform" }> {
+  try {
+    const connection = await getActiveConnectionForProvider(userId, "linkedin");
+    const personUrn = typeof connection.metadata?.personUrn === "string" ? connection.metadata.personUrn : null;
+    if (personUrn) {
+      const secrets = await getDecryptedConnectionSecrets(connection.id);
+      if (secrets.accessToken) {
+        return { accessToken: secrets.accessToken, personUrn, source: "user" };
+      }
+    }
+  } catch {
+    // No active per-user LinkedIn connection - fall back below.
+  }
+  requireEnv(["LINKEDIN_ACCESS_TOKEN", "LINKEDIN_AUTHOR_URN"]);
+  return { accessToken: process.env.LINKEDIN_ACCESS_TOKEN!, personUrn: process.env.LINKEDIN_AUTHOR_URN!, source: "platform" };
+}
+
+async function resolveMetaCredential(userId: string): Promise<{
+  pageAccessToken: string;
+  pageId: string | null;
+  instagramBusinessAccountId: string | null;
+  source: "user" | "platform";
+}> {
+  try {
+    const connection = await getActiveConnectionForProvider(userId, "meta");
+    const pageId = typeof connection.metadata?.pageId === "string" ? connection.metadata.pageId : null;
+    if (pageId) {
+      const secrets = await getDecryptedConnectionSecrets(connection.id);
+      // The Page access token was stored in the secret slot at connect time
+      // (see oauth-service.ts) - the user access token in accessToken can't
+      // publish on its own.
+      if (secrets.secret) {
+        const instagramBusinessAccountId =
+          typeof connection.metadata?.instagramBusinessAccountId === "string"
+            ? connection.metadata.instagramBusinessAccountId
+            : null;
+        return { pageAccessToken: secrets.secret, pageId, instagramBusinessAccountId, source: "user" };
+      }
+    }
+  } catch {
+    // No active per-user Meta connection - fall back below.
+  }
+  requireEnv(["META_ACCESS_TOKEN"]);
+  return {
+    pageAccessToken: process.env.META_ACCESS_TOKEN!,
+    pageId: process.env.META_PAGE_ID ?? null,
+    instagramBusinessAccountId: process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID ?? null,
+    source: "platform",
+  };
+}
+
 async function publishToX(caption: string) {
   requireEnv(["X_ACCESS_TOKEN"]);
   return postJson("https://api.x.com/2/tweets", process.env.X_ACCESS_TOKEN!, { text: caption });
 }
 
-async function publishToLinkedIn(caption: string, mediaUrls: string[]) {
-  requireEnv(["LINKEDIN_ACCESS_TOKEN", "LINKEDIN_AUTHOR_URN"]);
-  return postJson("https://api.linkedin.com/v2/ugcPosts", process.env.LINKEDIN_ACCESS_TOKEN!, {
-    author: process.env.LINKEDIN_AUTHOR_URN,
+async function publishToLinkedIn(userId: string, caption: string, mediaUrls: string[]) {
+  const credential = await resolveLinkedInCredential(userId);
+  const result = await postJson("https://api.linkedin.com/v2/ugcPosts", credential.accessToken, {
+    author: credential.personUrn,
     lifecycleState: "PUBLISHED",
     specificContent: {
       "com.linkedin.ugc.ShareContent": {
@@ -47,32 +109,45 @@ async function publishToLinkedIn(caption: string, mediaUrls: string[]) {
     },
     visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
   });
+  return { ...result, publishedVia: credential.source };
 }
 
-async function publishToInstagram(caption: string, mediaUrls: string[]) {
-  requireEnv(["META_ACCESS_TOKEN", "INSTAGRAM_BUSINESS_ACCOUNT_ID"]);
+async function publishToInstagram(userId: string, caption: string, mediaUrls: string[]) {
   if (!mediaUrls[0]) throw new Error("Instagram publishing requires at least one public media URL.");
-  const token = process.env.META_ACCESS_TOKEN!;
-  const accountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID!;
-  const create = await postJson(`https://graph.facebook.com/v20.0/${accountId}/media`, token, {
+  const credential = await resolveMetaCredential(userId);
+  if (!credential.instagramBusinessAccountId) {
+    throw new Error(
+      credential.source === "user"
+        ? "Your connected Meta Page has no linked Instagram Business Account."
+        : "Instagram publishing requires INSTAGRAM_BUSINESS_ACCOUNT_ID to be configured.",
+    );
+  }
+  const create = await postJson(`https://graph.facebook.com/v20.0/${credential.instagramBusinessAccountId}/media`, credential.pageAccessToken, {
     image_url: mediaUrls[0],
     caption,
   });
   const creationId = String(create.id ?? "");
   if (!creationId) throw new Error("Instagram media container did not return an id.");
-  return postJson(`https://graph.facebook.com/v20.0/${accountId}/media_publish`, token, {
+  const result = await postJson(`https://graph.facebook.com/v20.0/${credential.instagramBusinessAccountId}/media_publish`, credential.pageAccessToken, {
     creation_id: creationId,
   });
+  return { ...result, publishedVia: credential.source };
 }
 
-async function publishToFacebook(caption: string, mediaUrls: string[]) {
-  requireEnv(["META_ACCESS_TOKEN", "META_PAGE_ID"]);
-  const pageId = process.env.META_PAGE_ID!;
-  const token = process.env.META_ACCESS_TOKEN!;
+async function publishToFacebook(userId: string, caption: string, mediaUrls: string[]) {
+  const credential = await resolveMetaCredential(userId);
+  if (!credential.pageId) {
+    throw new Error(
+      credential.source === "user"
+        ? "Your connected Meta account has no accessible Page to post to."
+        : "Facebook publishing requires META_PAGE_ID to be configured.",
+    );
+  }
   const url = mediaUrls[0]
-    ? `https://graph.facebook.com/v20.0/${pageId}/photos`
-    : `https://graph.facebook.com/v20.0/${pageId}/feed`;
-  return postJson(url, token, mediaUrls[0] ? { url: mediaUrls[0], caption } : { message: caption });
+    ? `https://graph.facebook.com/v20.0/${credential.pageId}/photos`
+    : `https://graph.facebook.com/v20.0/${credential.pageId}/feed`;
+  const result = await postJson(url, credential.pageAccessToken, mediaUrls[0] ? { url: mediaUrls[0], caption } : { message: caption });
+  return { ...result, publishedVia: credential.source };
 }
 
 async function publishToYoutube(caption: string, mediaUrls: string[]) {
@@ -97,11 +172,11 @@ async function publishToTikTok(caption: string, mediaUrls: string[]) {
   };
 }
 
-async function executeProvider(provider: Provider, caption: string, mediaUrls: string[]) {
+async function executeProvider(userId: string, provider: Provider, caption: string, mediaUrls: string[]) {
   if (provider === "x") return publishToX(caption);
-  if (provider === "linkedin") return publishToLinkedIn(caption, mediaUrls);
-  if (provider === "instagram") return publishToInstagram(caption, mediaUrls);
-  if (provider === "facebook") return publishToFacebook(caption, mediaUrls);
+  if (provider === "linkedin") return publishToLinkedIn(userId, caption, mediaUrls);
+  if (provider === "instagram") return publishToInstagram(userId, caption, mediaUrls);
+  if (provider === "facebook") return publishToFacebook(userId, caption, mediaUrls);
   if (provider === "youtube") return publishToYoutube(caption, mediaUrls);
   return publishToTikTok(caption, mediaUrls);
 }
@@ -183,7 +258,7 @@ export async function executePublishingRuntime(input: {
     for (const provider of input.providers) {
       const result = input.dryRun
         ? { provider, status: "dry_run", caption: input.caption, mediaUrls: input.mediaUrls ?? [] }
-        : await executeProvider(provider, input.caption, input.mediaUrls ?? []);
+        : await executeProvider(input.userId, provider, input.caption, input.mediaUrls ?? []);
       results.push({ provider, result });
     }
 

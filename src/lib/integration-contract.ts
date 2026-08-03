@@ -146,8 +146,8 @@ const CONTRACTS: IntegrationContract[] = [
   },
   {
     providerId: "linkedin",
-    readiness: "draft_only",
-    reason: "Executor exists, but person/company identity mapping needs verification.",
+    readiness: "code_ready",
+    reason: "OAuth resolves the member's own person URN via LinkedIn's OpenID Connect userinfo endpoint at connect time, and publishing posts through that connected identity (falling back to Dobly's shared account only if the user hasn't connected their own). Not yet live-verified against a real LinkedIn app/account - depends on the app having the OpenID Connect and Share on LinkedIn products enabled.",
   },
   {
     providerId: "zoom",
@@ -166,8 +166,8 @@ const CONTRACTS: IntegrationContract[] = [
   },
   {
     providerId: "meta",
-    readiness: "draft_only",
-    reason: "Executor exists, but social publishing requires media/container rules beyond a generic text post.",
+    readiness: "code_ready",
+    reason: "OAuth discovers the user's own Facebook Page and any linked Instagram Business Account at connect time (Graph API me/accounts + instagram_business_account field) and publishing posts through that Page's own access token - the media/container flow for Instagram photo posts is implemented. Not yet live-verified against a real Meta Business app/account - Instagram/Page publishing scopes commonly require Meta App Review before they work for accounts beyond the app's own admins/testers.",
   },
 ];
 
