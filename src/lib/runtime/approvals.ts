@@ -152,10 +152,15 @@ export async function decideRuntimeApproval(input: {
   // recognise (e.g. a memory-proposal approval, which is handled elsewhere)
   // fail harmlessly in the background instead of blocking this response.
   if (input.decision === "approved" && resume && typeof resume.type === "string") {
+    // job_queue.run_id is a foreign key to workflow_runs specifically, not
+    // to whatever table this approval's run actually lives in (a runtime
+    // command's parentRun is a durable_runtime_runs row) - passing it here
+    // throws a foreign key violation. It isn't needed for correctness: the
+    // resume handler below re-fetches the approval by id and reads its own
+    // run reference out of that row's metadata.
     await enqueueRuntimeApprovalResume({
       approvalId: approval.id,
       userId: input.userId,
-      runId: approval.run_id,
     }).catch((enqueueError) => {
       console.error(`Failed to enqueue resume for approval ${approval.id}:`, enqueueError);
     });
