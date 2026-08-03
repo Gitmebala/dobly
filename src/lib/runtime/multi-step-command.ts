@@ -515,7 +515,7 @@ export async function executeRuntimeCommandPlan(input: {
           const mentionedProviders = allProviders.filter((provider) =>
             lowerPrompt.includes(provider) || (provider === "x" && /\btwitter\b|\bx\.com\b/.test(lowerPrompt)),
           );
-          const providers = mentionedProviders.length ? mentionedProviders : (["instagram"] as const);
+          const providers = mentionedProviders.length ? mentionedProviders : (["instagram"] as Array<"instagram" | "facebook" | "linkedin" | "x" | "youtube" | "tiktok">);
           const mediaUrls = Array.isArray(input.context?.mediaUrls) ? (input.context!.mediaUrls as string[]) : [];
           const publishResult = await executePublishingRuntime({
             userId: input.userId,
