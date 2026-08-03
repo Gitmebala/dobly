@@ -21,6 +21,7 @@ export type DoblyCapability =
   | "create_document"
   | "edit_spreadsheet"
   | "manage_calendar"
+  | "check_availability"
   | "organize_documents"
   | "send_message"
   | "make_call"
@@ -56,6 +57,12 @@ export const DOBLY_CAPABILITIES: CapabilityDefinition[] = [
   { id: "create_document", label: "Create document", aliases: ["document", "doc", "proposal", "contract", "spec", "report"], riskLevel: "medium" },
   { id: "edit_spreadsheet", label: "Edit spreadsheet", aliases: ["spreadsheet", "sheet", "excel", "forecast", "model"], riskLevel: "medium" },
   { id: "manage_calendar", label: "Manage calendar", aliases: ["calendar", "meeting", "appointment", "schedule"], riskLevel: "medium" },
+  // Deliberately distinct from manage_calendar (event creation): "check my
+  // calendar for conflicts" was always resolving to the create-event native
+  // executor because both shared one capability, and CAPABILITY_NATIVE_TOOLS
+  // has no way to express "same provider, different action" within a single
+  // capability id.
+  { id: "check_availability", label: "Check calendar availability", aliases: ["availability", "conflict", "conflicts", "free/busy", "freebusy", "double-booked", "double booked", "am i free", "any conflicts", "time slot"], riskLevel: "low" },
   { id: "organize_documents", label: "Organize documents", aliases: ["file", "organize", "folder", "rename", "document filing"], riskLevel: "low" },
   { id: "send_message", label: "Send message", aliases: ["email", "message", "send", "whatsapp", "sms"], riskLevel: "high" },
   { id: "make_call", label: "Make a phone call", aliases: ["call", "phone", "ring", "dial", "voice call"], riskLevel: "high" },

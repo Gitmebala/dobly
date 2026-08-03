@@ -164,6 +164,7 @@ const NATIVE_TOOL_ARG_SCHEMAS: Record<string, string> = {
   gmail: `{"to": "email address", "subject": "string", "text": "plain text body"}`,
   google_docs: `{"title": "string", "content": "string"}`,
   google_calendar: `{"summary": "string", "description": "string", "start": "ISO 8601 datetime", "end": "ISO 8601 datetime", "attendees": ["email", "..."] (omit if none), "location": "string (omit if none)"}`,
+  calendar_check_availability: `{"start": "ISO 8601 datetime - the beginning of the window to check", "end": "ISO 8601 datetime - the end of the window to check"}`,
   google_drive: `{"fileId": "the Google Drive file id being organized - check prior step results for a documentId/fileId if the user didn't give one literally", "folderName": "destination folder name", "rename": "new file name (omit if not renaming)"}`,
   mpesa: `{"phoneNumber": "e.g. 2547XXXXXXXX", "amount": number, "accountReference": "string", "transactionDesc": "string"}`,
   paystack: `{"email": "customer email", "amount": number, "currency": "3-letter code, default KES"}`,

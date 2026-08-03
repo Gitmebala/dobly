@@ -278,6 +278,7 @@ const CAPABILITY_NATIVE_TOOLS: Partial<Record<DoblyCapability, string[]>> = {
   create_document: ["google_docs"],
   edit_spreadsheet: ["google_sheets"],
   manage_calendar: ["google_calendar"],
+  check_availability: ["calendar_check_availability"],
   organize_documents: ["google_drive"],
   // Same shape of bug as send_message, just for finance: collect_payment and
   // create_invoice are "high" risk by default, so before this they always

@@ -10,6 +10,7 @@ import { createRuntimeApproval } from "@/lib/runtime/approvals";
 import { logRuntimeAuditEvent } from "@/lib/runtime/audit";
 import { resolveUniversalExecutionPaths } from "@/lib/runtime/universal-mcp";
 import type { UniversalExecutionPath } from "@/lib/runtime/universal-mcp";
+import type { DoblyCapability } from "@/lib/runtime/capabilities";
 import { executeUniversalMcpPath, executeNativeCapabilityPath } from "@/lib/runtime/universal-mcp-execution";
 import { resolveCustomApiExecutionPaths, executeCustomApiAction } from "@/lib/runtime/custom-api";
 import type { CustomApiExecutionPath } from "@/lib/runtime/custom-api";
@@ -179,7 +180,20 @@ export async function executeRuntimeCommandPlan(input: {
   // MCP server never got a software_execution step at all for that request.
   const nativePaths = universalResolution.paths.filter((path) => path.kind === "native");
   const customApiPaths = customApiResolution.paths.filter((path) => path.kind === "custom_api");
-  const bestConnectedPath = mcpPaths[0] ?? nativePaths[0];
+  // inferCapabilitiesFromText can match several capabilities in one prompt
+  // (e.g. "calendar" -> manage_calendar AND "conflicts" -> check_availability
+  // both fire on "check my calendar for conflicts"). Prefer the more specific
+  // read-only check over the event-creating default so a plain availability
+  // question doesn't get routed into "create event".
+  const CAPABILITY_PREFERENCE_ORDER: DoblyCapability[] = ["check_availability"];
+  function preferPath(paths: UniversalExecutionPath[]) {
+    for (const capability of CAPABILITY_PREFERENCE_ORDER) {
+      const preferred = paths.find((path) => path.capability === capability);
+      if (preferred) return preferred;
+    }
+    return paths[0];
+  }
+  const bestConnectedPath = preferPath(mcpPaths) ?? preferPath(nativePaths);
   if (bestConnectedPath) {
     // dobly-inference.ts's routeIntentToExecution() unconditionally assigns a
     // static legacy tool (browser_software_ops, crm_sales_ops, ...) for any
