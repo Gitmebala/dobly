@@ -87,14 +87,30 @@ export async function decideRuntimeApproval(input: {
   note?: string | null;
 }) {
   const admin = createAdminSupabaseClient();
-  const { data, error } = await admin.rpc("dobly_decide_runtime_approval", {
-    p_approval_id: input.approvalId,
-    p_user_id: input.userId,
-    p_decision: input.decision,
-    p_note: input.note ?? null,
-  }).single();
+  // Not the dobly_decide_runtime_approval RPC: it does this same update, but
+  // inside the same transaction also inserts into job_queue with this
+  // approval's run_id - which is a durable_runtime_runs id, not a
+  // workflow_runs id, and job_queue.run_id is a foreign key to workflow_runs
+  // specifically. That insert has been throwing on every single runtime
+  // approval, silently rolling back the whole transaction including the
+  // status change - so no runtime approval has ever actually recorded a
+  // decision. Replicate the RPC's safe pending->decided transition directly
+  // (the .eq("status","pending") still guards against a double-decide race)
+  // and enqueue the resume job separately below, without the bad run_id.
+  const { data, error } = await admin
+    .from("runtime_approvals")
+    .update({
+      status: input.decision,
+      decided_at: new Date().toISOString(),
+      decision_note: input.note?.slice(0, 2000) ?? null,
+    })
+    .eq("id", input.approvalId)
+    .eq("user_id", input.userId)
+    .eq("status", "pending")
+    .select("*")
+    .single();
 
-  if (error || !data) throw new Error(error?.message ?? "Failed to update runtime approval.");
+  if (error || !data) throw new Error(error?.message ?? "Approval not found or already decided.");
   const approval = data as RuntimeApprovalRecord;
   await logRuntimeAuditEvent({
     userId: input.userId,
