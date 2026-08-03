@@ -400,7 +400,18 @@ export async function runDoblyOperator(input: {
       capabilityTags: operator.capability_tags,
       guardrails: operator.guardrails,
     },
-    intent: outcomeContractState.contract.intent as unknown as JsonRecord,
+    // Not outcomeContractState.contract.intent: that contract is generated
+    // once from the operator's original hiring mission and reused for every
+    // future run as long as it stays "approved" (see ensureOutcomeContract).
+    // Passing its intent here pinned departmentId/workTypeId/outputTypeId -
+    // and therefore preferredToolId - to whatever the FIRST message happened
+    // to classify as, for every message this operator would ever process.
+    // A mission like "...email me a short summary..." trips the video
+    // keyword rule on "short", permanently routing every later message
+    // (including totally unrelated ones like a calendar check) to the
+    // unconfigured creative_media_ops tool. Leave this null so the runtime
+    // classifies intent fresh from each message's own prompt instead.
+    intent: null,
   });
 
   const admin = createAdminSupabaseClient();

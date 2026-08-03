@@ -89,7 +89,11 @@ const WORK_TYPE_RULES: Array<KeywordRule<DoblyWorkTypeId>> = [
 ];
 
 const OUTPUT_RULES: Array<KeywordRule<DoblyOutputTypeId>> = [
-  { value: "video", patterns: [/video|reel|short|tiktok|youtube|animation|animatic|motion graphics/i] },
+  // Bare "short" matched ordinary English ("a short summary", "fall short",
+  // "short notice") and, since this is the first rule tested, won every tie -
+  // permanently misclassifying any operator whose mission mentioned it as
+  // needing video production. Require it in actual video-adjacent phrasing.
+  { value: "video", patterns: [/video|reel|tiktok|youtube|animation|animatic|motion graphics|short[- ]form|\bshorts\b/i] },
   { value: "image_design", patterns: [/image|design|graphic|poster|thumbnail|mockup|figma|canva|cad|3d model|render|blueprint|prototype/i] },
   { value: "presentation", patterns: [/slides|deck|presentation|pitch deck|slide deck|powerpoint|pptx?/i] },
   { value: "spreadsheet_report", patterns: [/spreadsheet|sheet|excel|forecast|model|tableau|csv/i] },
