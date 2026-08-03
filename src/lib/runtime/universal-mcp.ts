@@ -277,6 +277,8 @@ const CAPABILITY_NATIVE_TOOLS: Partial<Record<DoblyCapability, string[]>> = {
   send_message: ["gmail"],
   create_document: ["google_docs"],
   edit_spreadsheet: ["google_sheets"],
+  manage_calendar: ["google_calendar"],
+  organize_documents: ["google_drive"],
   // Same shape of bug as send_message, just for finance: collect_payment and
   // create_invoice are "high" risk by default, so before this they always
   // became a fallback path even with a real, validated M-Pesa/Paystack

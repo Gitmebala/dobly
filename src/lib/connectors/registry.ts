@@ -2,7 +2,7 @@ import type { ConnectorDefinition, ConnectorExecutor } from "@/lib/connectors/sd
 import { emailConnectorExecutor } from "@/lib/connectors/generic/email";
 import { fileConnectorExecutor } from "@/lib/connectors/generic/file";
 import { httpConnectorExecutor } from "@/lib/connectors/generic/http";
-import { googleGmailSendExecutor, googleDocsCreateExecutor, googleSheetsAppendExecutor, googleSheetsReadExecutor, googleSheetsAnalyzeExecutor, googleCalendarCreateEventExecutor } from "@/lib/connectors/native/google";
+import { googleGmailSendExecutor, googleDocsCreateExecutor, googleSheetsAppendExecutor, googleSheetsReadExecutor, googleSheetsAnalyzeExecutor, googleCalendarCreateEventExecutor, googleCalendarCheckAvailabilityExecutor, googleDriveOrganizeExecutor } from "@/lib/connectors/native/google";
 import { mpesaStkPushExecutor } from "@/lib/connectors/native/mpesa";
 import { orchestratorDocumentExecutor } from "@/lib/connectors/native/orchestrator";
 import { slackSendMessageExecutor } from "@/lib/connectors/native/slack";
@@ -90,6 +90,8 @@ const EXECUTORS = new Map<string, ConnectorExecutor>([
   [googleSheetsReadExecutor.id, googleSheetsReadExecutor],
   [googleSheetsAnalyzeExecutor.id, googleSheetsAnalyzeExecutor],
   [googleCalendarCreateEventExecutor.id, googleCalendarCreateEventExecutor],
+  [googleCalendarCheckAvailabilityExecutor.id, googleCalendarCheckAvailabilityExecutor],
+  [googleDriveOrganizeExecutor.id, googleDriveOrganizeExecutor],
   // M-PESA
   [mpesaStkPushExecutor.id, mpesaStkPushExecutor],
   // Orchestrator

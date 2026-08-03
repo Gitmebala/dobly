@@ -30,6 +30,11 @@ const TOOL_TO_EXECUTOR: Record<string, string> = {
   sheets_analyze: "native.google.sheets.analyze",
   google_calendar: "native.google.calendar.create-event",
   calendar_create_event: "native.google.calendar.create-event",
+  check_availability: "native.google.calendar.check-availability",
+  calendar_check_availability: "native.google.calendar.check-availability",
+  organize_documents: "native.google.drive.organize",
+  file_document: "native.google.drive.organize",
+  google_drive: "native.google.drive.organize",
 
   // Messaging
   slack: "native.slack.send",

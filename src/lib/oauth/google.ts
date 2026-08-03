@@ -1,11 +1,26 @@
 import crypto from "crypto";
 
+// drive.file (not the full "drive" scope) deliberately: it only grants
+// access to files/folders this app creates or that the user explicitly
+// opens with it, not the user's entire existing Drive. The full "drive"
+// scope is a Google-restricted scope requiring a formal security
+// assessment before it can be used with real users beyond a small test
+// allowlist - impractical to ship on. This does mean "organize documents"
+// only ever covers what Dobly itself created, not a user's pre-existing
+// files; that's a real product constraint, not an oversight.
+//
+// calendar.events was missing entirely, so native.google.calendar.
+// create-event has never had a token that could actually call the
+// Calendar API - it would fail with insufficient permission on every
+// real attempt.
 const GOOGLE_SCOPES = [
   "openid",
   "email",
   "profile",
   "https://www.googleapis.com/auth/gmail.send",
   "https://www.googleapis.com/auth/spreadsheets",
+  "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/calendar.events",
 ];
 
 function signState(payload: string) {

@@ -356,3 +356,142 @@ export const googleCalendarCreateEventExecutor: ConnectorExecutor = {
     };
   },
 };
+
+// "Admin" promised booking that's aware of real conflicts, not blind event
+// creation. Uses Calendar's freeBusy API to check for overlap before a
+// caller decides to create the event - real conflict-awareness, not a
+// simulation.
+export const googleCalendarCheckAvailabilityExecutor: ConnectorExecutor = {
+  id: "native.google.calendar.check-availability",
+  async execute(context) {
+    const { accessToken, connection } = await getGoogleConnection(
+      context.workflow.user_id,
+      typeof context.config.connectionId === "string" ? context.config.connectionId : undefined
+    );
+    const calendarId = String(
+      context.config.calendarId ??
+        (connection.metadata as Record<string, unknown>)?.calendarId ??
+        "primary"
+    ).trim();
+    const start = String(context.config.start ?? "").trim();
+    const end = String(context.config.end ?? "").trim();
+    if (!start || !end) {
+      throw new Error("Google Calendar availability check requires start and end.");
+    }
+
+    const response = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        timeMin: start,
+        timeMax: end,
+        items: [{ id: calendarId }],
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(`Google Calendar availability check failed: ${JSON.stringify(data)}`);
+    }
+
+    const busy = (data.calendars?.[calendarId]?.busy ?? []) as Array<{ start: string; end: string }>;
+    return {
+      provider: "google",
+      service: "calendar",
+      calendarId,
+      available: busy.length === 0,
+      conflicts: busy,
+    };
+  },
+};
+
+// Deliberately scoped to files/folders Dobly itself creates (drive.file
+// scope - see the scope comment in lib/oauth/google.ts). "Organize a
+// document" here means: ensure a named folder exists, then move a
+// Dobly-created file into it. It cannot see or move a user's pre-existing
+// Drive files - that would need the "drive" restricted scope and Google's
+// app-verification review, which isn't a realistic MVP dependency.
+async function ensureDriveFolder(accessToken: string, folderName: string): Promise<string> {
+  const query = encodeURIComponent(
+    `name = '${folderName.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+  );
+  const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name)`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const searchData = await searchResponse.json().catch(() => ({}));
+  if (searchResponse.ok && Array.isArray(searchData.files) && searchData.files[0]?.id) {
+    return String(searchData.files[0].id);
+  }
+
+  const createResponse = await fetch("https://www.googleapis.com/drive/v3/files", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name: folderName, mimeType: "application/vnd.google-apps.folder" }),
+  });
+  const createData = await createResponse.json().catch(() => ({}));
+  if (!createResponse.ok || !createData.id) {
+    throw new Error(`Google Drive folder create failed: ${JSON.stringify(createData)}`);
+  }
+  return String(createData.id);
+}
+
+export const googleDriveOrganizeExecutor: ConnectorExecutor = {
+  id: "native.google.drive.organize",
+  async execute(context) {
+    const { accessToken } = await getGoogleConnection(
+      context.workflow.user_id,
+      typeof context.config.connectionId === "string" ? context.config.connectionId : undefined
+    );
+    const fileId = String(context.config.fileId ?? "").trim();
+    const folderName = String(context.config.folderName ?? context.config.folder ?? "").trim();
+    const newName = typeof context.config.rename === "string" ? context.config.rename.trim() : null;
+
+    if (!fileId || !folderName) {
+      throw new Error("Google Drive organize requires fileId and folderName.");
+    }
+
+    const folderId = await ensureDriveFolder(accessToken, folderName);
+
+    const currentResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=parents`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const currentData = await currentResponse.json().catch(() => ({}));
+    if (!currentResponse.ok) {
+      throw new Error(`Google Drive file lookup failed: ${JSON.stringify(currentData)}`);
+    }
+    const previousParents = Array.isArray(currentData.parents) ? currentData.parents.join(",") : "";
+
+    const updateUrl = new URL(`https://www.googleapis.com/drive/v3/files/${fileId}`);
+    updateUrl.searchParams.set("addParents", folderId);
+    if (previousParents) updateUrl.searchParams.set("removeParents", previousParents);
+    updateUrl.searchParams.set("fields", "id,name,parents");
+
+    const updateResponse = await fetch(updateUrl.toString(), {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newName ? { name: newName } : {}),
+    });
+    const updateData = await updateResponse.json().catch(() => ({}));
+    if (!updateResponse.ok) {
+      throw new Error(`Google Drive organize failed: ${JSON.stringify(updateData)}`);
+    }
+
+    return {
+      provider: "google",
+      service: "drive",
+      fileId,
+      folderId,
+      folderName,
+      name: updateData.name ?? newName ?? null,
+    };
+  },
+};
