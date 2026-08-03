@@ -71,7 +71,8 @@ export async function exchangeGoogleCode(params: { code: string; appUrl: string 
   });
 
   if (!response.ok) {
-    throw new Error("Failed to exchange Google OAuth code.");
+    const body = await response.text().catch(() => "");
+    throw new Error(`Failed to exchange Google OAuth code (${response.status}): ${body.slice(0, 300)}`);
   }
 
   return (await response.json()) as {

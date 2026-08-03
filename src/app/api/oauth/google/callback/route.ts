@@ -59,7 +59,11 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.redirect(new URL("/dashboard/settings?tab=connections&success=google_connected", req.url));
-  } catch {
-    return NextResponse.redirect(new URL("/dashboard/settings?tab=connections&error=google_oauth", req.url));
+  } catch (error) {
+    console.error("Google OAuth callback failed:", error);
+    const message = error instanceof Error ? error.message : "unknown_error";
+    return NextResponse.redirect(
+      new URL(`/dashboard/settings?tab=connections&error=google_oauth&detail=${encodeURIComponent(message.slice(0, 200))}`, req.url)
+    );
   }
 }
