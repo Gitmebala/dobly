@@ -10,7 +10,7 @@ import { createRuntimeApproval } from "@/lib/runtime/approvals";
 import { logRuntimeAuditEvent } from "@/lib/runtime/audit";
 import { resolveUniversalExecutionPaths } from "@/lib/runtime/universal-mcp";
 import type { UniversalExecutionPath } from "@/lib/runtime/universal-mcp";
-import { executeUniversalMcpPath } from "@/lib/runtime/universal-mcp-execution";
+import { executeUniversalMcpPath, executeNativeCapabilityPath } from "@/lib/runtime/universal-mcp-execution";
 import { resolveCustomApiExecutionPaths, executeCustomApiAction } from "@/lib/runtime/custom-api";
 import type { CustomApiExecutionPath } from "@/lib/runtime/custom-api";
 
@@ -172,15 +172,22 @@ export async function executeRuntimeCommandPlan(input: {
     prompt: input.prompt,
   }).catch(() => ({ capabilities: [], paths: [] }));
   const mcpPaths = universalResolution.paths.filter((path) => path.kind === "mcp");
+  // `resolveUniversalExecutionPaths` also resolves `kind: "native"` paths - a
+  // real, live connector (Gmail/Calendar/Drive/M-Pesa/Paystack/HubSpot/voice)
+  // reached via office/native-tool-bridge.ts. Only "mcp" was ever spliced into
+  // the plan here, so a coworker with e.g. a connected Google account but no
+  // MCP server never got a software_execution step at all for that request.
+  const nativePaths = universalResolution.paths.filter((path) => path.kind === "native");
   const customApiPaths = customApiResolution.paths.filter((path) => path.kind === "custom_api");
-  if (mcpPaths.length > 0 && !steps.some((step) => step.type === "software_execution")) {
+  const bestConnectedPath = mcpPaths[0] ?? nativePaths[0];
+  if (bestConnectedPath && !steps.some((step) => step.type === "software_execution")) {
     steps.splice(Math.min(steps.length, 1), 0, {
       id: "step_universal_mcp",
       type: "software_execution",
       title: "Use connected software",
       task: input.prompt,
-      toolId: `universal:${mcpPaths[0].capability}`,
-      requiresApproval: mcpPaths[0].approvalRequired,
+      toolId: `universal:${bestConnectedPath.capability}`,
+      requiresApproval: bestConnectedPath.approvalRequired,
     });
   }
   if (customApiPaths.length > 0 && !steps.some((step) => step.type === "software_execution" || step.type === "custom_api")) {
@@ -245,52 +252,92 @@ export async function executeRuntimeCommandPlan(input: {
 
       if (step.type === "software_execution" && step.toolId) {
         if (step.toolId.startsWith("universal:")) {
-          const path = mcpPaths[0];
-          if (path?.approvalRequired && !input.approved) {
-            const approval = await createRuntimeApproval({
+          const capability = step.toolId.slice("universal:".length);
+          const path =
+            mcpPaths.find((candidate) => candidate.capability === capability) ??
+            nativePaths.find((candidate) => candidate.capability === capability);
+
+          if (!path) {
+            // The plan-building pass above resolved a connected path, but by
+            // the time this step runs the resolution disagrees (stale intent
+            // carried a toolId forward, a connection was removed mid-run,
+            // etc). This used to be passed straight into executeUniversalMcpPath
+            // unguarded and crash the whole run with "Cannot read properties
+            // of undefined" - fail just this step instead.
+            stepResults.push({ step, status: "failed", error: `No connected execution path is available for ${capability}.` });
+            await input.onEvent?.({
+              eventType: "tool_call_completed",
+              title: "Connected software unavailable",
+              summary: `No connected execution path is available for ${capability}.`,
+              runId: parentRun.id,
+              severity: "danger",
+              payload: { step },
+            });
+          } else if (path.kind === "native") {
+            const result = await executeNativeCapabilityPath({
               userId: input.userId,
               workspaceId: input.workspaceId ?? null,
-              runId: parentRun.id,
-              title: `Approve ${path.label}`,
-              message: `Dobly found a connected software path for: ${input.prompt}. Approve before it acts inside ${path.connection?.label ?? "the connected tool"}.`,
-              actionLabel: "Approve and run",
-              riskLevel: path.riskLevel,
-              metadata: {
-                resume: { type: "runtime_command", prompt: input.prompt, context: input.context ?? {}, intent: commandPlan.intent },
-                path,
-                previousSteps: stepResults,
-              },
+              prompt: step.task,
+              context: { parentRunId: parentRun.id, previousSteps: stepResults, ...input.context },
+              path,
+              intent: commandPlan.intent,
             });
-            stepResults.push({ step, approvalId: approval.id, status: "needs_approval", path });
+            stepResults.push({ step, runId: result.run.id, status: result.run.status, path });
             await input.onEvent?.({
-              eventType: "approval_requested",
-              title: approval.title,
-              summary: approval.message,
-              runId: parentRun.id,
-              approvalId: approval.id,
-              severity: "warning",
-              payload: { step, approval, path },
+              eventType: "tool_call_completed",
+              title: "Connected software completed",
+              summary: result.run.summary ?? "Connected software path completed.",
+              runId: result.run.id,
+              severity: result.run.status === "failed" ? "danger" : "success",
+              payload: { step, result, path },
             });
-            break;
+          } else {
+            if (path.approvalRequired && !input.approved) {
+              const approval = await createRuntimeApproval({
+                userId: input.userId,
+                workspaceId: input.workspaceId ?? null,
+                runId: parentRun.id,
+                title: `Approve ${path.label}`,
+                message: `Dobly found a connected software path for: ${input.prompt}. Approve before it acts inside ${path.connection?.label ?? "the connected tool"}.`,
+                actionLabel: "Approve and run",
+                riskLevel: path.riskLevel,
+                metadata: {
+                  resume: { type: "runtime_command", prompt: input.prompt, context: input.context ?? {}, intent: commandPlan.intent },
+                  path,
+                  previousSteps: stepResults,
+                },
+              });
+              stepResults.push({ step, approvalId: approval.id, status: "needs_approval", path });
+              await input.onEvent?.({
+                eventType: "approval_requested",
+                title: approval.title,
+                summary: approval.message,
+                runId: parentRun.id,
+                approvalId: approval.id,
+                severity: "warning",
+                payload: { step, approval, path },
+              });
+              break;
+            }
+            const result = await executeUniversalMcpPath({
+              userId: input.userId,
+              workspaceId: input.workspaceId ?? null,
+              prompt: step.task,
+              context: { parentRunId: parentRun.id, previousSteps: stepResults, ...input.context },
+              path,
+              approved: input.approved ?? false,
+              intent: commandPlan.intent,
+            });
+            stepResults.push({ step, runId: result.run.id, status: result.run.status, path });
+            await input.onEvent?.({
+              eventType: "tool_call_completed",
+              title: "Connected software completed",
+              summary: result.run.summary ?? "Connected software path completed.",
+              runId: result.run.id,
+              severity: result.run.status === "failed" ? "danger" : "success",
+              payload: { step, result, path },
+            });
           }
-          const result = await executeUniversalMcpPath({
-            userId: input.userId,
-            workspaceId: input.workspaceId ?? null,
-            prompt: step.task,
-            context: { parentRunId: parentRun.id, previousSteps: stepResults, ...input.context },
-            path,
-            approved: input.approved ?? false,
-            intent: commandPlan.intent,
-          });
-          stepResults.push({ step, runId: result.run.id, status: result.run.status, path });
-          await input.onEvent?.({
-            eventType: "tool_call_completed",
-            title: "Connected software completed",
-            summary: result.run.summary ?? "Connected software path completed.",
-            runId: result.run.id,
-            severity: result.run.status === "failed" ? "danger" : "success",
-            payload: { step, result, path },
-          });
         } else {
           const result = await createSoftwareExecutionRun({
             userId: input.userId,

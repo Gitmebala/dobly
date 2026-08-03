@@ -225,6 +225,28 @@ function staticCoreCandidates(prompt: string, intent: DoblyExecutionIntent, tool
     .sort((a, b) => b.score - a.score);
 }
 
+// No native engine's `supports()` predicate matched, and no static core tool
+// scored above zero (e.g. an Admin/HR/Projects/Compliance/Marketing/Creative
+// prompt that isn't literally "research"/"media"/"publish"/"pay"/"remember").
+// Every branch below used to fall through to `sorted[0]`, which is `undefined`
+// on an empty array - `strategyPreview.primary.toolId` back in
+// plain-english-command.ts then threw "Cannot read properties of undefined
+// (reading 'toolId')" for any department without a dedicated keyword match.
+// This is a guaranteed-safe generic-reasoning candidate, never absent.
+const GENERIC_FALLBACK_CANDIDATE: DoblyExecutionStrategyCandidate = {
+  id: "generic_reasoning_engine",
+  kind: "native_outcome_engine",
+  label: "Generic Reasoning Engine",
+  score: 1,
+  reason: "No specialized engine or connected tool matched this request; Dobly will reason and answer directly.",
+  route: "research",
+  producesArtifactsDirectly: true,
+  changesWorldState: false,
+  requiresApproval: false,
+  capabilityState: "live",
+  engineId: "generic_reasoning_engine",
+};
+
 function choosePrimary(prompt: string, intent: DoblyExecutionIntent, candidates: DoblyExecutionStrategyCandidate[]) {
   const lower = prompt.toLowerCase();
   const sorted = [...candidates].sort((a, b) => b.score - a.score);
@@ -234,14 +256,14 @@ function choosePrimary(prompt: string, intent: DoblyExecutionIntent, candidates:
   const bestUniversal = sorted.find((candidate) => candidate.kind === "universal_user_mcp");
 
   if (intent.trustLevelId === "human_only") {
-    return bestApprovalOnly ?? bestNative ?? bestStatic ?? bestUniversal ?? sorted[0];
+    return bestApprovalOnly ?? bestNative ?? bestStatic ?? bestUniversal ?? sorted[0] ?? GENERIC_FALLBACK_CANDIDATE;
   }
 
   if (explicitToolMention(lower) || isExternalSystemHeavy(intent, lower)) {
     if (wantsDirectArtifact(intent) && bestNative && bestNative.score >= (bestStatic?.score ?? 0) - 8) {
       return bestNative;
     }
-    return bestUniversal ?? bestStatic ?? bestNative ?? sorted[0];
+    return bestUniversal ?? bestStatic ?? bestNative ?? sorted[0] ?? GENERIC_FALLBACK_CANDIDATE;
   }
 
   if (wantsDirectArtifact(intent) && bestNative && (!bestStatic || bestNative.score >= bestStatic.score - 4)) {
@@ -252,7 +274,7 @@ function choosePrimary(prompt: string, intent: DoblyExecutionIntent, candidates:
     return bestUniversal;
   }
 
-  return bestStatic ?? bestNative ?? bestUniversal ?? sorted[0];
+  return bestStatic ?? bestNative ?? bestUniversal ?? sorted[0] ?? GENERIC_FALLBACK_CANDIDATE;
 }
 
 export { choosePrimary };

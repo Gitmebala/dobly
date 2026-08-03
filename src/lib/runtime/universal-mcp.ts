@@ -288,6 +288,14 @@ const CAPABILITY_NATIVE_TOOLS: Partial<Record<DoblyCapability, string[]>> = {
   update_crm: ["hubspot"],
 };
 
+// Exposed so a resolved `kind: "native"` path can be dispatched by its actual
+// execution engine later (see multi-step-command.ts / universal-mcp-execution.ts)
+// without duplicating this capability->tool-name table a second time.
+export function getCapabilityNativeToolNames(capability: DoblyCapability): string[] {
+  if (capability === "make_call") return ["make_call"];
+  return CAPABILITY_NATIVE_TOOLS[capability] ?? [];
+}
+
 async function resolveNativeCapabilityPath(
   userId: string,
   capability: DoblyCapability,
