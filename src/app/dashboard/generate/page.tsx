@@ -765,14 +765,14 @@ export default function GeneratePage() {
           </ol>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
-              href={result.next_url ?? (result.pod_id ? `/dashboard/pods/${result.pod_id}` : `/dashboard/workflows/${result.workflow_id}?mode=sandbox`)}
+              href={result.next_url ?? (result.pod_id ? `/dashboard/pods/${result.pod_id}` : `/dashboard/coworkers?operatorId=${result.workflow_id}`)}
               className="btn-primary"
             >
               Open Pod
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link href={`/dashboard/workflows/${result.workflow_id}`} className="btn-secondary">
-              Open advanced editor
+            <Link href={`/dashboard/coworkers?operatorId=${result.workflow_id}`} className="btn-secondary">
+              Open coworker
             </Link>
             <button type="button" onClick={() => setConnectionsModalOpen(true)} className="btn-ghost">
               Open access

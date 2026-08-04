@@ -18,7 +18,11 @@ export async function getPlanUsageSnapshot(userId: string, planId: PlanId): Prom
 
   const [{ count: workflowCount }, { count: standardExecutions }, { count: intelligenceActions }] =
     await Promise.all([
-      admin.from("workflows").select("*", { count: "exact", head: true }).eq("user_id", userId),
+      admin
+        .from("dobly_operators")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .neq("status", "archived"),
       admin
         .from("usage_logs")
         .select("*", { count: "exact", head: true })

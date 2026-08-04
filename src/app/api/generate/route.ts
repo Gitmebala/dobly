@@ -3,19 +3,18 @@ import { generateWorkflowBlueprint } from "@/lib/anthropic";
 import { resolveDoblyCapabilities } from "@/lib/capability-resolver";
 import { findOperationalConnection } from "@/lib/connection-readiness";
 import { buildDoblyGenerationBrief } from "@/lib/dobly-ops";
+import { createDoblyOperator, listDoblyOperators } from "@/lib/dobly-operators";
 import { attachDoblyOperatingModel, buildDoblyOperatingModel, DOBLY_WORK_TALENTS } from "@/lib/dobly-operating-model";
 import { analyzePromptDesign, buildGenerationDesignBrief } from "@/lib/generation";
 import { canCreateWorkflow } from "@/lib/plans";
 import { buildAndStorePodDraft } from "@/lib/pods/service";
 import { getWorkflowConnectionStrategy } from "@/lib/provider-strategy";
 import { rateLimits } from "@/lib/rate-limit";
-import { syncWorkflowRuntimeRecords } from "@/lib/runtime/records";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { generateWorkflowSchema } from "@/lib/validations";
-import { createWorkflowVersion } from "@/lib/versioning";
 import { validateWorkflowBlueprintForActivation } from "@/lib/workflow-definition";
 import { getDoblyVerticalById } from "@/lib/verticals";
-import type { ApiError, Connection, GenerateWorkflowResponse } from "@/types";
+import type { ApiError, Connection, GenerateWorkflowResponse, Workflow } from "@/types";
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabaseClient();
@@ -55,13 +54,22 @@ export async function POST(req: NextRequest) {
   const analysis = analyzePromptDesign(prompt);
   const vertical = getDoblyVerticalById(analysis.verticalId);
 
-  const [{ data: profile }, { data: businessProfile }, { data: existingWorkflows }, { data: existingConnections }] =
+  const [{ data: profile }, { data: businessProfile }, existingOperators, { data: existingConnections }] =
     await Promise.all([
       supabase.from("profiles").select("plan, notification_preference").eq("id", user.id).single(),
       supabase.from("business_profiles").select("*").eq("user_id", user.id).single(),
-      supabase.from("workflows").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+      listDoblyOperators({ userId: user.id }).catch(() => []),
       supabase.from("connections").select("*").eq("user_id", user.id),
     ]);
+
+  // Operators are the real coworker system; this shape only feeds text-generation
+  // context (title/status/time_saved_minutes are the only fields dobly-ops.ts reads).
+  const existingWorkflows = existingOperators.map((operator) => ({
+    id: operator.id,
+    title: operator.name,
+    status: operator.status,
+    time_saved_minutes: 0,
+  })) as unknown as Workflow[];
 
   if (!profile) {
     return NextResponse.json<ApiError>({ error: "Profile not found" }, { status: 404 });
@@ -137,44 +145,19 @@ export async function POST(req: NextRequest) {
   });
   blueprint = attachDoblyOperatingModel(blueprint, operatingModel);
 
-  const { data: workflow, error: insertError } = await supabase
-    .from("workflows")
-    .insert({
-      user_id: user.id,
-      title: blueprint.name,
-      description: blueprint.description,
-      prompt: enrichedPrompt,
-      blueprint,
-      status: "draft",
-      trigger_type: blueprint.definition?.trigger.type ?? "manual",
-      webhook_path: blueprint.definition?.trigger.webhook_path ?? null,
-      time_saved_minutes: parseTimeSaved(blueprint.estimated_time_saved),
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !workflow) {
-    console.error("Database insert error:", insertError);
+  let operator;
+  try {
+    operator = await createDoblyOperator({
+      userId: user.id,
+      name: blueprint.name,
+      mission: blueprint.description || prompt,
+      connectedToolIds: requiredProviders,
+    });
+  } catch (error) {
+    console.error("Operator creation error:", error);
     return NextResponse.json<ApiError>({ error: "Failed to save workflow" }, { status: 500 });
   }
-
-  await createWorkflowVersion({
-    workflowId: workflow.id,
-    userId: user.id,
-    title: blueprint.name,
-    description: blueprint.description,
-    blueprint,
-    status: "draft",
-  }).catch(() => undefined);
-
-  await syncWorkflowRuntimeRecords({
-    workflowId: workflow.id,
-    userId: user.id,
-    workflowTitle: blueprint.name,
-    prompt: enrichedPrompt,
-    status: "draft",
-    blueprint,
-  }).catch(() => undefined);
+  const workflow = { id: operator.id };
 
   const podDraft = await buildAndStorePodDraft(supabase as any, {
     userId: user.id,
@@ -272,7 +255,7 @@ export async function POST(req: NextRequest) {
         ? `/dashboard/pods/${podDraft.pod.id}`
         : missingProviders.length > 0
           ? "/dashboard/connections"
-          : `/dashboard/workflows/${workflow.id}`,
+          : `/dashboard/coworkers?operatorId=${workflow.id}`,
       vertical: vertical
         ? {
             id: vertical.id,
@@ -309,14 +292,4 @@ export async function POST(req: NextRequest) {
       },
     },
   );
-}
-
-function parseTimeSaved(str: string): number {
-  if (!str) return 0;
-  const lower = str.toLowerCase();
-  const num = parseFloat(lower.match(/[\d.]+/)?.[0] ?? "0");
-  if (lower.includes("hour")) return num * 60;
-  if (lower.includes("min")) return num;
-  if (lower.includes("day")) return num * 60 * 8;
-  return num * 60;
 }
