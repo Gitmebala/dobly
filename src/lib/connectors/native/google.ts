@@ -2,9 +2,45 @@ import {
   getActiveConnectionForProvider,
   getConnectionById,
   getDecryptedConnectionSecrets,
+  storeConnectionSecrets,
 } from "@/lib/connections";
 import { anthropic } from "@/lib/anthropic";
 import type { ConnectorExecutor } from "@/lib/connectors/sdk";
+
+// Google access tokens expire (typically ~1 hour) and nothing anywhere in
+// this codebase ever refreshed one before use - every Google-connected
+// action (Gmail, Docs, Sheets, Calendar, Drive all share this one helper)
+// worked for roughly an hour after connect/reconnect and then failed with a
+// real 401 from Google forever after, silently, until the user manually
+// reconnected. The refresh_token needed to fix this was already being
+// stored at connect time (see oauth/google.ts's exchangeGoogleCode) - it
+// was just never read back out and used.
+async function refreshGoogleAccessToken(connectionId: string, refreshToken: string) {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID ?? "",
+      client_secret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) {
+    throw new Error(`Google token refresh failed: ${JSON.stringify(data)}`);
+  }
+  const expiresAt = data.expires_in ? new Date(Date.now() + data.expires_in * 1000).toISOString() : null;
+  await storeConnectionSecrets({
+    connectionId,
+    accessToken: data.access_token,
+    // Google only returns a new refresh_token occasionally; keep the
+    // existing one when it doesn't.
+    refreshToken: data.refresh_token ?? refreshToken,
+    expiresAt,
+  });
+  return data.access_token as string;
+}
 
 async function getGoogleConnection(userId: string, connectionId?: string) {
   const connection = connectionId
@@ -14,6 +50,16 @@ async function getGoogleConnection(userId: string, connectionId?: string) {
   if (!secrets.accessToken) {
     throw new Error("Google connection is missing an access token.");
   }
+
+  // Refresh proactively if we know it's expired or expiring within a minute,
+  // rather than waiting for Google to reject the call.
+  const expiresAt = secrets.expiresAt ? new Date(secrets.expiresAt).getTime() : null;
+  const isExpiredOrUnknown = expiresAt === null || expiresAt < Date.now() + 60_000;
+  if (isExpiredOrUnknown && secrets.refreshToken) {
+    const accessToken = await refreshGoogleAccessToken(connection.id, secrets.refreshToken);
+    return { connection, accessToken };
+  }
+
   return { connection, accessToken: secrets.accessToken };
 }
 
