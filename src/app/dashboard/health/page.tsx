@@ -1,11 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Activity, AlertTriangle, CheckCircle2, ShieldAlert } from "lucide-react";
-import { getRequiredProviderIdsForWorkflow } from "@/lib/connection-requirements";
 import { isConnectionOperational } from "@/lib/connection-readiness";
 import { deriveWorkflowHealth } from "@/lib/plans";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Approval, Connection, Workflow, WorkflowRun } from "@/types";
+import { listDoblyOperators, type OperatorWithLoops } from "@/lib/dobly-operators";
+import { listRuntimeApprovals, type RuntimeApprovalRecord } from "@/lib/runtime/approvals";
+import type { Connection } from "@/types";
+
+interface RuntimeRunRow {
+  id: string;
+  status: string;
+  started_at: string | null;
+  context: { operatorId?: string } | null;
+}
 
 export default async function HealthPage() {
   const supabase = await createServerSupabaseClient();
@@ -15,35 +23,36 @@ export default async function HealthPage() {
 
   if (!user) redirect("/auth/login");
 
-  const [{ data: workflows }, { data: connections }, { data: runs }, { data: approvals }] =
-    await Promise.all([
-      supabase.from("workflows").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }),
-      supabase.from("connections").select("*").eq("user_id", user.id),
-      supabase
-        .from("workflow_runs")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("started_at", { ascending: false })
-        .limit(200),
-      supabase
-        .from("approvals")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "pending")
-        .order("requested_at", { ascending: false }),
-    ]);
+  const [operators, { data: connections }, { data: runs }, approvals] = await Promise.all([
+    listDoblyOperators({ userId: user.id }).catch((): OperatorWithLoops[] => []),
+    supabase.from("connections").select("*").eq("user_id", user.id),
+    supabase
+      .from("software_execution_runs")
+      .select("id, status, started_at, context")
+      .eq("user_id", user.id)
+      .order("started_at", { ascending: false })
+      .limit(200) as unknown as Promise<{ data: RuntimeRunRow[] | null }>,
+    listRuntimeApprovals({ userId: user.id, status: "pending" }).catch((): RuntimeApprovalRecord[] => []),
+  ]);
 
   const connectionMap = new Map<string, Connection>(
     (connections ?? []).map((connection) => [connection.provider, connection] as const)
   );
-  const healthRows = (workflows ?? []).map((workflow) =>
-    buildHealthRow({
-      workflow,
-      runs: (runs ?? []).filter((run) => run.workflow_id === workflow.id),
-      approvals: (approvals ?? []).filter((approval) => approval.workflow_id === workflow.id),
-      connectionMap,
-    })
+
+  const pendingRunIds = new Set(
+    approvals.map((approval) => approval.run_id).filter((id): id is string => Boolean(id))
   );
+
+  const healthRows = operators
+    .filter((operator) => operator.status !== "archived")
+    .map((operator) =>
+      buildHealthRow({
+        operator,
+        runs: (runs ?? []).filter((run) => run.context?.operatorId === operator.id),
+        pendingRunIds,
+        connectionMap,
+      })
+    );
 
   const healthyCount = healthRows.filter((row) => row.health === "green").length;
   const attentionCount = healthRows.filter((row) => row.health !== "green").length;
@@ -101,11 +110,15 @@ export default async function HealthPage() {
           </div>
         ) : (
           healthRows.map((row) => (
-            <div key={row.workflow.id} className="card-hover">
+            <Link
+              key={row.operator.id}
+              href={`/dashboard/coworkers?operatorId=${row.operator.id}`}
+              className="card-hover block"
+            >
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <div className="font-display text-base font-semibold text-text">{row.workflow.title}</div>
-                  <p className="mt-1 text-xs leading-4 text-text-muted">{row.workflow.description}</p>
+                  <div className="font-display text-base font-semibold text-text">{row.operator.name}</div>
+                  <p className="mt-1 text-xs leading-4 text-text-muted">{row.operator.mission}</p>
                   <div className="mt-2 flex flex-wrap gap-1">
                     <span className="badge-muted text-xs">{row.lastRunLabel}</span>
                     <span className="badge-muted text-xs">{row.successRateLabel}</span>
@@ -122,7 +135,7 @@ export default async function HealthPage() {
                   {row.label}
                 </div>
               </div>
-            </div>
+            </Link>
           ))
         )}
       </section>
@@ -131,22 +144,21 @@ export default async function HealthPage() {
 }
 
 function buildHealthRow({
-  workflow,
+  operator,
   runs,
-  approvals,
+  pendingRunIds,
   connectionMap,
 }: {
-  workflow: Workflow;
-  runs: WorkflowRun[];
-  approvals: Approval[];
+  operator: OperatorWithLoops;
+  runs: RuntimeRunRow[];
+  pendingRunIds: Set<string>;
   connectionMap: Map<string, Connection>;
 }) {
   const recentRuns = runs.slice(0, 10);
   const lastRun = recentRuns[0] ?? null;
-  const succeeded = recentRuns.filter((run) => run.status === "success").length;
+  const succeeded = recentRuns.filter((run) => run.status === "completed").length;
   const successRate = recentRuns.length > 0 ? succeeded / recentRuns.length : 1;
-  const requiredProviders = getRequiredProviderIdsForWorkflow(workflow.blueprint, workflow.prompt);
-  const atRiskProviders = requiredProviders.filter((provider) => {
+  const atRiskProviders = operator.connected_tool_ids.filter((provider) => {
     const connection = connectionMap.get(provider);
     return !connection || !isConnectionOperational(connection);
   });
@@ -157,7 +169,7 @@ function buildHealthRow({
     credentialsExpiringSoon: atRiskProviders.length > 0,
   });
 
-  const pendingApprovals = approvals.length;
+  const pendingApprovals = runs.filter((run) => pendingRunIds.has(run.id)).length;
   const tone =
     health === "green"
       ? "border-accent/25 bg-accent/5 text-accent"
@@ -168,7 +180,7 @@ function buildHealthRow({
   const label = health === "green" ? "Healthy" : health === "amber" ? "Needs attention" : "At risk";
 
   return {
-    workflow,
+    operator,
     health,
     tone,
     Icon,
@@ -176,7 +188,7 @@ function buildHealthRow({
     pendingApprovals,
     atRiskProviders,
     lastRunLabel: lastRun
-      ? `Last run: ${lastRun.status} · ${new Date(lastRun.started_at).toLocaleString()}`
+      ? `Last run: ${lastRun.status} · ${lastRun.started_at ? new Date(lastRun.started_at).toLocaleString() : "unknown"}`
       : "No runs yet",
     successRateLabel:
       recentRuns.length > 0
