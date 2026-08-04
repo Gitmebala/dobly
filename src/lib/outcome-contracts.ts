@@ -161,35 +161,6 @@ export async function generateOutcomeContractForJob(payload: JsonRecord) {
     });
   }
 
-  if (entityType === "coworker" && entityId) {
-    const { data, error } = await admin
-      .from("coworkers")
-      .select("*")
-      .eq("id", entityId)
-      .eq("user_id", userId)
-      .single();
-    if (error || !data) throw new Error(error?.message ?? "Coworker not found for outcome contract generation.");
-
-    return ensureOutcomeContract({
-      userId,
-      entityType,
-      entityId,
-      workspaceId: null,
-      name: String((data as JsonRecord).name ?? "Coworker"),
-      mission: String((data as JsonRecord).mission ?? ""),
-      outcome: Array.isArray((data as JsonRecord).target_outcomes)
-        ? String(((data as JsonRecord).target_outcomes as unknown[])[0] ?? (data as JsonRecord).mission ?? "")
-        : String((data as JsonRecord).mission ?? ""),
-      targetOutcomes: Array.isArray((data as JsonRecord).target_outcomes) ? (data as JsonRecord).target_outcomes as string[] : [],
-      tools: Array.isArray((data as JsonRecord).tools) ? (data as JsonRecord).tools as string[] : [],
-      guardrails: ((data as JsonRecord).approval_boundaries as JsonRecord | null | undefined) ?? null,
-      approvalMode: typeof (data as JsonRecord).autonomy_level === "string" ? String((data as JsonRecord).autonomy_level) : null,
-      standards: ((data as JsonRecord).standards as JsonRecord | null | undefined) ?? null,
-      minimumScore: typeof payload.minimumScore === "number" ? Number(payload.minimumScore) : undefined,
-      forceRegenerate: Boolean(payload.forceRegenerate),
-    });
-  }
-
   return ensureOutcomeContract({
     userId,
     entityType,
