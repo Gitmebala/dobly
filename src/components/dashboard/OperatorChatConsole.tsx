@@ -1171,6 +1171,29 @@ function SideMini({ title, meta }: { title: string; meta: string }) {
   );
 }
 
+// Pull the human-readable part out of an artifact payload. Artifacts carry
+// different shapes depending on which runtime produced them (research results,
+// documents, connector output, multi-step command results), so look for the
+// fields that actually hold prose rather than assuming one schema.
+function readableArtifactText(content: unknown): string | null {
+  if (typeof content === "string") return content.trim() || null;
+  if (!content || typeof content !== "object") return null;
+
+  const record = content as Record<string, unknown>;
+  const proseKeys = ["summary", "text", "body", "content", "markdown", "note", "result"];
+  const parts: string[] = [];
+
+  for (const key of proseKeys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) {
+      parts.push(value.trim());
+    }
+  }
+
+  if (parts.length) return Array.from(new Set(parts)).join("\n\n");
+  return null;
+}
+
 function ArtifactPreviewModal({ artifact, onClose }: { artifact: JsonRecord; onClose: () => void }) {
   const previewType = artifactPreviewType(artifact);
   const url = artifact.external_url;
@@ -1193,10 +1216,29 @@ function ArtifactPreviewModal({ artifact, onClose }: { artifact: JsonRecord; onC
           {url && previewType === "pdf" ? <iframe src={url} className="h-[64vh] w-full rounded-[1rem] border border-[var(--dobly-border)]" /> : null}
           {!url || previewType === "file" ? (
             <div className="rounded-[1rem] border border-[var(--dobly-border)] bg-[rgba(255,255,255,0.025)] p-4">
-              <p className="text-sm leading-7 text-[var(--dobly-text-secondary)]">
-                This artifact is stored in Dobly storage or as structured content. It is attached to the coworker chat and available to the runtime for revision, sending, publishing, analysis, or conversion.
-              </p>
-              <pre className="mt-4 max-h-[44vh] overflow-auto rounded-[0.9rem] bg-black/20 p-4 text-xs leading-5 text-[var(--dobly-text-muted)]">{JSON.stringify(artifact.content ?? artifact.metadata ?? artifact, null, 2)}</pre>
+              {(() => {
+                // This used to dump the raw artifact JSON straight into the
+                // modal, so opening any non-media artifact showed the user a
+                // wall of machine data instead of the work. Show the readable
+                // content when there is any, and keep the raw payload behind a
+                // collapsed disclosure for when it is genuinely needed.
+                const readable = readableArtifactText(artifact.content ?? artifact.metadata ?? null);
+                return (
+                  <>
+                    {readable ? (
+                      <div className="whitespace-pre-wrap text-sm leading-7 text-[var(--dobly-text-secondary)]">{readable}</div>
+                    ) : (
+                      <p className="text-sm leading-7 text-[var(--dobly-text-secondary)]">
+                        This artifact is attached to the coworker chat and available to the runtime for revision, sending, publishing, analysis, or conversion.
+                      </p>
+                    )}
+                    <details className="mt-4">
+                      <summary className="cursor-pointer text-xs text-[var(--dobly-text-muted)]">Technical details</summary>
+                      <pre className="mt-2 max-h-[36vh] overflow-auto rounded-[0.9rem] bg-black/20 p-4 text-xs leading-5 text-[var(--dobly-text-muted)]">{JSON.stringify(artifact.content ?? artifact.metadata ?? artifact, null, 2)}</pre>
+                    </details>
+                  </>
+                );
+              })()}
             </div>
           ) : null}
         </div>

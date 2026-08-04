@@ -63,48 +63,70 @@ export async function POST(req: NextRequest) {
     await requireWorkspacePermission({ userId: user.id, workspaceId: parsed.data.workspaceId, permission: "office:write" });
   }
 
-  const operator = await createDoblyOperator({
-    userId: user.id,
-    ...parsed.data,
-    capabilityTags: parsed.data.capabilityTags as DoblyCapability[] | undefined,
-  });
-  const conversation = await ensureOperatorConversation({
-    userId: user.id,
-    operatorId: operator.id,
-    workspaceId: operator.workspace_id,
-    title: `${operator.name} Chat`,
-  });
-  await appendOperatorChatMessage({
-    conversationId: conversation.id,
-    userId: user.id,
-    workspaceId: operator.workspace_id,
-    operatorId: operator.id,
-    role: "system",
-    intent: "system",
-    body: [
-      `${operator.name} is ready.`,
-      "This chat is its permanent work journal: instructions, plans, approvals, artifacts, memory updates, failures, and completed work will be written here.",
-    ].join(" "),
-    metadata: {
-      source: "operator_create",
+  let operator;
+  try {
+    operator = await createDoblyOperator({
+      userId: user.id,
+      ...parsed.data,
+      capabilityTags: parsed.data.capabilityTags as DoblyCapability[] | undefined,
+    });
+  } catch (error) {
+    // Surface the real reason instead of an unexplained 500 - "hiring just
+    // fails and I don't know why" is one of the worst experiences in the app.
+    console.error("[api/operators] createDoblyOperator failed:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Could not create this coworker." },
+      { status: 500 },
+    );
+  }
+
+  // Everything past this point is the chat journal, not the coworker itself.
+  // The coworker row already exists and is committed. If journal setup hiccups,
+  // it must NOT surface as "creating the coworker failed" - that made a
+  // successful hire look like a failure, so the user retried (creating
+  // duplicates) or assumed the app had forgotten what they just did.
+  try {
+    const conversation = await ensureOperatorConversation({
+      userId: user.id,
       operatorId: operator.id,
-      coworkerOperatingProfile: operator.guardrails?.coworkerOperatingProfile ?? operator.memory_policy?.coworkerOperatingProfile ?? null,
-    },
-  }).catch(() => undefined);
-  await recordOperatorChatEvent({
-    conversationId: conversation.id,
-    userId: user.id,
-    workspaceId: operator.workspace_id,
-    operatorId: operator.id,
-    eventType: "operator_created",
-    title: "Coworker created",
-    summary: `${operator.name} was created with memory, loops, approvals, and a persistent chat journal.`,
-    severity: "success",
-    payload: {
-      capabilityTags: operator.capability_tags,
-      loops: operator.loops,
-      approvalMode: operator.approval_mode,
-    },
-  }).catch(() => undefined);
+      workspaceId: operator.workspace_id,
+      title: `${operator.name} Chat`,
+    });
+    await appendOperatorChatMessage({
+      conversationId: conversation.id,
+      userId: user.id,
+      workspaceId: operator.workspace_id,
+      operatorId: operator.id,
+      role: "system",
+      intent: "system",
+      body: [
+        `${operator.name} is ready.`,
+        "This chat is its permanent work journal: instructions, plans, approvals, artifacts, memory updates, failures, and completed work will be written here.",
+      ].join(" "),
+      metadata: {
+        source: "operator_create",
+        operatorId: operator.id,
+        coworkerOperatingProfile: operator.guardrails?.coworkerOperatingProfile ?? operator.memory_policy?.coworkerOperatingProfile ?? null,
+      },
+    }).catch(() => undefined);
+    await recordOperatorChatEvent({
+      conversationId: conversation.id,
+      userId: user.id,
+      workspaceId: operator.workspace_id,
+      operatorId: operator.id,
+      eventType: "operator_created",
+      title: "Coworker created",
+      summary: `${operator.name} was created with memory, loops, approvals, and a persistent chat journal.`,
+      severity: "success",
+      payload: {
+        capabilityTags: operator.capability_tags,
+        loops: operator.loops,
+        approvalMode: operator.approval_mode,
+      },
+    }).catch(() => undefined);
+  } catch (error) {
+    console.error("[api/operators] coworker created but chat journal setup failed:", error);
+  }
+
   return NextResponse.json({ operator }, { status: 201 });
 }

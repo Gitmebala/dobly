@@ -55,8 +55,18 @@ export async function createServerSupabaseClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             );
-          } catch {
-            // Called from Server Component — middleware handles refresh
+          } catch (error) {
+            // Expected in Server Components, where the cookie store is
+            // read-only and middleware handles the refresh instead. NOT
+            // expected in a Route Handler - there it means a session write
+            // was silently dropped, which is how "signed in but immediately
+            // bounced back to login" happens. Log it so that case is
+            // diagnosable instead of invisible (this empty catch has now
+            // hidden three separate production bugs in this codebase).
+            console.warn(
+              "[supabase/server] could not persist auth cookies:",
+              error instanceof Error ? error.message : error,
+            );
           }
         },
       },

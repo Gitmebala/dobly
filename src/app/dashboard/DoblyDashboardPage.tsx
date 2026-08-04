@@ -53,14 +53,26 @@ export default async function DoblyDashboardPage({
   const latestApprovals = ((approvals ?? []) as Approval[]).slice(0, 3);
   const latestConnections = ((connections ?? []) as Connection[]).slice(0, 4);
   const workflowTitles = Object.fromEntries(((workflows ?? []) as Workflow[]).map((workflow) => [workflow.id, workflow.title]));
-  const onboarding = {
-    hasBusinessContext: Boolean(businessProfile?.business_name && businessProfile?.description),
-    hasConnection: ((connections ?? []) as Connection[]).some(isConnectionOperational),
-    hasWorkflow: ((workflows ?? []) as Workflow[]).length > 0,
-  };
 
   const firstName = profile?.full_name?.split(" ")[0] || "there";
   const operators = await operatorsPromise;
+
+  // This must match /dashboard/onboarding's definition of "done" exactly.
+  // It used to disagree in two ways, so the "Finish setup" line could never
+  // disappear no matter what the user actually did:
+  //   1. hasWorkflow counted rows in `workflows`, a legacy table the current
+  //      product never writes to - hiring a coworker creates a row in
+  //      `dobly_operators` (see createDoblyOperator), so this was always
+  //      false. The onboarding wizard meanwhile counted operators and told
+  //      the user they were finished.
+  //   2. hasBusinessContext required `description`, which is optional in
+  //      businessProfileSchema - so a user who completed the business form
+  //      without that one optional field stayed "incomplete" forever.
+  const onboarding = {
+    hasBusinessContext: Boolean(businessProfile?.business_name),
+    hasConnection: ((connections ?? []) as Connection[]).some(isConnectionOperational),
+    hasWorkflow: operators.length > 0,
+  };
   const team = operators.slice(0, 6).map((operator) => ({
     id: operator.id,
     name: operator.name,

@@ -24,7 +24,11 @@ export default async function OnboardingPage() {
   ]);
 
   const readyConnections = (connections ?? []).filter(isConnectionOperational);
-  const hasBusinessContext = Boolean(businessProfile?.business_name && businessProfile?.description);
+  // Only business_name is actually required by businessProfileSchema -
+  // requiring the optional `description` here left users permanently stuck on
+  // "incomplete" after filling in the form. Must stay in sync with the same
+  // computation in DoblyDashboardPage.tsx.
+  const hasBusinessContext = Boolean(businessProfile?.business_name);
   const hasConnection = readyConnections.length > 0;
   const latestOperator = operators[0] ?? null;
   const hasWorkflow = Boolean(latestOperator);
