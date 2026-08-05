@@ -11,7 +11,6 @@ import {
   ListTodo,
   Network,
   Sparkles,
-  Workflow,
 } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -19,8 +18,7 @@ const sources = [
   { table: "workspace_tasks", type: "Task", href: "/dashboard/tasks", titleKey: "title", icon: ListTodo },
   { table: "workspace_projects", type: "Project", href: "/dashboard/projects", titleKey: "name", icon: FolderKanban },
   { table: "workspace_documents", type: "Document", href: "/dashboard/documents", titleKey: "title", icon: FileText },
-  { table: "workflows", type: "Workflow", href: "/dashboard/workflows", titleKey: "title", icon: Workflow },
-  { table: "coworkers", type: "Coworker", href: "/dashboard/coworkers", titleKey: "name", icon: Bot },
+  { table: "dobly_operators", type: "Coworker", href: "/dashboard/coworkers", titleKey: "name", icon: Bot },
 ] as const;
 
 type ActivityItem = {
@@ -46,7 +44,7 @@ export default async function ActivityPage() {
     return (data ?? []).map((item: Record<string, unknown>): ActivityItem => ({
       id: String(item.id),
       type: source.type,
-      href: source.type === "Workflow" ? `${source.href}/${item.id}` : source.href,
+      href: source.type === "Coworker" ? `${source.href}?operatorId=${item.id}` : source.href,
       title: String(item[source.titleKey] || source.type),
       at: item.updated_at ? String(item.updated_at) : item.created_at ? String(item.created_at) : null,
     }));

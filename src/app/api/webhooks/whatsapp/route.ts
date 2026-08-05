@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decideApproval } from "@/lib/approvals";
+import { decideRuntimeApproval } from "@/lib/runtime/approvals";
 import { verifyWhatsappOtp } from "@/lib/verifications";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 
@@ -96,20 +97,77 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ ok: true, handled: "approval" });
       }
+
+      // Coworker approvals live in runtime_approvals, not the legacy table -
+      // without this, replying YES/NO could never decide a real coworker's
+      // pending approval, only ones from the old workflow-builder product.
+      const { data: runtimeApproval } = await admin
+        .from("runtime_approvals")
+        .select("*")
+        .eq("id", explicitId)
+        .eq("status", "pending")
+        .single();
+
+      if (runtimeApproval) {
+        try {
+          await decideRuntimeApproval({
+            approvalId: runtimeApproval.id,
+            userId: runtimeApproval.user_id,
+            decision,
+            note: `WhatsApp reply from ${from}`,
+          });
+        } catch {
+          return NextResponse.json({ ok: true, handled: "ignored" });
+        }
+
+        return NextResponse.json({ ok: true, handled: "approval" });
+      }
     }
 
-    const { data: approvals } = await admin
-      .from("approvals")
-      .select("*")
-      .eq("channel", "whatsapp")
-      .eq("status", "pending")
-      .order("requested_at", { ascending: false })
-      .limit(25);
+    const [{ data: approvals }, { data: runtimeApprovals }] = await Promise.all([
+      admin
+        .from("approvals")
+        .select("*")
+        .eq("channel", "whatsapp")
+        .eq("status", "pending")
+        .order("requested_at", { ascending: false })
+        .limit(25),
+      admin
+        .from("runtime_approvals")
+        .select("*")
+        .eq("channel", "whatsapp")
+        .eq("status", "pending")
+        .order("requested_at", { ascending: false })
+        .limit(25),
+    ]);
 
-    const match = (approvals ?? []).find((item: { id: string; user_id: string; metadata: Record<string, unknown> | null }) => {
+    const matchesPhone = (item: { metadata: Record<string, unknown> | null }) => {
       const phone = String(item.metadata?.phone ?? item.metadata?.destination ?? item.metadata?.whatsapp_number ?? "");
       return phone ? normalizePhone(phone) === normalizedFrom : false;
-    });
+    };
+
+    const runtimeMatch = (runtimeApprovals ?? []).find(matchesPhone) as
+      | { id: string; user_id: string; metadata: Record<string, unknown> | null }
+      | undefined;
+
+    if (runtimeMatch) {
+      try {
+        await decideRuntimeApproval({
+          approvalId: runtimeMatch.id,
+          userId: runtimeMatch.user_id,
+          decision,
+          note: `WhatsApp reply from ${from}`,
+        });
+      } catch {
+        return NextResponse.json({ ok: true, handled: "ignored" });
+      }
+
+      return NextResponse.json({ ok: true, handled: "approval" });
+    }
+
+    const match = (approvals ?? []).find(matchesPhone) as
+      | { id: string; user_id: string; metadata: Record<string, unknown> | null }
+      | undefined;
 
     if (match) {
       try {

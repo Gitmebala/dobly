@@ -17,12 +17,13 @@ import {
   Workflow,
 } from "lucide-react";
 
-type WorkflowRecord = {
+type LoopRecord = {
   id: string;
-  title: string;
-  description: string;
+  name: string;
+  operatorId: string;
+  operatorName: string;
   status: string;
-  updated_at: string;
+  updatedAt: string;
 };
 
 type RunRecord = {
@@ -73,23 +74,25 @@ type Snapshot = {
 };
 
 export default function DoblyDashboardClient({
-  recentWorkflows,
+  recentLoops,
   latestRuns,
   latestApprovals,
   latestConnections,
   snapshot,
   workflowTitles,
+  runLabels,
   onboarding,
   firstName,
   team = [],
   justOnboarded = false,
 }: {
-  recentWorkflows: WorkflowRecord[];
+  recentLoops: LoopRecord[];
   latestRuns: RunRecord[];
   latestApprovals: ApprovalRecord[];
   latestConnections: ConnectionRecord[];
   snapshot: Snapshot;
   workflowTitles: Record<string, string>;
+  runLabels: Record<string, string>;
   onboarding: {
     hasBusinessContext: boolean;
     hasConnection: boolean;
@@ -208,20 +211,20 @@ export default function DoblyDashboardClient({
 
           <section className="home-section">
             <header className="home-section-head">
-              <h2><i>03</i> Operating systems</h2>
+              <h2><i>03</i> Loops</h2>
               <Link href="/dashboard/workflows">View all</Link>
             </header>
-            {recentWorkflows.length ? (
+            {recentLoops.length ? (
               <div className="home-list">
-                {recentWorkflows.map((workflow) => (
-                  <Link className="home-list-row" href={`/dashboard/workflows/${workflow.id}`} key={workflow.id}>
+                {recentLoops.map((loop) => (
+                  <Link className="home-list-row" href={`/dashboard/coworkers?operatorId=${loop.operatorId}`} key={loop.id}>
                     <span className="home-list-main">
-                      <strong>{workflow.title}</strong>
-                      <small>{workflow.description || "No description yet"}</small>
+                      <strong>{loop.name}</strong>
+                      <small>{loop.operatorName}</small>
                     </span>
                     <span className="home-list-meta">
-                      <em data-status={workflow.status}>{workflow.status}</em>
-                      <time>{formatDate(workflow.updated_at)}</time>
+                      <em data-status={loop.status}>{loop.status}</em>
+                      <time>{formatDate(loop.updatedAt)}</time>
                     </span>
                   </Link>
                 ))}
@@ -235,14 +238,14 @@ export default function DoblyDashboardClient({
             <div>
               <header className="home-section-head">
                 <h2><i>04</i> Recent runs</h2>
-                <Link href="/dashboard/workflows/executions">History</Link>
+                <Link href="/dashboard/activity">History</Link>
               </header>
               {latestRuns.length ? (
                 <div className="home-list">
                   {latestRuns.slice(0, 4).map((run) => (
                     <div className="home-list-row" key={run.id}>
                       <span className="home-list-main">
-                        <strong>{workflowTitles[run.workflow_id] || "Operating system"}</strong>
+                        <strong>{workflowTitles[run.workflow_id] || runLabels[run.id] || "Coworker run"}</strong>
                         <small>{run.status}</small>
                       </span>
                       <span className="home-list-meta"><time>{formatDate(run.started_at)}</time></span>

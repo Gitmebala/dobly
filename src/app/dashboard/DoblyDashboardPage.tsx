@@ -42,6 +42,9 @@ export default async function DoblyDashboardPage({
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("business_profiles").select("*").eq("user_id", user.id).single(),
+    // The workflow builder is retired - Build now creates a dobly_operator, so
+    // this legacy table no longer receives new rows. Kept only to fold any
+    // historical rows into the workspace snapshot's numbers below.
     supabase.from("workflows").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(8),
     supabase.from("workflow_runs").select("*").eq("user_id", user.id).order("started_at", { ascending: false }).limit(10),
     supabase.from("approvals").select("*").eq("user_id", user.id).order("requested_at", { ascending: false }).limit(5),
@@ -53,10 +56,10 @@ export default async function DoblyDashboardPage({
     // real coworker work ran that day.
     supabase
       .from("software_execution_runs")
-      .select("id, status, started_at")
+      .select("id, status, started_at, task")
       .eq("user_id", user.id)
       .order("started_at", { ascending: false })
-      .limit(50) as unknown as PromiseLike<{ data: Array<{ id: string; status: string; started_at: string }> | null }>,
+      .limit(50) as unknown as PromiseLike<{ data: Array<{ id: string; status: string; started_at: string; task: string | null }> | null }>,
   ]);
 
   // Runtime approvals carry the same shape as legacy approvals apart from
@@ -96,6 +99,14 @@ export default async function DoblyDashboardPage({
     }) as unknown as WorkflowRun),
   ].sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
 
+  // Runtime runs have no workflow_id (they belong to an operator, not a
+  // legacy workflow), so their label has to travel by run id instead of the
+  // workflowTitles-by-workflow_id lookup that only ever worked for legacy runs.
+  const runLabels: Record<string, string> = {};
+  for (const run of runtimeRuns ?? []) {
+    runLabels[run.id] = run.task || "Coworker run";
+  }
+
   const snapshot = buildDoblyWorkspaceSnapshot({
     profile: profile ?? null,
     businessProfile: businessProfile ?? null,
@@ -106,7 +117,6 @@ export default async function DoblyDashboardPage({
     versions: (versions ?? []) as WorkflowVersion[],
   });
 
-  const recentWorkflows = ((workflows ?? []) as Workflow[]).slice(0, 5);
   const latestRuns = ((runs ?? []) as WorkflowRun[]).slice(0, 5);
   const latestApprovals = ((approvals ?? []) as Approval[]).slice(0, 3);
   const latestConnections = ((connections ?? []) as Connection[]).slice(0, 4);
@@ -139,14 +149,34 @@ export default async function DoblyDashboardPage({
     lastRunAt: operator.last_run_at,
   }));
 
+  // "Operating systems" used to be recent rows from the legacy workflows
+  // table. Now that Build creates operators, the equivalent live concept is
+  // each coworker's loops - the recurring work actually running unattended.
+  const recentLoops = operators
+    .flatMap((operator) =>
+      (operator.loops ?? [])
+        .filter((loop) => loop.status !== "archived")
+        .map((loop) => ({
+          id: loop.id,
+          name: loop.name,
+          operatorId: operator.id,
+          operatorName: operator.name,
+          status: loop.status,
+          updatedAt: loop.last_run_at ?? loop.updated_at,
+        })),
+    )
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 5);
+
   return (
     <DoblyDashboardClient
-      recentWorkflows={recentWorkflows}
+      recentLoops={recentLoops}
       latestRuns={latestRuns}
       latestApprovals={latestApprovals}
       latestConnections={latestConnections}
       snapshot={snapshot}
       workflowTitles={workflowTitles}
+      runLabels={runLabels}
       onboarding={onboarding}
       firstName={firstName}
       team={team}

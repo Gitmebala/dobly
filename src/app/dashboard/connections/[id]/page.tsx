@@ -14,23 +14,16 @@ export default async function ConnectionDetailPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  // Coworkers are the thing that actually uses a connection today (via
-  // connected_tool_ids on dobly_operators) - `workflows` is the legacy
-  // workflow-builder product. Reading only `workflows` here made every
-  // connection say "No live setups are currently using this access" even
-  // when a real coworker depended on it.
-  const [{ data: connection }, { data: workflows }, operators] = await Promise.all([
+  // Coworkers are the only thing that actually uses a connection today (via
+  // connected_tool_ids on dobly_operators) - the legacy workflow-builder
+  // product this page used to also check is retired.
+  const [{ data: connection }, operators] = await Promise.all([
     supabase.from("connections").select("*").eq("id", id).eq("user_id", user.id).single(),
-    supabase.from("workflows").select("*").eq("user_id", user.id),
     listDoblyOperators({ userId: user.id }).catch((): OperatorWithLoops[] => []),
   ]);
 
   if (!connection) notFound();
 
-  const related = (workflows ?? []).filter((workflow) => {
-    const integrations = ((workflow.blueprint as Record<string, unknown>)?.integrations ?? []) as string[];
-    return integrations.some((integration) => integration.toLowerCase().includes(connection.provider));
-  });
   const relatedOperators = operators.filter((operator) =>
     (operator.connected_tool_ids ?? []).some((toolId) => toolId.toLowerCase().includes(connection.provider.toLowerCase())),
   );
@@ -66,13 +59,7 @@ export default async function ConnectionDetailPage({
               <div className="mt-2 text-sm text-text-muted">{operator.mission}</div>
             </Link>
           ))}
-          {related.map((workflow) => (
-            <Link key={workflow.id} href={`/dashboard/workflows/${workflow.id}`} className="premium-tile block">
-              <div className="font-display text-xl font-semibold text-text">{workflow.title}</div>
-              <div className="mt-2 text-sm text-text-muted">{workflow.description}</div>
-            </Link>
-          ))}
-          {related.length === 0 && relatedOperators.length === 0 ? (
+          {relatedOperators.length === 0 ? (
             <div className="text-sm text-text-muted">No live setups are currently using this access.</div>
           ) : null}
         </div>

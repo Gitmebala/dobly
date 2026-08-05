@@ -21,7 +21,7 @@ export async function buildExecutiveDashboardData(params: { userId: string; work
     createBoardroomReport({ userId: params.userId, workspaceId: params.workspaceId ?? null }),
     safeRows(() =>
       admin
-        .from("workflow_runs")
+        .from("software_execution_runs")
         .select("*")
         .eq("user_id", params.userId)
         .order("started_at", { ascending: false })
@@ -29,7 +29,7 @@ export async function buildExecutiveDashboardData(params: { userId: string; work
     ),
     safeRows(() =>
       admin
-        .from("approvals")
+        .from("runtime_approvals")
         .select("*")
         .eq("user_id", params.userId)
         .order("requested_at", { ascending: false })

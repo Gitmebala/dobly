@@ -40,8 +40,8 @@ export default async function AdminPage() {
       .order("created_at", { ascending: false })
       .limit(8),
     supabase
-      .from("workflow_runs")
-      .select("id,status,workflow_id,started_at,finished_at")
+      .from("software_execution_runs")
+      .select("id,status,task,started_at,completed_at")
       .order("started_at", { ascending: false })
       .limit(8),
   ]);
@@ -204,16 +204,16 @@ export default async function AdminPage() {
           </div>
 
           <div className="card">
-            <h2 className="font-display text-2xl">Recent workflow runs</h2>
+            <h2 className="font-display text-2xl">Recent coworker runs</h2>
             <div className="mt-4 space-y-3">
               {(recentRuns ?? []).map((run: any) => (
                 <div key={run.id} className="rounded-2xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="text-sm text-[var(--dobly-text)]">{run.workflow_id ?? "workflow"}</div>
+                    <div className="text-sm text-[var(--dobly-text)]">{run.task ?? "Run"}</div>
                     <span className="badge-muted text-xs">{run.status}</span>
                   </div>
                   <div className="mt-2 text-xs text-[var(--dobly-text-muted)]">
-                    Started {run.started_at ? new Date(run.started_at).toLocaleString() : "unknown"} {run.finished_at ? `· finished ${new Date(run.finished_at).toLocaleString()}` : ""}
+                    Started {run.started_at ? new Date(run.started_at).toLocaleString() : "unknown"} {run.completed_at ? `· finished ${new Date(run.completed_at).toLocaleString()}` : ""}
                   </div>
                 </div>
               ))}

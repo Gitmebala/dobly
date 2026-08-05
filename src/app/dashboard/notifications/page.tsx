@@ -22,7 +22,7 @@ export default async function NotificationsPage() {
 
   if (!user) redirect("/auth/login");
 
-  const [{ data: profile }, { data: legacyApprovals }, { data: runtimeApprovals }, { data: legacyFailedRuns }, { data: runtimeFailedRuns }, { data: connections }, { data: workflows }] =
+  const [{ data: profile }, { data: legacyApprovals }, { data: runtimeApprovals }, { data: legacyFailedRuns }, { data: runtimeFailedRuns }, { data: connections }] =
     await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
       supabase
@@ -54,7 +54,6 @@ export default async function NotificationsPage() {
         .order("started_at", { ascending: false })
         .limit(10),
       supabase.from("connections").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }),
-      supabase.from("workflows").select("id,title").eq("user_id", user.id),
     ]);
 
   const approvals = [...(runtimeApprovals ?? []), ...(legacyApprovals ?? [])]
@@ -65,9 +64,6 @@ export default async function NotificationsPage() {
     .slice(0, 10);
 
   const usage = await getPlanUsageSnapshot(user.id, ((profile?.plan ?? "free") as PlanId));
-  const workflowMap = new Map<string, string>(
-    (workflows ?? []).map((workflow) => [workflow.id, workflow.title] as const)
-  );
   const riskyConnections = (connections ?? []).filter((connection) => !isConnectionOperational(connection));
   const standardPressure =
     usage.standard_executions_limit !== -1 &&
@@ -154,11 +150,11 @@ export default async function NotificationsPage() {
             {failedRuns.map((run: any) => (
               <Link
                 key={run.id}
-                href={run.workflow_id ? `/dashboard/workflows/${run.workflow_id}/runs` : "/dashboard/activity"}
+                href={run.context?.operatorId ? `/dashboard/coworkers?operatorId=${run.context.operatorId}` : "/dashboard/activity"}
                 className="block rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-3 transition-all hover:border-border-hi"
               >
                 <div className="font-display text-base font-medium text-text">
-                  {workflowMap.get(run.workflow_id) ?? "Workflow run"}
+                  {run.task ?? "Run"}
                 </div>
                 <div className="mt-2 text-sm leading-6 text-text-muted">
                   {run.error_message ?? run.summary ?? "Execution failed."}
