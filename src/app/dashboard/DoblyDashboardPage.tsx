@@ -107,10 +107,25 @@ export default async function DoblyDashboardPage({
     runLabels[run.id] = run.task || "Coworker run";
   }
 
+  const operators = await operatorsPromise;
+
+  // "Active systems" and "time returned" used to come only from the legacy
+  // workflows table, which stops growing once Build creates operators - so
+  // this counted 0 active systems even with real, active coworkers running
+  // loops. Operators don't track time_saved_minutes, so that stat is folded
+  // in from the legacy rows only (historical, won't grow further).
+  const operatorsAsWorkflows = operators.map((operator) => ({
+    id: operator.id,
+    title: operator.name,
+    status: operator.status,
+    time_saved_minutes: 0,
+  })) as unknown as Workflow[];
+  const legacyWorkflows = (workflows ?? []) as Workflow[];
+
   const snapshot = buildDoblyWorkspaceSnapshot({
     profile: profile ?? null,
     businessProfile: businessProfile ?? null,
-    workflows: (workflows ?? []) as Workflow[],
+    workflows: [...operatorsAsWorkflows, ...legacyWorkflows],
     runs: mergedRuns,
     approvals: mergedApprovals,
     connections: (connections ?? []) as Connection[],
@@ -118,12 +133,15 @@ export default async function DoblyDashboardPage({
   });
 
   const latestRuns = ((runs ?? []) as WorkflowRun[]).slice(0, 5);
-  const latestApprovals = ((approvals ?? []) as Approval[]).slice(0, 3);
+  // Was reading only the raw legacy `approvals` array, so the sidebar
+  // "Approvals" panel could say "No actions are waiting" while the "Needs
+  // attention" panel (built from mergedApprovals) correctly counted a real
+  // backlog of pending runtime approvals sitting right next to it.
+  const latestApprovals = mergedApprovals.filter((approval) => approval.status === "pending").slice(0, 3);
   const latestConnections = ((connections ?? []) as Connection[]).slice(0, 4);
   const workflowTitles = Object.fromEntries(((workflows ?? []) as Workflow[]).map((workflow) => [workflow.id, workflow.title]));
 
   const firstName = profile?.full_name?.split(" ")[0] || "there";
-  const operators = await operatorsPromise;
 
   // This must match /dashboard/onboarding's definition of "done" exactly.
   // It used to disagree in two ways, so the "Finish setup" line could never
