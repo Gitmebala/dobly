@@ -20,26 +20,31 @@ export default async function AdminPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // These are unscoped, all-user counts for a site-wide admin view - RLS
+  // policies are user-scoped, so running them through the regular client
+  // (as this did before) returns 0 or wrong numbers for every table with a
+  // policy that only lets a row's own owner see it. The admin client above
+  // was already created but never used for this.
   const [profiles, channels, workers, tasks, memory, usage, events, executive] = await Promise.all([
-    safeCount(supabase, "profiles"),
-    safeCount(supabase, "business_channel_connections"),
-    safeCount(supabase, "office_workers"),
-    safeCount(supabase, "office_tasks"),
-    safeCount(supabase, "business_memory_items"),
-    safeCount(supabase, "usage_events"),
-    safeCount(supabase, "office_events"),
+    safeCount(admin, "profiles"),
+    safeCount(admin, "business_channel_connections"),
+    safeCount(admin, "office_workers"),
+    safeCount(admin, "office_tasks"),
+    safeCount(admin, "business_memory_items"),
+    safeCount(admin, "usage_events"),
+    safeCount(admin, "office_events"),
     user ? buildExecutiveDashboardData({ userId: user.id }).catch(() => null) : Promise.resolve(null),
   ]);
 
   const readiness = await buildStartupReadinessSnapshot().catch(() => null);
 
   const [{ data: recentTasks }, { data: recentRuns }] = await Promise.all([
-    supabase
+    admin
       .from("office_tasks")
       .select("id,title,status,risk_level,created_at")
       .order("created_at", { ascending: false })
       .limit(8),
-    supabase
+    admin
       .from("software_execution_runs")
       .select("id,status,task,started_at,completed_at")
       .order("started_at", { ascending: false })

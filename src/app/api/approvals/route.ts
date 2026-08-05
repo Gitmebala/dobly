@@ -23,10 +23,15 @@ export async function GET(req: NextRequest) {
 
   if (status) workflowQuery = workflowQuery.eq("status", status);
 
-  const [{ data: workflowApprovals }, runtimeApprovals] = await Promise.all([
-    workflowQuery.catch(() => ({ data: [] })),
+  // Supabase query builders are thenable, not full Promises - calling
+  // .catch() directly on the builder (before it's awaited) throws
+  // "workflowQuery.catch is not a function", which crashed this whole route
+  // with an uncaught 500 on every call regardless of the status filter.
+  const [workflowResult, runtimeApprovals] = await Promise.all([
+    Promise.resolve(workflowQuery).catch(() => ({ data: [] as Array<Record<string, unknown>> })),
     listRuntimeApprovals({ userId: user.id, status: status as any }).catch(() => []),
   ]);
+  const workflowApprovals = workflowResult.data;
 
   const approvals = [
     ...((workflowApprovals ?? []) as Array<Record<string, unknown>>).map((approval) => ({

@@ -12,7 +12,7 @@ import {
   Network,
   Sparkles,
 } from "lucide-react";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminSupabaseClient, createServerSupabaseClient } from "@/lib/supabase/server";
 
 const sources = [
   { table: "workspace_tasks", type: "Task", href: "/dashboard/tasks", titleKey: "title", icon: ListTodo },
@@ -34,8 +34,14 @@ export default async function ActivityPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
+  // dobly_operators has RLS enabled with no policy letting the regular
+  // request-scoped client read it directly (every other operator read in
+  // this codebase goes through the admin client for that reason - see
+  // listDoblyOperators) - this page used the plain client and silently
+  // showed "0 recent" coworkers no matter how many actually existed.
+  const admin = createAdminSupabaseClient();
   const groups = await Promise.all(sources.map(async (source) => {
-    const { data } = await supabase
+    const { data } = await admin
       .from(source.table)
       .select("*")
       .eq("user_id", user.id)
