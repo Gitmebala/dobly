@@ -1,6 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createAdminSupabaseClient, createServerSupabaseClient } from "@/lib/supabase/server";
 import { dispatchTaskToOperator } from "@/lib/workspace-tasks";
+
+// Vercel serverless functions can freeze/terminate right after the response
+// is sent - a bare `.catch()` with no await here got cut off mid-flight on
+// every dispatch (confirmed live: the task-assignment chat message landed,
+// but runDoblyOperator's own work - the Anthropic call, the risk brain, the
+// approval - never ran, with no error logged anywhere). after() keeps the
+// function alive until the callback finishes instead.
+function dispatchInBackground(input: Parameters<typeof dispatchTaskToOperator>[0]) {
+  try {
+    after(async () => {
+      await dispatchTaskToOperator(input).catch((dispatchError) => {
+        console.error("[tasks] failed to dispatch task to operator", dispatchError);
+      });
+    });
+  } catch {
+    // after() requires a request-scoped context; fall back to fire-and-forget
+    // rather than let a missing context break task creation itself.
+    dispatchTaskToOperator(input).catch((dispatchError) => {
+      console.error("[tasks] failed to dispatch task to operator", dispatchError);
+    });
+  }
+}
 
 // Real table now (see supabase/migrations/202608050002_workspace_tasks_projects.sql) -
 // reads go through the admin client like every other operator-adjacent table in this
@@ -58,9 +80,7 @@ export async function POST(request: NextRequest) {
   if (error) return NextResponse.json({ error: "Failed to create task." }, { status: 500 });
 
   if (assigneeOperatorId) {
-    dispatchTaskToOperator({ userId: user.id, operatorId: assigneeOperatorId, task: data }).catch((dispatchError) => {
-      console.error("[tasks] failed to dispatch task to operator", dispatchError);
-    });
+    dispatchInBackground({ userId: user.id, operatorId: assigneeOperatorId, task: data });
   }
 
   return NextResponse.json({ task: data }, { status: 201 });
@@ -115,9 +135,7 @@ export async function PATCH(request: NextRequest) {
   if (error || !data) return NextResponse.json({ error: "Task not found." }, { status: 404 });
 
   if (dispatchOperatorId) {
-    dispatchTaskToOperator({ userId: user.id, operatorId: dispatchOperatorId, task: data }).catch((dispatchError) => {
-      console.error("[tasks] failed to dispatch task to operator", dispatchError);
-    });
+    dispatchInBackground({ userId: user.id, operatorId: dispatchOperatorId, task: data });
   }
 
   return NextResponse.json({ task: data });
