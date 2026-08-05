@@ -2566,7 +2566,18 @@ html.theme-transitioning * {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* Was overflow: hidden. The console shell has a capped height
+     (calc(100dvh - Npx)) and this column can hold more flex-shrink:0
+     content than fits inside it - status cards, Leash, Guardrails, Shift
+     tape - on top of the message thread and composer. With overflow
+     hidden, anything past the visible height (routinely including the
+     compose box itself) was clipped with no scrollbar and no way for a
+     real user to reach it - only reachable by setting scrollTop from
+     script. overflow-y: auto keeps .operator-chat-thread's own inner
+     scroll for the messages while letting the whole column scroll too
+     when its flex-shrink:0 siblings don't fit the available height. */
+  overflow-y: auto;
+  overflow-x: hidden;
   border-right: 1px solid var(--app-line);
 }
 
