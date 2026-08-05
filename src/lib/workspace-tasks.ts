@@ -54,7 +54,7 @@ export async function dispatchTaskToOperator(input: {
     workspaceId: input.workspaceId ?? null,
     operatorId: input.operatorId,
     role: "user",
-    intent: "task_assignment",
+    intent: "instruction",
     body: prompt,
     metadata: { source: "workspace_task", taskId: input.task.id },
   });
@@ -64,7 +64,7 @@ export async function dispatchTaskToOperator(input: {
     userId: input.userId,
     workspaceId: input.workspaceId ?? null,
     operatorId: input.operatorId,
-    eventType: "task_assigned",
+    eventType: "user_input",
     title: "Task assigned",
     summary: input.task.title,
     payload: { taskId: input.task.id },
