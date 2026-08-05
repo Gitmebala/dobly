@@ -55,23 +55,30 @@ export async function loadWorkflowRuntimeState(workflow: Workflow, triggerPayloa
       ? new Date(Date.now() - dedupeWindowMinutes * 60_000).toISOString()
       : null;
 
+  // Supabase query builders are thenable, not full Promises - .catch()
+  // chained directly on the builder (as this did) throws "not a function"
+  // and would crash the whole legacy workflow-webhook execution path.
+  // Promise.resolve(builder) properly adopts the thenable into a real
+  // Promise first, so .catch() actually works.
   const [agentResult, automationResult, runsResult, reportsResult] = await Promise.all([
-    admin.from("agents").select("id").eq("workflow_id", workflow.id).maybeSingle().catch(() => ({ data: null })),
-    admin.from("automations").select("id").eq("workflow_id", workflow.id).maybeSingle().catch(() => ({ data: null })),
-    admin
-      .from("workflow_runs")
-      .select("*")
-      .eq("workflow_id", workflow.id)
-      .order("started_at", { ascending: false })
-      .limit(8)
-      .catch(() => ({ data: [] })),
-    admin
-      .from("reports")
-      .select("*")
-      .eq("workflow_id", workflow.id)
-      .order("created_at", { ascending: false })
-      .limit(6)
-      .catch(() => ({ data: [] })),
+    Promise.resolve(admin.from("agents").select("id").eq("workflow_id", workflow.id).maybeSingle()).catch(() => ({ data: null })),
+    Promise.resolve(admin.from("automations").select("id").eq("workflow_id", workflow.id).maybeSingle()).catch(() => ({ data: null })),
+    Promise.resolve(
+      admin
+        .from("workflow_runs")
+        .select("*")
+        .eq("workflow_id", workflow.id)
+        .order("started_at", { ascending: false })
+        .limit(8),
+    ).catch(() => ({ data: [] })),
+    Promise.resolve(
+      admin
+        .from("reports")
+        .select("*")
+        .eq("workflow_id", workflow.id)
+        .order("created_at", { ascending: false })
+        .limit(6),
+    ).catch(() => ({ data: [] })),
   ]);
 
   const agentId = agentResult.data?.id ?? null;
@@ -79,12 +86,13 @@ export async function loadWorkflowRuntimeState(workflow: Workflow, triggerPayloa
 
   let memoryRows: AgentMemory[] = [];
   if (agentId) {
-    const memoryResult = await admin
-      .from("agent_memory")
-      .select("*")
-      .eq("agent_id", agentId)
-      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-      .catch(() => ({ data: [] }));
+    const memoryResult = await Promise.resolve(
+      admin
+        .from("agent_memory")
+        .select("*")
+        .eq("agent_id", agentId)
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
+    ).catch(() => ({ data: [] }));
     memoryRows = (memoryResult.data ?? []) as AgentMemory[];
   }
 
