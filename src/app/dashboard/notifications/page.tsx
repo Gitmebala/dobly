@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { getConnectionReadiness, isConnectionOperational } from "@/lib/connection-readiness";
 import { getPlanUsageSnapshot, percentUsed } from "@/lib/plans";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminSupabaseClient, createServerSupabaseClient } from "@/lib/supabase/server";
 import type { PlanId } from "@/types";
 
 export default async function NotificationsPage() {
@@ -22,6 +22,12 @@ export default async function NotificationsPage() {
 
   if (!user) redirect("/auth/login");
 
+  // runtime_approvals and software_execution_runs only have a
+  // workspace-scoped SELECT policy - a solo user's own rows (workspace_id
+  // null) are invisible to the regular client, so this page silently
+  // showed 0 pending approvals and 0 failed runs no matter what was
+  // actually waiting.
+  const admin = createAdminSupabaseClient();
   const [{ data: profile }, { data: legacyApprovals }, { data: runtimeApprovals }, { data: legacyFailedRuns }, { data: runtimeFailedRuns }, { data: connections }] =
     await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
@@ -32,7 +38,7 @@ export default async function NotificationsPage() {
         .eq("status", "pending")
         .order("requested_at", { ascending: false })
         .limit(10),
-      supabase
+      admin
         .from("runtime_approvals")
         .select("*")
         .eq("user_id", user.id)
@@ -46,7 +52,7 @@ export default async function NotificationsPage() {
         .eq("status", "failed")
         .order("started_at", { ascending: false })
         .limit(10),
-      supabase
+      admin
         .from("software_execution_runs")
         .select("*")
         .eq("user_id", user.id)

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createBusinessChannelSetupSnapshot } from "@/lib/business-channels";
 import { getKenyaLaunchTelecomCosts, isKenyaPhoneNumber } from "@/lib/providers/dobly-comms";
 import { buyTwilioPhoneNumber, searchTwilioLocalNumbers } from "@/lib/providers/twilio";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminSupabaseClient, createServerSupabaseClient } from "@/lib/supabase/server";
 import type { ApiError } from "@/types";
 
 const searchSchema = z.object({
@@ -92,7 +92,12 @@ export async function POST(req: NextRequest) {
 
   let operatorId: string | null = null;
   if (validation.data.operatorId) {
-    const { data: operator } = await supabase
+    // dobly_operators only has a workspace-scoped SELECT policy - a solo
+    // user's own rows (workspace_id null) are invisible to the regular
+    // client, which made this ownership check 404 on every real coworker
+    // for exactly the accounts most likely to hit it.
+    const admin = createAdminSupabaseClient();
+    const { data: operator } = await admin
       .from("dobly_operators")
       .select("id")
       .eq("id", validation.data.operatorId)
