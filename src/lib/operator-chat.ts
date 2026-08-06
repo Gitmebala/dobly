@@ -688,22 +688,28 @@ export async function ingestOperatorVoiceTranscript(input: {
   }
 
   const admin = createAdminSupabaseClient();
-  await admin.from("voice_call_records").insert({
-    user_id: input.userId,
-    workspace_id: input.workspaceId ?? operator.workspace_id,
-    provider_call_id: input.providerCallId ?? null,
-    direction: "inbound",
-    status: "completed",
-    transcript: [{ speaker: "user", text: input.transcript, at: new Date().toISOString() }],
-    recording_url: input.recordingUrl ?? null,
-    telemetry: {
-      source: "operator_chat_voice",
-      operatorId: operator.id,
-      conversationId: conversation.id,
-      artifactId: attachment?.artifact?.id ?? null,
-    },
-    ended_at: new Date().toISOString(),
-  }).catch(() => null);
+  // Supabase query builders are thenable, not full Promises - a bare
+  // .catch() here throws "not a function" instead of catching, which
+  // aborted the rest of this function (including posting the transcript
+  // into chat below) every time a voice transcript came in.
+  await Promise.resolve(
+    admin.from("voice_call_records").insert({
+      user_id: input.userId,
+      workspace_id: input.workspaceId ?? operator.workspace_id,
+      provider_call_id: input.providerCallId ?? null,
+      direction: "inbound",
+      status: "completed",
+      transcript: [{ speaker: "user", text: input.transcript, at: new Date().toISOString() }],
+      recording_url: input.recordingUrl ?? null,
+      telemetry: {
+        source: "operator_chat_voice",
+        operatorId: operator.id,
+        conversationId: conversation.id,
+        artifactId: attachment?.artifact?.id ?? null,
+      },
+      ended_at: new Date().toISOString(),
+    }),
+  ).catch(() => null);
 
   await recordOperatorChatEvent({
     conversationId: conversation.id,

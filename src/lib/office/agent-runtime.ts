@@ -562,17 +562,25 @@ async function logStep(params: {
   output?: JsonRecord;
 }) {
   const admin = createAdminSupabaseClient();
-  await admin.from("office_agent_steps").insert({
-    run_id: params.runId,
-    office_task_id: params.taskId,
-    user_id: params.userId,
-    step_number: params.stepNumber,
-    stage: params.stage,
-    step_type: params.stepType,
-    summary: params.summary,
-    input: params.input ?? {},
-    output: params.output ?? {},
-  }).catch(() => undefined);
+  // Supabase query builders are thenable, not full Promises - a bare
+  // .catch() here throws "not a function" instead of catching. logStep is
+  // called after every stage of the context/plan/validate/act/evaluate/
+  // learn/escalate loop, so a single failed insert (transient DB error,
+  // RLS, schema drift) would throw out of this function and silently abort
+  // the entire agent run mid-flight instead of just skipping one log line.
+  await Promise.resolve(
+    admin.from("office_agent_steps").insert({
+      run_id: params.runId,
+      office_task_id: params.taskId,
+      user_id: params.userId,
+      step_number: params.stepNumber,
+      stage: params.stage,
+      step_type: params.stepType,
+      summary: params.summary,
+      input: params.input ?? {},
+      output: params.output ?? {},
+    }),
+  ).catch(() => undefined);
 }
 
 async function updateRun(runId: string, patch: JsonRecord) {
@@ -868,15 +876,21 @@ export async function runOfficeTaskAgentLoop(params: {
     validation_result: validationResult as unknown as JsonRecord,
   });
 
-  await admin.from("office_agent_confidence_log").insert({
-    run_id: runId,
-    office_task_id: taskId,
-    user_id: userId,
-    action_proposed: validationResult.actionLabel,
-    confidence_score: plannerOutput.confidence,
-    confidence_reason: plannerOutput.confidence_reason,
-    decision: validationResult.decision,
-  }).catch(() => undefined);
+  // See the comment on the office_agent_steps insert above - same
+  // thenable-not-Promise .catch() hazard, and this one sits before the
+  // escalation branch below, so a failed insert here would have skipped
+  // escalation handling entirely instead of just the confidence log.
+  await Promise.resolve(
+    admin.from("office_agent_confidence_log").insert({
+      run_id: runId,
+      office_task_id: taskId,
+      user_id: userId,
+      action_proposed: validationResult.actionLabel,
+      confidence_score: plannerOutput.confidence,
+      confidence_reason: plannerOutput.confidence_reason,
+      decision: validationResult.decision,
+    }),
+  ).catch(() => undefined);
 
   if (!validationResult.allowed) {
     const escalationReason = validationResult.reasons.join(" ");
