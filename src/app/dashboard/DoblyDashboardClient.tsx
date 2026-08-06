@@ -63,7 +63,7 @@ type SignalSummary = {
   criticalSignals: number;
   byType: Record<string, number>;
   byImpact: Record<string, number>;
-  recentSignals: Array<{ id: string; title?: string; description?: string; signal_type: string; impact_level?: string; created_at: string }>;
+  recentSignals: Array<{ id: string; title?: string | null; description?: string | null; signal_type: string; impact_level?: string | null; created_at: string }>;
 };
 
 type Snapshot = {
