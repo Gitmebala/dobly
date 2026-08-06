@@ -54,7 +54,6 @@ export async function middleware(request: NextRequest) {
     "/api/webhooks",
     "/api/triggers/webhook",
     "/api/internal",
-    "/api/voice/reception",
     "/api/connections/verify-link",
     "/api/chat/widget",
   ];
@@ -66,7 +65,7 @@ export async function middleware(request: NextRequest) {
   const authRoutes = ["/auth/login", "/auth/signup"];
   const localMode = isLocalModeActive();
   const unsafeMethod = !["GET", "HEAD", "OPTIONS"].includes(request.method);
-  const csrfExemptPrefixes = ["/api/webhooks", "/api/internal", "/api/triggers/webhook", "/api/chat/widget", "/api/voice/reception"];
+  const csrfExemptPrefixes = ["/api/webhooks", "/api/internal", "/api/triggers/webhook", "/api/chat/widget"];
   if (pathname.startsWith("/api/") && unsafeMethod && !csrfExemptPrefixes.some((prefix) => pathname.startsWith(prefix))) {
     const origin = request.headers.get("origin");
     if (origin) {
