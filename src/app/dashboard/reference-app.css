@@ -7740,3 +7740,305 @@ html[data-theme="dark"] .dashboard-shell {
   padding: 0.2rem 0.4rem;
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════
+   COWORKERS WORKSPACE - v2, authoritative rewrite
+   ---------------------------------------------------------------------
+   This section fully replaces the scattered, duplicated rules for the
+   coworkers page and the operator chat console defined earlier in this
+   file (search .coworker-console-*, .console-head, .operator-thread-
+   controls, .operator-chat-composer above - they're superseded here by
+   source order, kept in place rather than surgically deleted mid-file
+   to avoid an unreviewable diff, but everything that actually renders
+   for this view now comes from this block).
+
+   Rule this section follows throughout: nothing gets a border or a
+   distinct background by default. Sections of one page are separated
+   by whitespace and type weight, not boxes. See DESIGN.md.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dashboard-shell .dashboard-page-shell:has(.coworker-console-page) {
+  padding: 28px clamp(20px, 3vw, 40px) 32px;
+  overflow: hidden;
+}
+
+.coworker-console-page {
+  width: 100%;
+  height: calc(100dvh - 116px);
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  background: transparent;
+}
+
+/* ── Page header: title + actions, no card, generous room ────────── */
+.coworker-console-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex: none;
+  gap: 24px;
+  padding: 0;
+}
+
+.coworker-console-header h1 {
+  margin: 0;
+  color: var(--app-text);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 34px;
+  font-weight: 460;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+
+.coworker-console-header p {
+  margin: 8px 0 0;
+  color: var(--app-muted);
+  font-size: 13px;
+}
+
+.coworker-console-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coworker-console-header-actions a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  color: var(--app-muted);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.coworker-console-header-actions a:hover {
+  border-color: var(--app-line-strong);
+  color: var(--app-text);
+  background: color-mix(in srgb, var(--app-text) 4%, transparent);
+}
+
+.coworker-console-header-actions a.primary {
+  border-color: transparent;
+  color: white;
+  background: var(--app-rust);
+}
+
+.coworker-console-header-actions a.primary:hover {
+  background: var(--app-rust-dark);
+}
+
+.coworker-console-header-actions svg { width: 15px; height: 15px; }
+
+/* ── Body: roster rail + detail canvas, one hairline between ─────── */
+.coworker-console-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 272px minmax(0, 1fr);
+  gap: 32px;
+  background: transparent;
+}
+
+.coworker-roster {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 24px;
+  border-right: 1px solid var(--app-line);
+  background: transparent;
+}
+
+.coworker-roster-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  padding: 0 2px 14px;
+  color: var(--app-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.coworker-roster-heading strong {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--app-muted);
+  background: color-mix(in srgb, var(--app-text) 6%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.coworker-roster-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.coworker-roster-item {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 8px;
+  align-items: start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  color: var(--app-text);
+  transition: background 140ms ease;
+}
+
+.coworker-roster-item:hover { background: color-mix(in srgb, var(--app-text) 4%, transparent); }
+
+.coworker-roster-item[data-active="true"] {
+  background: color-mix(in srgb, var(--app-rust) 9%, transparent);
+}
+
+.coworker-roster-avatar {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--app-rust-dark);
+  background: color-mix(in srgb, var(--app-rust) 14%, var(--app-paper));
+  font-weight: 700;
+}
+
+.coworker-roster-copy strong {
+  display: block;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coworker-roster-copy small {
+  display: -webkit-box;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.coworker-roster-copy em {
+  display: block;
+  margin-top: 6px;
+  color: var(--app-muted);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.coworker-roster-item > i {
+  width: 6px;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--app-muted);
+}
+.coworker-roster-item > i[data-status="active"] { background: var(--app-green); }
+
+.coworker-roster-footer {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: 2px;
+  padding-top: 12px;
+}
+
+.coworker-roster-footer a {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--app-muted);
+  font-size: 13px;
+}
+.coworker-roster-footer a:hover { color: var(--app-text); background: color-mix(in srgb, var(--app-text) 4%, transparent); }
+
+.coworker-active-workspace {
+  min-width: 0;
+  min-height: 0;
+  background: transparent;
+}
+
+/* ── Chat console: header, thread controls, thread, composer ─────── */
+.operator-chat-console,
+.operator-chat-layout,
+.operator-conversation {
+  min-height: 0;
+  height: 100%;
+}
+
+.operator-chat-layout { grid-template-columns: minmax(0, 1fr) !important; }
+
+.console-head {
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--app-line);
+  background: transparent;
+}
+
+.console-name-row strong { font-size: 20px; }
+
+.operator-thread-controls {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--app-line);
+  background: transparent;
+}
+
+.operator-chat-thread {
+  padding: 24px 0;
+}
+
+.operator-chat-composer {
+  padding: 20px 0 4px;
+  border-top: 1px solid var(--app-line);
+  background: transparent;
+}
+
+.ledger-composer-input {
+  padding: 14px 16px;
+  border: 1px solid var(--app-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-text) 2.5%, transparent);
+  font-size: 14.5px;
+}
+
+.ledger-composer-input:focus {
+  border-color: var(--app-rust);
+  background: transparent;
+}
+
+@media (max-width: 900px) {
+  .coworker-console-layout { grid-template-columns: 240px minmax(0, 1fr); gap: 24px; }
+}
+
+@media (max-width: 720px) {
+  .dashboard-shell .dashboard-page-shell:has(.coworker-console-page) { padding: 16px; }
+  .coworker-console-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 16px; }
+  .coworker-roster { border-right: 0; border-bottom: 1px solid var(--app-line); padding-right: 0; padding-bottom: 16px; }
+  .coworker-console-header h1 { font-size: 26px; }
+}
