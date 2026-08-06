@@ -668,12 +668,15 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                 }}
               />
               <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
-                <input
-                  value={attachmentNote}
-                  onChange={(event) => setAttachmentNote(event.target.value)}
-                  placeholder="Optional note for attached image, doc, video, CAD file, or reference..."
-                  className="ledger-composer-note"
-                />
+                <details className="operator-attachment-note">
+                  <summary>+ Note for an attachment</summary>
+                  <input
+                    value={attachmentNote}
+                    onChange={(event) => setAttachmentNote(event.target.value)}
+                    placeholder="Optional note for attached image, doc, video, CAD file, or reference..."
+                    className="ledger-composer-note"
+                  />
+                </details>
                 <input
                   ref={fileInputRef}
                   type="file"

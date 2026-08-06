@@ -2390,8 +2390,8 @@ html.theme-transitioning * {
      ~778px and pushed the console past the viewport with nothing to scroll. */
   min-height: 420px;
   display: grid;
-  grid-template-rows: 58px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-rows: 74px minmax(0, 1fr);
+  gap: 18px;
   overflow: hidden;
 }
 
@@ -2454,12 +2454,9 @@ html.theme-transitioning * {
 .coworker-console-layout {
   min-height: 0;
   display: grid;
-  grid-template-columns: 238px minmax(0, 1fr);
+  grid-template-columns: 264px minmax(0, 1fr);
   overflow: hidden;
-  border: 1px solid var(--app-line);
-  border-radius: 8px;
   background: var(--app-paper);
-  box-shadow: var(--app-shadow);
 }
 
 .coworker-roster {
@@ -2468,8 +2465,12 @@ html.theme-transitioning * {
   display: grid;
   grid-template-rows: 46px minmax(0, 1fr) auto;
   overflow: hidden;
+  /* The one legitimate division in this view - everything else here is
+     whitespace, not a box. Two nested bordered/shadowed containers
+     (this panel plus .coworker-console-page around it) used to read as
+     a card floating inside a card; now there's a single hairline. */
   border-right: 1px solid var(--app-line);
-  background: var(--app-paper-2);
+  background: transparent;
 }
 
 .coworker-roster-heading {
@@ -2503,11 +2504,12 @@ html.theme-transitioning * {
 .coworker-roster-item {
   min-height: 74px;
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) 7px;
+  grid-template-columns: 34px minmax(0, 1fr) 7px;
   align-items: start;
-  gap: 9px;
-  padding: 10px 9px;
-  border-radius: 7px;
+  gap: 11px;
+  padding: 12px;
+  margin-bottom: 2px;
+  border-radius: 9px;
   color: var(--app-text);
 }
 
@@ -2594,8 +2596,8 @@ html.theme-transitioning * {
 }
 
 .coworker-roster-empty svg { width: 24px; color: var(--app-rust); }
-.coworker-roster-empty strong { color: var(--app-text); font-size: 11px; }
-.coworker-roster-empty span { font-size: 9px; }
+.coworker-roster-empty strong { color: var(--app-text); font-size: 13px; }
+.coworker-roster-empty span { font-size: 12px; line-height: 1.5; }
 
 .coworker-roster-footer {
   display: grid;
@@ -3702,14 +3704,12 @@ html.dark .dashboard-shell.app-shell {
 .coworker-console-page {
   height: calc(100dvh - 108px);
   min-height: 560px;
-  border: 1px solid var(--app-line-strong);
-  border-radius: 8px;
   background: var(--app-paper);
 }
 
 .coworker-console-header {
-  min-height: 66px;
-  padding: 12px 18px;
+  min-height: 74px;
+  padding: 8px 2px;
 }
 
 .coworker-console-header h1 {
@@ -5605,6 +5605,33 @@ html[data-theme="dark"] .ledger-entry-user .ledger-entry-body {
 .ledger-composer-note {
   padding: 11px 13px;
   font-size: 13px;
+}
+
+.operator-attachment-note {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+}
+
+.operator-attachment-note > summary {
+  color: var(--app-muted);
+  font-size: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.operator-attachment-note > summary::-webkit-details-marker { display: none; }
+
+.operator-attachment-note[open] > summary {
+  display: none;
+}
+
+.operator-attachment-note[open] {
+  align-items: stretch;
+}
+
+.operator-attachment-note .ledger-composer-note {
+  margin: 0;
 }
 
 .ledger-composer-input::placeholder,
