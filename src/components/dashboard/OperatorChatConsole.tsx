@@ -220,6 +220,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
   const [decisionLoading, setDecisionLoading] = useState<string | null>(null);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("overview");
   const [dateFilter, setDateFilter] = useState("");
+  const [shiftTapeOpen, setShiftTapeOpen] = useState(false);
   const [leash, setLeash] = useState(() => {
     const index = leashModes.findIndex((mode) => mode.value === props.operator.approval_mode);
     return index === -1 ? 1 : index;
@@ -541,6 +542,17 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                 {props.operator.status === "active" ? "On shift" : props.operator.status}
               </span>
               <code>last active {formatTime(props.operator.last_run_at).toLowerCase()}</code>
+              <button
+                type="button"
+                className="operator-leash-badge"
+                onClick={() => {
+                  setInspectorTab("control");
+                  setInspectorOpen(true);
+                }}
+                title="Autonomy level - open Details to change"
+              >
+                {leashModes[leash].label.split(",")[0]}
+              </button>
               <button type="button" className="operator-details-button" onClick={() => setInspectorOpen(true)}>
                 <PanelRightOpen aria-hidden="true" />
                 Details
@@ -549,66 +561,31 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
             </div>
           </div>
 
-          <div className="console-stats" aria-label="Today at a glance">
-            <div><code>handled</code><b>{props.recentRuns.length}</b></div>
-            <div><code>outputs</code><b>{artifacts.length}</b></div>
-            <div data-tone={pendingApprovals.length ? "warning" : undefined}><code>waiting on you</code><b>{pendingApprovals.length}</b></div>
-            <div><code>loops</code><b>{props.operator.loops.filter((loop) => loop.status === "active").length}</b></div>
-          </div>
-
-          <div className="console-leash">
-            <div className="console-leash-head">
-              <span>Leash</span>
-              <code>{leashSaving ? "saving…" : leashModes[leash].label}</code>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={3}
-              step={1}
-              value={leash}
-              onChange={(event) => updateLeash(Number(event.target.value))}
-              aria-label="Autonomy level"
-              style={{ "--leash-pct": `${(leash / 3) * 100}%` } as React.CSSProperties}
-            />
-            <div className="console-leash-stops" aria-hidden="true">
-              {leashModes.map((mode) => <span key={mode.value}>{mode.label.split(",")[0]}</span>)}
-            </div>
-            <p>{leashModes[leash].copy}</p>
-          </div>
-
-          {guardrailPills({ ...props.operator.guardrails, rules: rails }).length ? (
-            <div className="console-rails">
-              <div className="console-rails-head">
-                <span>Guardrails</span>
-                <code>{guardrailPills({ ...props.operator.guardrails, rules: rails }).length} rules · edit in details</code>
-              </div>
-              <div className="console-rails-pills">
-                {guardrailPills({ ...props.operator.guardrails, rules: rails }).map((pill) => (
-                  <span key={pill.label} data-tone={pill.tone}>{pill.label}</span>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="operator-thread-controls">
-            <span className="operator-thread-controls-label">
+          <div className="operator-thread-controls" data-open={shiftTapeOpen}>
+            <button
+              type="button"
+              className="operator-thread-controls-label"
+              onClick={() => setShiftTapeOpen((open) => !open)}
+              aria-expanded={shiftTapeOpen}
+            >
               <CalendarDays aria-hidden="true" />
               Shift tape
               <code>{dateFilter ? formatDayLabel(`${dateFilter}T12:00:00`, new Date().toISOString().slice(0, 10)).toLowerCase() : "full history"}</code>
-            </span>
-            <div className="operator-thread-controls-actions">
-              <input
-                type="date"
-                value={dateFilter}
-                max={dayKey(new Date().toISOString())}
-                onChange={(event) => setDateFilter(event.target.value)}
-                aria-label="View what this coworker did on a specific day"
-              />
-              {dateFilter ? (
-                <button type="button" onClick={() => setDateFilter("")}>Show everything</button>
-              ) : null}
-            </div>
+            </button>
+            {shiftTapeOpen ? (
+              <div className="operator-thread-controls-actions">
+                <input
+                  type="date"
+                  value={dateFilter}
+                  max={dayKey(new Date().toISOString())}
+                  onChange={(event) => setDateFilter(event.target.value)}
+                  aria-label="View what this coworker did on a specific day"
+                />
+                {dateFilter ? (
+                  <button type="button" onClick={() => setDateFilter("")}>Show everything</button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div ref={listRef} className="operator-chat-thread">
@@ -782,6 +759,12 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
           <div className="operator-inspector-scroll">
             {inspectorTab === "overview" ? (
               <>
+                <div className="console-stats" aria-label="Today at a glance">
+                  <div><code>handled</code><b>{props.recentRuns.length}</b></div>
+                  <div><code>outputs</code><b>{artifacts.length}</b></div>
+                  <div data-tone={pendingApprovals.length ? "warning" : undefined}><code>waiting on you</code><b>{pendingApprovals.length}</b></div>
+                  <div><code>loops</code><b>{props.operator.loops.filter((loop) => loop.status === "active").length}</b></div>
+                </div>
                 <ControlCard icon={Clock3} title="Recent runs" value={`${props.recentRuns.length}`}>
                   {props.recentRuns.slice(0, 8).map((run) => <RunItem key={run.id} run={run} />)}
                   {!props.recentRuns.length ? <p>No runs yet.</p> : null}
@@ -828,6 +811,26 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
 
             {inspectorTab === "control" ? (
               <>
+                <div className="console-leash">
+                  <div className="console-leash-head">
+                    <span>Leash</span>
+                    <code>{leashSaving ? "saving…" : leashModes[leash].label}</code>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={3}
+                    step={1}
+                    value={leash}
+                    onChange={(event) => updateLeash(Number(event.target.value))}
+                    aria-label="Autonomy level"
+                    style={{ "--leash-pct": `${(leash / 3) * 100}%` } as React.CSSProperties}
+                  />
+                  <div className="console-leash-stops" aria-hidden="true">
+                    {leashModes.map((mode) => <span key={mode.value}>{mode.label.split(",")[0]}</span>)}
+                  </div>
+                  <p>{leashModes[leash].copy}</p>
+                </div>
                 <ControlCard icon={ShieldCheck} title="Guardrails" value={railsSaving ? "saving…" : `${rails.length} rules`}>
                   <div className="rails-editor">
                     {rails.map((rule, index) => (

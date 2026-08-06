@@ -6,7 +6,14 @@ import type { DoblyPlanId } from "@/lib/billing/plans";
 
 export async function runBillingMaintenance() {
   const admin = createAdminSupabaseClient() as any;
-  const { data: released } = await admin.rpc("dobly_release_expired_reservations", {}).catch(() => ({ data: 0 }));
+  // Supabase query builders (including .rpc()) are thenable, not full
+  // Promises - a bare .catch() here throws "not a function" instead of
+  // catching, and since this is the first await in the function with no
+  // surrounding try/catch, that crash would have skipped every renewal
+  // and downgrade check below it, not just the reservation release.
+  const { data: released } = await Promise.resolve(
+    admin.rpc("dobly_release_expired_reservations", {}),
+  ).catch(() => ({ data: 0 }));
   const now = new Date();
   const renewalHorizon = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
   const pendingSince = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();

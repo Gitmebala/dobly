@@ -190,14 +190,17 @@ async function persistBoardDirectiveMemory(params: {
     recommendedAction: params.issue.recommendedAction,
   };
 
-  const { data: existing } = await admin
-    .from("business_memory_items")
-    .select("id, metadata")
-    .eq("user_id", params.userId)
-    .eq("title", memory.title)
-    .limit(1)
-    .maybeSingle()
-    .catch(() => ({ data: null }));
+  // Supabase query builders are thenable, not full Promises - a bare
+  // .catch() here throws "not a function" instead of catching.
+  const { data: existing } = await Promise.resolve(
+    admin
+      .from("business_memory_items")
+      .select("id, metadata")
+      .eq("user_id", params.userId)
+      .eq("title", memory.title)
+      .limit(1)
+      .maybeSingle(),
+  ).catch(() => ({ data: null }));
 
   if (existing?.id) {
     await admin
@@ -270,15 +273,16 @@ export async function ensureLeadershipCoordination(params: {
         : null;
 
     const coordinationId = `${issue.owner}:${issue.id}:${assignee.workerKey}`;
-    const { data: existing } = await admin
-      .from("office_tasks")
-      .select("id")
-      .eq("user_id", params.userId)
-      .contains("tool_payload", { coordinationId })
-      .in("status", ["queued", "running", "waiting_approval"])
-      .limit(1)
-      .maybeSingle()
-      .catch(() => ({ data: null }));
+    const { data: existing } = await Promise.resolve(
+      admin
+        .from("office_tasks")
+        .select("id")
+        .eq("user_id", params.userId)
+        .contains("tool_payload", { coordinationId })
+        .in("status", ["queued", "running", "waiting_approval"])
+        .limit(1)
+        .maybeSingle(),
+    ).catch(() => ({ data: null }));
 
     if (existing?.id) continue;
 

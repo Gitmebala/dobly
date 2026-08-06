@@ -376,15 +376,20 @@ async function createDownstreamHandoffTask(input: {
 
   const stageId = `${String(existingCoordination.id ?? input.currentTask.id)}:${nextDepartmentId}:${nextIndex}`;
   const admin = createAdminSupabaseClient();
-  const { data: existing } = await admin
-    .from("office_tasks")
-    .select("id")
-    .eq("user_id", input.userId)
-    .contains("tool_payload", { stageId })
-    .in("status", ["queued", "running", "waiting_approval"])
-    .limit(1)
-    .maybeSingle()
-    .catch(() => ({ data: null }));
+  // Supabase query builders are thenable, not full Promises - .catch()
+  // chained directly on the builder throws "not a function" instead of
+  // catching, which would crash the whole department handoff instead of
+  // falling back to "no duplicate found".
+  const { data: existing } = await Promise.resolve(
+    admin
+      .from("office_tasks")
+      .select("id")
+      .eq("user_id", input.userId)
+      .contains("tool_payload", { stageId })
+      .in("status", ["queued", "running", "waiting_approval"])
+      .limit(1)
+      .maybeSingle(),
+  ).catch(() => ({ data: null }));
   if (existing?.id) return null;
 
   const handoff = {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { normalizePhoneIdentifier, resolveUserByChannelIdentifier } from "@/lib/communications/channel-resolver";
 import { markCommunicationMessagesByProvider } from "@/lib/communications/ledger";
 import { ingestInboundCommunication } from "@/lib/communications/runtime";
+import { appendOperatorChatMessage, ensureOperatorConversation, recordOperatorChatEvent } from "@/lib/operator-chat";
 import { isWebhookSecurityDisabledForDev, verifyHmacSignature } from "@/lib/webhooks/security";
 
 export async function GET(req: NextRequest) {
@@ -121,6 +122,39 @@ export async function POST(req: NextRequest) {
             messageType: message.type,
           },
         });
+
+        if (owner.operatorId) {
+          try {
+            const conversation = await ensureOperatorConversation({
+              userId: owner.userId,
+              operatorId: owner.operatorId,
+              workspaceId: owner.workspaceId,
+            });
+            const sourceMessage = await appendOperatorChatMessage({
+              conversationId: conversation.id,
+              userId: owner.userId,
+              workspaceId: owner.workspaceId,
+              operatorId: owner.operatorId,
+              role: "user",
+              intent: "instruction",
+              body: `Incoming WhatsApp from ${from}: "${body}"`,
+              metadata: { source: "meta_whatsapp", messageId: message.id, from },
+            });
+            await recordOperatorChatEvent({
+              conversationId: conversation.id,
+              messageId: sourceMessage.id,
+              userId: owner.userId,
+              workspaceId: owner.workspaceId,
+              operatorId: owner.operatorId,
+              eventType: "user_input",
+              title: "WhatsApp message received",
+              summary: body.slice(0, 200),
+              payload: { messageId: message.id, from },
+            });
+          } catch (chatError) {
+            console.error("[whatsapp] failed to post message into operator chat", chatError);
+          }
+        }
 
         ingested.push({ messageId: String(message.id ?? ""), owner: owner.userId });
       }

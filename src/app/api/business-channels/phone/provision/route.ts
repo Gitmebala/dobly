@@ -17,6 +17,9 @@ const provisionSchema = z.object({
   country: z.string().length(2).default("KE"),
   workspaceId: z.string().uuid().optional().nullable(),
   friendlyName: z.string().min(1).max(120).optional(),
+  // Without this a provisioned number could never be attributed to the
+  // specific coworker the owner hired - see 202608060001 migration.
+  operatorId: z.string().uuid().optional().nullable(),
 });
 
 function appOrigin() {
@@ -87,10 +90,25 @@ export async function POST(req: NextRequest) {
     setupMode: "new_dobly_number",
   });
 
+  let operatorId: string | null = null;
+  if (validation.data.operatorId) {
+    const { data: operator } = await supabase
+      .from("dobly_operators")
+      .select("id")
+      .eq("id", validation.data.operatorId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!operator) {
+      return NextResponse.json<ApiError>({ error: "That coworker was not found." }, { status: 404 });
+    }
+    operatorId = operator.id;
+  }
+
   if (country === "KE" || (phoneNumber ? isKenyaPhoneNumber(phoneNumber) : false)) {
     const payload = {
       user_id: user.id,
       workspace_id: validation.data.workspaceId ?? null,
+      operator_id: operatorId,
       ...setup,
       status: "approval_pending",
       metadata: {
@@ -149,6 +167,7 @@ export async function POST(req: NextRequest) {
   const payload = {
     user_id: user.id,
     workspace_id: validation.data.workspaceId ?? null,
+    operator_id: operatorId,
     ...setup,
     status: "live",
     metadata: {

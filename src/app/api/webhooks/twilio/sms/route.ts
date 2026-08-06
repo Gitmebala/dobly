@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { normalizePhoneIdentifier, resolveUserByChannelIdentifier } from "@/lib/communications/channel-resolver";
 import { ingestInboundCommunication } from "@/lib/communications/runtime";
+import { appendOperatorChatMessage, ensureOperatorConversation, recordOperatorChatEvent } from "@/lib/operator-chat";
 import { isWebhookSecurityDisabledForDev, verifySharedSecret } from "@/lib/webhooks/security";
 
 function twiml(message: string) {
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     return twiml("Thanks. This number is not connected to Dobly yet.");
   }
 
-  await ingestInboundCommunication({
+  const result = await ingestInboundCommunication({
     userId: owner.userId,
     workspaceId: owner.workspaceId,
     channel: "sms",
@@ -51,6 +52,39 @@ export async function POST(req: NextRequest) {
       raw: Object.fromEntries(form.entries()),
     },
   });
+
+  if (owner.operatorId) {
+    try {
+      const conversation = await ensureOperatorConversation({
+        userId: owner.userId,
+        operatorId: owner.operatorId,
+        workspaceId: owner.workspaceId,
+      });
+      const sourceMessage = await appendOperatorChatMessage({
+        conversationId: conversation.id,
+        userId: owner.userId,
+        workspaceId: owner.workspaceId,
+        operatorId: owner.operatorId,
+        role: "user",
+        intent: "instruction",
+        body: `Incoming SMS from ${from}: "${body}"`,
+        metadata: { source: "twilio_sms", messageSid, from },
+      });
+      await recordOperatorChatEvent({
+        conversationId: conversation.id,
+        messageId: sourceMessage.id,
+        userId: owner.userId,
+        workspaceId: owner.workspaceId,
+        operatorId: owner.operatorId,
+        eventType: "user_input",
+        title: "SMS received",
+        summary: body.slice(0, 200),
+        payload: { messageSid, from },
+      });
+    } catch (chatError) {
+      console.error("[twilio sms] failed to post message into operator chat", chatError);
+    }
+  }
 
   return twiml("Thanks. We received your message and will follow up shortly.");
 }

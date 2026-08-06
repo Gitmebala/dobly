@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { normalizePhoneIdentifier, resolveUserByChannelIdentifier } from "@/lib/communications/channel-resolver";
 import { ingestInboundCommunication } from "@/lib/communications/runtime";
+import { appendOperatorChatMessage, ensureOperatorConversation, recordOperatorChatEvent } from "@/lib/operator-chat";
 import { isWebhookSecurityDisabledForDev, verifySharedSecret, verifyTwilioSignature } from "@/lib/webhooks/security";
 
 function twiml(body: string) {
@@ -56,6 +57,52 @@ export async function POST(req: NextRequest) {
   const reply = result.draft.requiresApproval
     ? "Thanks. I have sent this to the team so they can respond carefully."
     : result.draft.suggestedReply;
+
+  // If this number belongs to a specific coworker, the call should show up
+  // where the owner actually looks for that coworker's work - its own chat -
+  // not only in the generic office communications ledger.
+  if (owner.operatorId) {
+    try {
+      const conversation = await ensureOperatorConversation({
+        userId: owner.userId,
+        operatorId: owner.operatorId,
+        workspaceId: owner.workspaceId,
+      });
+      const sourceMessage = await appendOperatorChatMessage({
+        conversationId: conversation.id,
+        userId: owner.userId,
+        workspaceId: owner.workspaceId,
+        operatorId: owner.operatorId,
+        role: "user",
+        intent: "instruction",
+        body: `Incoming call from ${from}: "${speech}"`,
+        metadata: { source: "twilio_voice", callSid, from },
+      });
+      await recordOperatorChatEvent({
+        conversationId: conversation.id,
+        messageId: sourceMessage.id,
+        userId: owner.userId,
+        workspaceId: owner.workspaceId,
+        operatorId: owner.operatorId,
+        eventType: "user_input",
+        title: "Phone call received",
+        summary: speech.slice(0, 200),
+        payload: { callSid, from },
+      });
+      await appendOperatorChatMessage({
+        conversationId: conversation.id,
+        userId: owner.userId,
+        workspaceId: owner.workspaceId,
+        operatorId: owner.operatorId,
+        role: "operator",
+        intent: "run_update",
+        body: reply,
+        metadata: { source: "twilio_voice", callSid, requiresApproval: result.draft.requiresApproval },
+      });
+    } catch (chatError) {
+      console.error("[twilio voice] failed to post call into operator chat", chatError);
+    }
+  }
 
   return twiml(`<Say voice="alice">${reply.replace(/[<>&]/g, "")}</Say>`);
 }

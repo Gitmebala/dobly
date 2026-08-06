@@ -27,6 +27,7 @@ const startChannelSchema = z.object({
   displayName: z.string().min(1).max(120).optional(),
   externalIdentifier: z.string().max(180).optional().nullable(),
   setupMode: z.string().max(80).optional().nullable(),
+  operatorId: z.string().uuid().optional().nullable(),
 });
 
 async function getUser() {
@@ -119,6 +120,20 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  let operatorId: string | null = null;
+  if (validation.data.operatorId) {
+    const { data: operator } = await supabase
+      .from("dobly_operators")
+      .select("id")
+      .eq("id", validation.data.operatorId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!operator) {
+      return NextResponse.json<ApiError>({ error: "That coworker was not found." }, { status: 404 });
+    }
+    operatorId = operator.id;
+  }
+
   const setup = createBusinessChannelSetupSnapshot({
     channelId,
     displayName: validation.data.displayName,
@@ -129,6 +144,7 @@ export async function POST(req: NextRequest) {
   const payload = {
     user_id: user.id,
     workspace_id: validation.data.workspaceId ?? null,
+    operator_id: operatorId,
     ...setup,
     updated_at: new Date().toISOString(),
   };

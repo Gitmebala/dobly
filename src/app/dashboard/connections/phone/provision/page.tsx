@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface NumberOption {
@@ -9,6 +9,12 @@ interface NumberOption {
   locality?: string;
   region?: string;
   capabilities?: { voice?: boolean; SMS?: boolean; sms?: boolean };
+}
+
+interface OperatorOption {
+  id: string;
+  name: string;
+  mission: string;
 }
 
 export default function PhoneProvisionPage() {
@@ -21,6 +27,15 @@ export default function PhoneProvisionPage() {
   const [selectedNumber, setSelectedNumber] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [operators, setOperators] = useState<OperatorOption[]>([]);
+  const [operatorId, setOperatorId] = useState<string>("");
+
+  useEffect(() => {
+    fetch("/api/operators")
+      .then((response) => response.json())
+      .then((data) => setOperators((data.operators ?? []).map((operator: any) => ({ id: operator.id, name: operator.name, mission: operator.mission }))))
+      .catch(() => setOperators([]));
+  }, []);
 
   async function handleSearch() {
     setSearching(true);
@@ -31,7 +46,7 @@ export default function PhoneProvisionPage() {
         const response = await fetch("/api/business-channels/phone/provision", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ country: "KE", friendlyName: "Dobly Kenya Business Number" }),
+          body: JSON.stringify({ country: "KE", friendlyName: "Dobly Kenya Business Number", operatorId: operatorId || null }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Failed to request Kenya setup.");
@@ -70,6 +85,7 @@ export default function PhoneProvisionPage() {
           phoneNumber: selectedNumber,
           country,
           friendlyName: "Dobly Business Number",
+          operatorId: operatorId || null,
         }),
       });
       const data = await response.json();
@@ -94,7 +110,24 @@ export default function PhoneProvisionPage() {
       </div>
 
       <div className="rounded-lg border border-border bg-surface p-6">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-text">Which coworker answers this number?</label>
+          <select value={operatorId} onChange={(e) => setOperatorId(e.target.value)} className="input">
+            <option value="">No coworker yet — general inbox only</option>
+            {operators.map((operator) => (
+              <option key={operator.id} value={operator.id}>{operator.name}</option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs text-text-muted">
+            {operatorId
+              ? "Calls and texts to this number will greet as this coworker and show up in its chat."
+              : operators.length === 0
+                ? "Hire a coworker first if you want calls to this number to reach one by name."
+                : "Without a coworker, calls and texts land in the general inbox instead of a specific coworker's chat."}
+          </p>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
           <div>
             <label className="mb-2 block text-sm font-medium text-text">Country</label>
             <select value={country} onChange={(e) => setCountry(e.target.value)} className="input">

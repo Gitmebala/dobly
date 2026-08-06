@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   CheckCircle2,
   Loader2,
@@ -28,6 +28,19 @@ const CHANNEL_ICONS: Record<BusinessChannelId, typeof Phone> = {
   content_tools: Megaphone,
 };
 
+const OPERATOR_ROUTABLE_CAPABILITIES = new Set([
+  "receive_calls",
+  "receive_sms",
+  "receive_whatsapp",
+  "receive_chat",
+]);
+
+interface OperatorOption {
+  id: string;
+  name: string;
+  mission: string;
+}
+
 export default function BusinessChannelsClient({
   channels,
 }: {
@@ -37,6 +50,17 @@ export default function BusinessChannelsClient({
   const [identifier, setIdentifier] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [operators, setOperators] = useState<OperatorOption[]>([]);
+  const [operatorId, setOperatorId] = useState("");
+
+  useEffect(() => {
+    fetch("/api/operators")
+      .then((response) => response.json())
+      .then((data) => setOperators((data.operators ?? []).map((operator: any) => ({ id: operator.id, name: operator.name, mission: operator.mission }))))
+      .catch(() => setOperators([]));
+  }, []);
+
+  const routesToOperator = activeChannel?.capabilities.some((capability) => OPERATOR_ROUTABLE_CAPABILITIES.has(capability)) ?? false;
 
   function startSetup(channel: BusinessChannelDefinition) {
     setMessage(null);
@@ -48,6 +72,7 @@ export default function BusinessChannelsClient({
           channelId: channel.id,
           displayName: channel.title,
           externalIdentifier: identifier.trim() || null,
+          operatorId: routesToOperator ? operatorId || null : null,
         }),
       });
 
@@ -144,6 +169,31 @@ export default function BusinessChannelsClient({
                 </div>
               ))}
             </div>
+
+            {routesToOperator ? (
+              <div className="mt-6 rounded-2xl border border-[rgba(242,232,220,0.08)] bg-[rgba(0,0,0,0.14)] p-4">
+                <label className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">
+                  Which coworker answers this?
+                </label>
+                <select
+                  value={operatorId}
+                  onChange={(event) => setOperatorId(event.target.value)}
+                  className="mt-3 min-h-[44px] w-full rounded-xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.035)] px-4 text-sm text-[var(--dobly-text)] outline-none"
+                >
+                  <option value="">No coworker yet — general inbox only</option>
+                  {operators.map((operator) => (
+                    <option key={operator.id} value={operator.id}>{operator.name}</option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-[var(--dobly-text-muted)]">
+                  {operatorId
+                    ? "Messages here will show up in this coworker's chat."
+                    : operators.length === 0
+                      ? "Hire a coworker first if you want this channel to reach one by name."
+                      : "Without a coworker, this lands in the general office inbox instead of a specific coworker's chat."}
+                </p>
+              </div>
+            ) : null}
 
             <div className="mt-6 rounded-2xl border border-[rgba(242,232,220,0.08)] bg-[rgba(0,0,0,0.14)] p-4">
               <label className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">

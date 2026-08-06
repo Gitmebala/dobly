@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { normalizePhoneIdentifier, resolveUserByChannelIdentifier } from "@/lib/communications/channel-resolver";
+import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { isWebhookSecurityDisabledForDev, verifySharedSecret, verifyTwilioSignature } from "@/lib/webhooks/security";
 
 function escapeXml(value: string) {
@@ -71,10 +72,26 @@ export async function POST(req: NextRequest) {
     `);
   }
 
+  // If this number belongs to a specific hired coworker, greet as that
+  // coworker - otherwise the call reaches a generic account inbox with no
+  // connection to who the owner actually hired to answer it.
+  let greeting = "Thanks for calling. Tell me how we can help, and I will route this to the right person.";
+  if (owner.operatorId) {
+    const admin = createAdminSupabaseClient();
+    const { data: operator } = await admin
+      .from("dobly_operators")
+      .select("name, mission")
+      .eq("id", owner.operatorId)
+      .maybeSingle();
+    if (operator?.name) {
+      greeting = `Thanks for calling. This is ${operator.name}. Tell me how I can help.`;
+    }
+  }
+
   const action = `${origin}/api/webhooks/twilio/voice/process?to=${encodeURIComponent(to)}&from=${encodeURIComponent(from)}&callSid=${encodeURIComponent(callSid)}`;
   return twiml(`
     <Gather input="speech" action="${escapeXml(action)}" method="POST" speechTimeout="auto" timeout="5">
-      <Say voice="alice">Thanks for calling. Tell me how we can help, and I will route this to the right person.</Say>
+      <Say voice="alice">${escapeXml(greeting)}</Say>
     </Gather>
     <Say voice="alice">I did not catch that. Please send us a message and we will follow up shortly.</Say>
   `);
