@@ -8042,3 +8042,176 @@ html[data-theme="dark"] .dashboard-shell {
   .coworker-roster { border-right: 0; border-bottom: 1px solid var(--app-line); padding-right: 0; padding-bottom: 16px; }
   .coworker-console-header h1 { font-size: 26px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   HOME - business hub + pulse
+   ═══════════════════════════════════════════════════════════════════ */
+
+.home-hub-section { padding-bottom: 8px; }
+
+.home-hub {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 380px;
+  margin: 8px 0;
+}
+
+.home-hub svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.home-hub-spoke {
+  stroke: var(--app-line);
+  stroke-width: 1;
+}
+
+.home-hub-center {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--app-rust) 9%, var(--app-paper));
+  text-align: center;
+}
+
+.home-hub-center strong {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 30px;
+  font-weight: 500;
+  color: var(--app-rust-dark);
+  line-height: 1;
+}
+
+.home-hub-center span {
+  margin-top: 4px;
+  color: var(--app-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.home-hub-node {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: -54px;
+  margin-left: -54px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  color: var(--app-text);
+  text-align: center;
+  transition: background 140ms ease, transform 140ms ease;
+}
+
+.home-hub-node:hover {
+  background: color-mix(in srgb, var(--app-text) 4%, transparent);
+}
+
+.home-hub-node-avatar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--app-paper);
+  border: 1px solid var(--app-line);
+  color: var(--app-rust-dark);
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.home-hub-node[data-status="active"] .home-hub-node-avatar {
+  border-color: color-mix(in srgb, var(--app-rust) 40%, var(--app-line));
+  background: color-mix(in srgb, var(--app-rust) 10%, var(--app-paper));
+}
+
+.home-hub-node-name {
+  max-width: 100px;
+  overflow: hidden;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-hub-node-meta {
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
+.home-hub-node > i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--app-muted);
+}
+.home-hub-node > i[data-status="active"] { background: var(--app-green); }
+.home-hub-node > i[data-status="paused"] { background: #c9862f; }
+
+.home-hub-add {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px dashed var(--app-line-strong);
+  border-radius: 50%;
+  color: var(--app-muted);
+}
+.home-hub-add:hover { color: var(--app-rust); border-color: var(--app-rust); }
+
+.home-hub-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 240px;
+  text-align: center;
+}
+.home-hub-empty p { max-width: 360px; margin: 0; color: var(--app-muted); font-size: 13px; }
+
+.home-pulse-score {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--app-rust-dark);
+}
+.home-pulse-score em { font-size: 13px; font-style: normal; color: var(--app-muted); }
+
+.home-pulse-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-text) 7%, transparent);
+  overflow: hidden;
+}
+.home-pulse-bar > div {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--app-rust);
+  transition: width 400ms var(--ease-premium, ease);
+}
+
+@media (max-width: 720px) {
+  .home-hub { min-height: 300px; }
+  .home-hub-center { width: 84px; height: 84px; }
+  .home-hub-center strong { font-size: 22px; }
+}

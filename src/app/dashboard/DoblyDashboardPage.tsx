@@ -4,6 +4,7 @@ import { buildDoblyWorkspaceSnapshot } from "@/lib/dobly-ops";
 import { isConnectionOperational } from "@/lib/connection-readiness";
 import { listDoblyOperators, type OperatorWithLoops } from "@/lib/dobly-operators";
 import { listRuntimeApprovals, type RuntimeApprovalRecord } from "@/lib/runtime/approvals";
+import { getSignalSummary } from "@/lib/signals/service";
 import type { Approval, Connection, Workflow, WorkflowRun, WorkflowVersion } from "@/types";
 import DoblyDashboardClient from "./DoblyDashboardClient";
 
@@ -30,6 +31,14 @@ export default async function DoblyDashboardPage({
   const runtimeApprovalsPromise = listRuntimeApprovals({ userId: user.id, status: "pending" }).catch(
     (): RuntimeApprovalRecord[] => [],
   );
+  const signalSummaryPromise = getSignalSummary(user.id).catch(() => ({
+    totalSignals: 0,
+    unresolvedSignals: 0,
+    criticalSignals: 0,
+    byType: {} as Record<string, number>,
+    byImpact: {} as Record<string, number>,
+    recentSignals: [] as Array<{ id: string; title: string; description: string; signal_type: string; impact_level: string; created_at: string }>,
+  }));
   const [
     { data: profile },
     { data: businessProfile },
@@ -159,13 +168,33 @@ export default async function DoblyDashboardPage({
     hasConnection: ((connections ?? []) as Connection[]).some(isConnectionOperational),
     hasWorkflow: operators.length > 0,
   };
-  const team = operators.slice(0, 6).map((operator) => ({
+  const team = operators.slice(0, 8).map((operator) => ({
     id: operator.id,
     name: operator.name,
     mission: operator.mission,
     status: operator.status,
+    kind: operator.kind,
     lastRunAt: operator.last_run_at,
+    loopCount: (operator.loops ?? []).filter((loop) => loop.status !== "archived").length,
   }));
+
+  const signalSummary = await signalSummaryPromise;
+
+  // A single at-a-glance score, built from things the user already sees
+  // broken out individually elsewhere on this page (failed runs, stale
+  // approvals, disconnected accounts, critical signals) - not a new
+  // metric invented for this view, just those combined into one number.
+  const pulseScore = Math.max(
+    0,
+    Math.min(
+      100,
+      100 -
+        snapshot.metrics.failedToday * 6 -
+        Math.min(snapshot.metrics.waitingApprovals, 10) * 2 -
+        snapshot.metrics.reconnectNeeded * 8 -
+        signalSummary.criticalSignals * 5,
+    ),
+  );
 
   // "Operating systems" used to be recent rows from the legacy workflows
   // table. Now that Build creates operators, the equivalent live concept is
@@ -198,6 +227,8 @@ export default async function DoblyDashboardPage({
       onboarding={onboarding}
       firstName={firstName}
       team={team}
+      signalSummary={signalSummary}
+      pulseScore={pulseScore}
       justOnboarded={justOnboarded}
     />
   );

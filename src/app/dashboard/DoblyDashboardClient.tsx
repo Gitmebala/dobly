@@ -52,7 +52,18 @@ type TeamMember = {
   name: string;
   mission: string;
   status: string;
+  kind?: string;
   lastRunAt: string | null;
+  loopCount?: number;
+};
+
+type SignalSummary = {
+  totalSignals: number;
+  unresolvedSignals: number;
+  criticalSignals: number;
+  byType: Record<string, number>;
+  byImpact: Record<string, number>;
+  recentSignals: Array<{ id: string; title?: string; description?: string; signal_type: string; impact_level?: string; created_at: string }>;
 };
 
 type Snapshot = {
@@ -84,6 +95,8 @@ export default function DoblyDashboardClient({
   onboarding,
   firstName,
   team = [],
+  signalSummary,
+  pulseScore = 100,
   justOnboarded = false,
 }: {
   recentLoops: LoopRecord[];
@@ -100,6 +113,8 @@ export default function DoblyDashboardClient({
   };
   firstName?: string;
   team?: TeamMember[];
+  signalSummary?: SignalSummary;
+  pulseScore?: number;
   justOnboarded?: boolean;
 }) {
   const router = useRouter();
@@ -169,9 +184,17 @@ export default function DoblyDashboardClient({
             {quickPrompts.map((item) => <button type="button" key={item} onClick={() => setPrompt(item)}>{item}</button>)}
           </div>
 
+          <section className="home-section home-hub-section">
+            <header className="home-section-head">
+              <h2><i>01</i> Your business</h2>
+              <Link href="/dashboard/coworkers">Open workspace</Link>
+            </header>
+            <BusinessHub team={team} />
+          </section>
+
           <section className="home-section">
             <header className="home-section-head">
-              <h2><i>01</i> Your team</h2>
+              <h2><i>02</i> Your team</h2>
               <Link href="/dashboard/coworkers">Open workspace</Link>
             </header>
             <div className="home-roster">
@@ -199,7 +222,7 @@ export default function DoblyDashboardClient({
 
           <section className="home-section">
             <header className="home-section-head">
-              <h2><i>02</i> The numbers</h2>
+              <h2><i>03</i> The numbers</h2>
             </header>
             <div className="home-figures">
               <div><b>{snapshot.metrics.activeSystems}</b><span>Active systems</span></div>
@@ -211,7 +234,7 @@ export default function DoblyDashboardClient({
 
           <section className="home-section">
             <header className="home-section-head">
-              <h2><i>03</i> Loops</h2>
+              <h2><i>04</i> Loops</h2>
               <Link href="/dashboard/workflows">View all</Link>
             </header>
             {recentLoops.length ? (
@@ -237,7 +260,7 @@ export default function DoblyDashboardClient({
           <section className="home-section home-columns">
             <div>
               <header className="home-section-head">
-                <h2><i>04</i> Recent runs</h2>
+                <h2><i>05</i> Recent runs</h2>
                 <Link href="/dashboard/activity">History</Link>
               </header>
               {latestRuns.length ? (
@@ -256,7 +279,7 @@ export default function DoblyDashboardClient({
             </div>
             <div>
               <header className="home-section-head">
-                <h2><i>05</i> Dobly recommends</h2>
+                <h2><i>06</i> Dobly recommends</h2>
               </header>
               {snapshot.recommendations.length ? (
                 <div className="home-list">
@@ -273,6 +296,28 @@ export default function DoblyDashboardClient({
         </main>
 
         <aside className="ref-page-rail ref-stack">
+          <section className="ref-card ref-panel home-pulse">
+            <div className="ref-between"><strong>Pulse</strong><span className="home-pulse-score">{Math.round(pulseScore)}<em>%</em></span></div>
+            <p className="ref-muted" style={{ margin: "2px 0 12px" }}>Overall business health</p>
+            <div className="home-pulse-bar"><div style={{ width: `${Math.round(pulseScore)}%` }} /></div>
+          </section>
+
+          {signalSummary && signalSummary.totalSignals > 0 ? (
+            <section className="ref-card ref-panel">
+              <div className="ref-between"><strong>Signals</strong><span className="ref-pill">{signalSummary.unresolvedSignals}</span></div>
+              {signalSummary.recentSignals.length ? (
+                <div className="ref-simple-rows">
+                  {signalSummary.recentSignals.slice(0, 4).map((signal) => (
+                    <div className="ref-between" key={signal.id}>
+                      <span>{signal.title || signal.description || signal.signal_type.replaceAll("_", " ")}</span>
+                      <i data-status={signal.impact_level === "critical" || signal.impact_level === "high" ? "amber" : undefined} aria-hidden="true" />
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="ref-muted">Nothing flagged right now.</p>}
+            </section>
+          ) : null}
+
           <section className="ref-card ref-panel ref-focus">
             <div className="ref-between"><strong><ShieldCheck size={17} /> Needs attention</strong><span className="ref-pill">{snapshot.whatNeedsAttention.length}</span></div>
             {snapshot.whatNeedsAttention.length ? (
@@ -335,4 +380,67 @@ function EmptyState({ title, copy, href, action }: { title: string; copy: string
 function formatDate(value: string) {
   if (!value) return "";
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
+}
+
+// A literal picture of "your business": each hired coworker as a node
+// orbiting the center. Deliberately shows real coworkers, not invented
+// department buckets (dobly_operators has no office/department column -
+// only a free-text scope string - so anything claiming to group by
+// "Sales, Marketing, Finance" would be fabricated for most Dobly users).
+function BusinessHub({ team }: { team: TeamMember[] }) {
+  if (!team.length) {
+    return (
+      <div className="home-hub home-hub-empty">
+        <div className="home-hub-center">
+          <strong>D</strong>
+          <span>Your business</span>
+        </div>
+        <p>Hire your first coworker and it will show up here, orbiting the business it works for.</p>
+        <Link href="/dashboard/coworkers?create=true" className="ref-button primary"><Plus size={14} /> Hire a coworker</Link>
+      </div>
+    );
+  }
+
+  const radius = 132;
+  const nodeSize = 108;
+  const angleStep = (2 * Math.PI) / team.length;
+  // Start pointing up (-90deg) so a single or first coworker sits at the top.
+  const startAngle = -Math.PI / 2;
+
+  return (
+    <div className="home-hub" role="img" aria-label={`${team.length} coworkers orbiting your business`}>
+      <svg viewBox="-190 -190 380 380" width="100%" height="380" aria-hidden="true">
+        {team.map((member, index) => {
+          const angle = startAngle + angleStep * index;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          return <line key={member.id} x1={0} y1={0} x2={x} y2={y} className="home-hub-spoke" strokeDasharray="2 5" />;
+        })}
+      </svg>
+      <div className="home-hub-center">
+        <strong>D</strong>
+        <span>Your business</span>
+      </div>
+      {team.map((member, index) => {
+        const angle = startAngle + angleStep * index;
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+        return (
+          <Link
+            key={member.id}
+            href={`/dashboard/coworkers?operatorId=${member.id}`}
+            className="home-hub-node"
+            data-status={member.status}
+            style={{ transform: `translate(${x}px, ${y}px)`, width: nodeSize }}
+          >
+            <span className="home-hub-node-avatar">{member.name.slice(0, 1).toUpperCase()}</span>
+            <span className="home-hub-node-name">{member.name}</span>
+            <span className="home-hub-node-meta">{member.loopCount ?? 0} loop{member.loopCount === 1 ? "" : "s"}</span>
+            <i data-status={member.status} aria-hidden="true" />
+          </Link>
+        );
+      })}
+      <Link href="/dashboard/coworkers?create=true" className="home-hub-add" aria-label="Hire a coworker"><Plus size={16} /></Link>
+    </div>
+  );
 }
