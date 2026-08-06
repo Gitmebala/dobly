@@ -216,9 +216,15 @@ export function buildDoblyWorkspaceSnapshot(params: {
   const todayKey = today.toISOString().slice(0, 10);
 
   const activeSystems = workflows.filter((workflow) => workflow.status === "active").length;
-  const ranToday = runs.filter((run) => run.started_at.slice(0, 10) === todayKey).length;
+  // software_execution_runs rows that were queued but never actually
+  // started (e.g. "not_configured", "draft", "cancelled") can have
+  // started_at = null. This table only started reaching this function
+  // with real data once its owner RLS policy was fixed - the unguarded
+  // .slice() below crashed the whole dashboard home page the moment a
+  // null-started_at row showed up, for every user who had one.
+  const ranToday = runs.filter((run) => run.started_at?.slice(0, 10) === todayKey).length;
   const failedToday = runs.filter(
-    (run) => run.started_at.slice(0, 10) === todayKey && run.status === "failed",
+    (run) => run.started_at?.slice(0, 10) === todayKey && run.status === "failed",
   ).length;
   const waitingApprovals = approvals.filter((approval) => approval.status === "pending").length;
   const reconnectNeeded = connections.filter((connection) => connection.status !== "active").length;
