@@ -355,6 +355,27 @@ async function resolveNativeCapabilityPath(
       reason: `Connected ${label} can run ${definition?.label ?? capability} through Dobly's native connector.`,
     };
   }
+
+  // A business with no mpesa/paystack account of its own would otherwise
+  // have no way to collect a payment at all - registering a Daraja app or
+  // Paystack merchant account is real technical setup this product's
+  // non-technical target user should never have to do. Same pattern as
+  // make_call above: Dobly is the merchant of record (via IntaSend) on
+  // this path instead of a per-user connection, so it's checked by
+  // platform env vars, not findLiveConnectionForProvider.
+  if ((capability === "collect_payment" || capability === "create_invoice") && Boolean(process.env.INTASEND_PUBLISHABLE_KEY) && Boolean(process.env.INTASEND_SECRET_KEY)) {
+    const definition = getCapabilityDefinition(capability);
+    return {
+      kind: "native",
+      capability,
+      label: `${definition?.label ?? capability} via Dobly's hosted payment collection`,
+      score: 55,
+      riskLevel: definition?.riskLevel ?? "high",
+      approvalRequired: false,
+      reason: "No connected mpesa or paystack account yet, so Dobly collects this on the business's behalf and tracks it for payout - no merchant setup required.",
+    };
+  }
+
   return null;
 }
 

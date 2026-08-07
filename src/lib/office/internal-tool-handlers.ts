@@ -1,6 +1,7 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { createConversationReply } from "@/lib/anthropic";
 import { getActiveConnectionForProvider, getDecryptedConnectionSecrets } from "@/lib/connections";
+import { createHostedInvoicePaymentLink } from "@/lib/intasend";
 import type { OfficeToolExecutionInput, OfficeToolExecutionResult } from "@/lib/office/tool-executor";
 
 /**
@@ -128,6 +129,7 @@ async function handleInvoiceGenerator(input: OfficeToolExecutionInput): Promise<
   const amount = Number(payload.amount ?? (payload as Record<string, any>)?.invoice?.amount ?? 0);
   const currency = String(payload.currency ?? "KES");
   const customerName = String(payload.customerName ?? payload.recipient ?? "Customer");
+  const customerEmail = typeof payload.customerEmail === "string" ? payload.customerEmail.trim() : "";
   const dueAt = new Date(Date.now() + 14 * 24 * 60 * 60_000).toISOString();
   const invoiceNumber = `DOB-${Date.now().toString(36).toUpperCase()}`;
 
@@ -155,10 +157,41 @@ async function handleInvoiceGenerator(input: OfficeToolExecutionInput): Promise<
     };
   }
 
+  // No business-owned mpesa/paystack connection is required for this -
+  // Dobly is the merchant of record on IntaSend, so a business with zero
+  // payment-provider setup of its own can still get paid. Requires a
+  // customer email (IntaSend's collection API needs one); if the task
+  // didn't include one, the invoice is still saved, just without a link
+  // yet - the coworker should ask for an email before this can go out.
+  let checkoutUrl: string | null = null;
+  let checkoutError: string | null = null;
+  if (customerEmail) {
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://dobly-dev.vercel.app";
+      const link = await createHostedInvoicePaymentLink({
+        invoiceId: data.id,
+        userId: input.userId,
+        amount,
+        currency,
+        customerEmail,
+        customerName,
+        description: `Invoice ${invoiceNumber}`,
+        successUrl: `${appUrl}/dashboard/tasks`,
+      });
+      checkoutUrl = link.url;
+    } catch (error) {
+      checkoutError = error instanceof Error ? error.message : "Could not generate a payment link.";
+    }
+  }
+
   return {
     status: "completed",
-    summary: `Drafted invoice ${invoiceNumber} for ${currency} ${amount}, due ${dueAt.slice(0, 10)}.`,
-    output: { invoiceId: data?.id, invoiceNumber, customerName, amount, currency, dueAt, persisted: true },
+    summary: checkoutUrl
+      ? `Drafted invoice ${invoiceNumber} for ${currency} ${amount}, due ${dueAt.slice(0, 10)}. Payment link ready to send: ${checkoutUrl}`
+      : customerEmail
+        ? `Drafted invoice ${invoiceNumber} for ${currency} ${amount}, due ${dueAt.slice(0, 10)}. Could not generate a payment link yet: ${checkoutError}`
+        : `Drafted invoice ${invoiceNumber} for ${currency} ${amount}, due ${dueAt.slice(0, 10)}. Need the customer's email to generate a payment link.`,
+    output: { invoiceId: data?.id, invoiceNumber, customerName, amount, currency, dueAt, persisted: true, checkoutUrl },
   };
 }
 

@@ -138,6 +138,57 @@ export async function createIntaSendTopUpSession(input: {
   }
 }
 
+// Dobly-hosted payment collection: a business's coworkers use this to get
+// the business paid by ITS OWN customers, without the business ever
+// registering a Daraja/Paystack merchant account. Dobly is the merchant of
+// record on IntaSend; the collected amount is tracked against the
+// business's invoice row (see the migration adding invoices.checkout_url)
+// so it can be reconciled and paid out to the business later. This is the
+// "Dobly hosted" half of the per-connection-or-hosted pattern already used
+// elsewhere (see [[dobly-per-user-connections]]) - a business that has
+// connected its own mpesa/paystack account should use that path instead;
+// this is the fallback for the common case where it hasn't.
+export async function createHostedInvoicePaymentLink(input: {
+  invoiceId: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  customerEmail: string;
+  customerName?: string | null;
+  description: string;
+  successUrl: string;
+}) {
+  const [firstName, ...rest] = String(input.customerName ?? input.customerEmail.split("@")[0]).trim().split(/\s+/);
+  const lastName = rest.join(" ") || "Customer";
+  const reference = `dobly-invoice-${input.invoiceId}`;
+
+  const response = (await getIntaSendClient().collection().charge({
+    first_name: firstName,
+    last_name: lastName,
+    email: input.customerEmail,
+    host: new URL(input.successUrl).origin,
+    amount: input.amount,
+    currency: input.currency,
+    api_ref: reference,
+    redirect_url: input.successUrl,
+    narrative: input.description,
+  })) as JsonRecord;
+
+  const nested = response.invoice && typeof response.invoice === "object" ? response.invoice : {};
+  const url = findString(response, ["url", "checkout_url", "payment_url"]) ?? findString(nested, ["url", "checkout_url"]);
+  const invoiceRef = findString(response, ["invoice_id", "invoiceId"]) ?? findString(nested, ["invoice_id", "id"]);
+  if (!url) throw new Error("IntaSend did not return a checkout URL for this invoice.");
+
+  const admin = createAdminSupabaseClient();
+  await admin
+    .from("invoices")
+    .update({ checkout_url: url, provider: "intasend_hosted", external_invoice_id: invoiceRef ?? reference })
+    .eq("id", input.invoiceId)
+    .eq("user_id", input.userId);
+
+  return { url, reference, invoiceRef };
+}
+
 export async function verifyIntaSendPayment(input: {
   invoiceId: string;
   checkoutId?: string | null;
