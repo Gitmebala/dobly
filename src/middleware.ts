@@ -39,6 +39,19 @@ type CookieToSet = {
   options?: Record<string, unknown>;
 };
 
+// See the matching comment in src/lib/supabase/server.ts - forces a
+// 90-day floor on the auth-token cookie so signing in actually
+// survives closing and reopening the browser, instead of relying on
+// whatever maxAge @supabase/ssr happened to compute for that session.
+const AUTH_COOKIE_MIN_MAX_AGE = 60 * 60 * 24 * 90;
+
+function withPersistentCookieOptions(name: string, options?: Record<string, unknown>) {
+  if (!name.startsWith("sb-") || !name.includes("-auth-token")) return options;
+  const currentMaxAge = typeof options?.maxAge === "number" ? options.maxAge : 0;
+  if (currentMaxAge >= AUTH_COOKIE_MIN_MAX_AGE) return options;
+  return { ...options, maxAge: AUTH_COOKIE_MIN_MAX_AGE };
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
@@ -134,7 +147,7 @@ export async function middleware(request: NextRequest) {
           );
           supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, withPersistentCookieOptions(name, options))
           );
         },
       },

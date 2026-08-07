@@ -11,6 +11,24 @@ type CookieToSet = {
   options?: Record<string, unknown>;
 };
 
+// A user closing the browser and reopening it later had to sign in
+// again every time. @supabase/ssr computes a maxAge for its auth
+// cookies from the session, but that computation can come back short
+// or absent depending on how the session was issued (password vs.
+// OAuth vs. refresh) - the visible symptom either way is a
+// session-only cookie that Chrome deletes when the browser process
+// fully closes, not just when a tab closes. Force a 90-day floor on
+// the auth-token cookie specifically so "remember me" actually means
+// something, regardless of what the library computed.
+const AUTH_COOKIE_MIN_MAX_AGE = 60 * 60 * 24 * 90;
+
+function withPersistentCookieOptions(name: string, options?: Record<string, unknown>) {
+  if (!name.startsWith("sb-") || !name.includes("-auth-token")) return options;
+  const currentMaxAge = typeof options?.maxAge === "number" ? options.maxAge : 0;
+  if (currentMaxAge >= AUTH_COOKIE_MIN_MAX_AGE) return options;
+  return { ...options, maxAge: AUTH_COOKIE_MIN_MAX_AGE };
+}
+
 function timedFetch(input: RequestInfo | URL, init?: RequestInit) {
   return fetch(input, {
     ...init,
@@ -53,7 +71,7 @@ export async function createServerSupabaseClient() {
         setAll(cookiesToSet: CookieToSet[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, withPersistentCookieOptions(name, options))
             );
           } catch (error) {
             // Expected in Server Components, where the cookie store is
