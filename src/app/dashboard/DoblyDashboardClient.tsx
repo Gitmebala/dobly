@@ -97,6 +97,8 @@ export default function DoblyDashboardClient({
   team = [],
   signalSummary,
   pulseScore = 100,
+  runsThisWeek = 0,
+  completedRunsThisWeek = 0,
   justOnboarded = false,
 }: {
   recentLoops: LoopRecord[];
@@ -115,6 +117,8 @@ export default function DoblyDashboardClient({
   team?: TeamMember[];
   signalSummary?: SignalSummary;
   pulseScore?: number;
+  runsThisWeek?: number;
+  completedRunsThisWeek?: number;
   justOnboarded?: boolean;
 }) {
   const router = useRouter();
@@ -189,7 +193,7 @@ export default function DoblyDashboardClient({
               <h2><i>01</i> Your business</h2>
               <Link href="/dashboard/coworkers">Open workspace</Link>
             </header>
-            <BusinessHub team={team} />
+            <BusinessHub team={team} pulseScore={pulseScore} />
           </section>
 
           <section className="home-section">
@@ -353,9 +357,13 @@ export default function DoblyDashboardClient({
           </section>
 
           <section className="ref-card ref-panel">
-            <div className="ref-between"><strong>Time returned</strong><Clock3 size={17} /></div>
-            <h2 style={{ margin: "18px 0 4px", fontSize: 34 }}>{Math.round(snapshot.metrics.timeSavedHours || 0)}h</h2>
-            <p className="ref-muted">Estimated from completed operating work.</p>
+            <div className="ref-between"><strong>This week</strong><Clock3 size={17} /></div>
+            <h2 style={{ margin: "18px 0 4px", fontSize: 34, fontFamily: "var(--font-display), Georgia, serif" }}>{runsThisWeek}</h2>
+            <p className="ref-muted">
+              {runsThisWeek
+                ? `${completedRunsThisWeek} of ${runsThisWeek} run${runsThisWeek === 1 ? "" : "s"} completed cleanly in the last 7 days.`
+                : "No runs yet this week - tell a coworker what to handle above."}
+            </p>
           </section>
         </aside>
       </div>
@@ -387,7 +395,7 @@ function formatDate(value: string) {
 // department buckets (dobly_operators has no office/department column -
 // only a free-text scope string - so anything claiming to group by
 // "Sales, Marketing, Finance" would be fabricated for most Dobly users).
-function BusinessHub({ team }: { team: TeamMember[] }) {
+function BusinessHub({ team, pulseScore }: { team: TeamMember[]; pulseScore: number }) {
   if (!team.length) {
     return (
       <div className="home-hub home-hub-empty">
@@ -401,25 +409,41 @@ function BusinessHub({ team }: { team: TeamMember[] }) {
     );
   }
 
-  const radius = 132;
-  const nodeSize = 108;
+  const activeCount = team.filter((member) => member.status === "active").length;
+  const totalLoops = team.reduce((sum, member) => sum + (member.loopCount ?? 0), 0);
+  // Wider spacing for fewer nodes so 1-3 coworkers don't crowd the
+  // center; tightens gracefully as the roster grows.
+  const radius = team.length <= 3 ? 176 : team.length <= 6 ? 196 : 216;
   const angleStep = (2 * Math.PI) / team.length;
   // Start pointing up (-90deg) so a single or first coworker sits at the top.
   const startAngle = -Math.PI / 2;
+  const half = radius + 130;
 
   return (
     <div className="home-hub" role="img" aria-label={`${team.length} coworkers orbiting your business`}>
-      <svg viewBox="-190 -190 380 380" width="100%" height="380" aria-hidden="true">
+      <svg viewBox={`-${half} -${half} ${half * 2} ${half * 2}`} width="100%" height={half * 2} aria-hidden="true">
         {team.map((member, index) => {
           const angle = startAngle + angleStep * index;
           const x = Math.cos(angle) * radius;
           const y = Math.sin(angle) * radius;
-          return <line key={member.id} x1={0} y1={0} x2={x} y2={y} className="home-hub-spoke" strokeDasharray="2 5" />;
+          return (
+            <line
+              key={member.id}
+              x1={0}
+              y1={0}
+              x2={x}
+              y2={y}
+              className="home-hub-spoke"
+              data-status={member.status}
+              strokeDasharray="1 6"
+            />
+          );
         })}
       </svg>
       <div className="home-hub-center">
-        <strong>D</strong>
-        <span>Your business</span>
+        <strong>{Math.round(pulseScore)}</strong>
+        <span>business pulse</span>
+        <em>{activeCount} on shift &middot; {totalLoops} loop{totalLoops === 1 ? "" : "s"}</em>
       </div>
       {team.map((member, index) => {
         const angle = startAngle + angleStep * index;
@@ -431,12 +455,16 @@ function BusinessHub({ team }: { team: TeamMember[] }) {
             href={`/dashboard/coworkers?operatorId=${member.id}`}
             className="home-hub-node"
             data-status={member.status}
-            style={{ transform: `translate(${x}px, ${y}px)`, width: nodeSize }}
+            style={{ transform: `translate(${x}px, ${y}px)` }}
           >
             <span className="home-hub-node-avatar">{member.name.slice(0, 1).toUpperCase()}</span>
             <span className="home-hub-node-name">{member.name}</span>
-            <span className="home-hub-node-meta">{member.loopCount ?? 0} loop{member.loopCount === 1 ? "" : "s"}</span>
-            <i data-status={member.status} aria-hidden="true" />
+            <span className="home-hub-node-meta">
+              <i data-status={member.status} aria-hidden="true" />
+              {member.status === "active"
+                ? member.lastRunAt ? `active ${formatDate(member.lastRunAt)}` : "ready"
+                : member.status}
+            </span>
           </Link>
         );
       })}

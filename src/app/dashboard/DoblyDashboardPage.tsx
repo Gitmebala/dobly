@@ -180,6 +180,15 @@ export default async function DoblyDashboardPage({
 
   const signalSummary = await signalSummaryPromise;
 
+  // "Time returned" used to sum time_saved_minutes, a field only the
+  // retired legacy workflows table ever wrote - for every user running
+  // only current-generation coworkers this was permanently 0h, forever,
+  // no matter how much real work ran. Replaced with something that's
+  // always accurate: actual completed runs in the last 7 days.
+  const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const runsThisWeek = mergedRuns.filter((run) => new Date(run.started_at).getTime() >= oneWeekAgo);
+  const completedRunsThisWeek = runsThisWeek.filter((run) => run.status === "success").length;
+
   // A single at-a-glance score, built from things the user already sees
   // broken out individually elsewhere on this page (failed runs, stale
   // approvals, disconnected accounts, critical signals) - not a new
@@ -229,6 +238,8 @@ export default async function DoblyDashboardPage({
       team={team}
       signalSummary={signalSummary}
       pulseScore={pulseScore}
+      runsThisWeek={runsThisWeek.length}
+      completedRunsThisWeek={completedRunsThisWeek}
       justOnboarded={justOnboarded}
     />
   );

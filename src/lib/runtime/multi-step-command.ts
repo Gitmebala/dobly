@@ -52,6 +52,16 @@ function hasAny(text: string, patterns: string[]) {
   return patterns.some((pattern) => text.includes(pattern));
 }
 
+function summarizeCommandTitle(prompt: string) {
+  const cleaned = prompt.trim().replace(/\s+/g, " ");
+  if (!cleaned) return "Command plan and results";
+  const limit = 72;
+  if (cleaned.length <= limit) return cleaned;
+  const cut = cleaned.slice(0, limit);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${cut.slice(0, lastSpace > 40 ? lastSpace : limit)}…`;
+}
+
 export function buildRuntimeCommandPlan(prompt: string, intent?: DoblyExecutionIntent | null): RuntimePlanStep[] {
   const lower = prompt.toLowerCase();
   const route = planDoblyCommand({ prompt, intent });
@@ -565,7 +575,12 @@ export async function executeRuntimeCommandPlan(input: {
       userId: input.userId,
       workspaceId: input.workspaceId ?? null,
       kind: "json",
-      title: "Multi-step command plan and results",
+      // Was a hardcoded "Multi-step command plan and results" for every
+      // run regardless of what was actually asked - every approval and
+      // artifact list built from this title looked like the exact same
+      // repeated item, when they were really distinct runs on different
+      // days. Derive it from the actual prompt instead.
+      title: summarizeCommandTitle(input.prompt),
       content: { prompt: input.prompt, steps, stepResults },
       metadata: { workerId: input.workerId ?? null },
     });
