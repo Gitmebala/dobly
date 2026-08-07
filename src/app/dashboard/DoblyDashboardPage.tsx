@@ -167,6 +167,9 @@ export default async function DoblyDashboardPage({
     hasBusinessContext: Boolean(businessProfile?.business_name),
     hasConnection: ((connections ?? []) as Connection[]).some(isConnectionOperational),
     hasWorkflow: operators.length > 0,
+    // A user who explicitly skipped setup should not keep getting
+    // nagged by the "Finish setup" line every time they land here.
+    skipped: Boolean(profile?.onboarding_skipped_at),
   };
   const team = operators.slice(0, 8).map((operator) => ({
     id: operator.id,

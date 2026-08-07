@@ -7637,9 +7637,59 @@ html[data-theme="dark"] .dashboard-shell {
 
 .onboard-step-footer {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--app-line);
+}
+
+.onboard-skip-link {
+  background: none;
+  border: none;
+  color: var(--app-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: color 140ms ease, text-decoration-color 140ms ease;
+}
+.onboard-skip-link:hover { color: var(--app-text); text-decoration-color: var(--app-line-strong); }
+.onboard-skip-link:disabled { opacity: 0.6; cursor: default; }
+
+.onboard-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  max-width: 560px;
+  min-height: calc(100vh - 64px);
+  margin: 0 auto;
+  padding: 0 24px;
+  animation: onboard-reveal-in 700ms var(--ease-premium, ease) both;
+}
+
+.onboard-welcome h1 {
+  margin: 14px 0 18px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 2.1rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--app-text);
+}
+
+.onboard-welcome p {
+  margin: 0 0 16px;
+  color: var(--app-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.onboard-welcome-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 12px;
 }
 
 .onboard-continue-button {

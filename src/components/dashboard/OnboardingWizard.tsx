@@ -62,6 +62,20 @@ export default function OnboardingWizard({
   const [selectedMode, setSelectedMode] = useState<ApprovalMode>(
     (deployedOperator?.approvalMode as ApprovalMode) || "approve_risky",
   );
+  // Only a brand-new account with zero progress sees the welcome
+  // screen - someone returning to resume setup goes straight back to
+  // whichever step they were on, not through the intro again.
+  const [showWelcome, setShowWelcome] = useState(!hasBusinessContext && !hasConnection && !hasWorkflow);
+  const [skipping, setSkipping] = useState(false);
+
+  async function skipOnboarding() {
+    setSkipping(true);
+    try {
+      await fetch("/api/onboarding/skip", { method: "POST" });
+    } finally {
+      router.push("/dashboard");
+    }
+  }
 
   const stepIndex = useMemo(() => {
     if (!hasBusinessContext) return 0;
@@ -105,6 +119,33 @@ export default function OnboardingWizard({
     );
   }
 
+  if (showWelcome) {
+    return (
+      <div className="onboard-welcome">
+        <Sparkles className="onboard-reveal-icon" />
+        <span className="onboard-step-eyebrow">Welcome, {firstName}</span>
+        <h1>Dobly is where you hire people, not software.</h1>
+        <p>
+          Describe a job in plain language and Dobly proposes who should do it, with what tools, under what rules.
+          Each coworker keeps a running chat - that thread is the permanent record of everything it does, so you
+          never have to guess what happened while you were away.
+        </p>
+        <p>
+          Setting up takes about three minutes: tell Dobly about the business, connect one place work happens, and
+          hire your first coworker. You can stop at any point and pick it back up later.
+        </p>
+        <div className="onboard-welcome-actions">
+          <button type="button" className="onboard-continue-button" onClick={() => setShowWelcome(false)}>
+            <ArrowRight size={15} /> Get started
+          </button>
+          <button type="button" className="onboard-skip-link" onClick={skipOnboarding} disabled={skipping}>
+            {skipping ? "Skipping…" : "Skip setup for now"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="onboard-wizard">
       <div className="onboard-wizard-progress" aria-label="Setup progress">
@@ -131,7 +172,7 @@ export default function OnboardingWizard({
             <div className="onboard-step-body">
               <BusinessSetupClient initialProfile={businessProfile} />
             </div>
-            <StepFooter onContinue={recheck} continueLabel="Continue" />
+            <StepFooter onContinue={recheck} continueLabel="Continue" onSkip={skipOnboarding} skipping={skipping} />
           </section>
         ) : stepIndex === 1 ? (
           <section className="onboard-step" key="connect">
@@ -148,7 +189,7 @@ export default function OnboardingWizard({
               />
             </div>
             <p className="onboard-step-note">Connecting a provider opens its sign-in elsewhere. Come back to this tab afterward and continue.</p>
-            <StepFooter onContinue={recheck} continueLabel="I've connected — continue" />
+            <StepFooter onContinue={recheck} continueLabel="I've connected — continue" onSkip={skipOnboarding} skipping={skipping} />
           </section>
         ) : stepIndex === 2 ? (
           <section className="onboard-step" key="hire">
@@ -166,6 +207,11 @@ export default function OnboardingWizard({
                 }}
               />
             </div>
+            <footer className="onboard-step-footer">
+              <button type="button" className="onboard-skip-link" onClick={skipOnboarding} disabled={skipping}>
+                {skipping ? "Skipping…" : "Skip setup for now"}
+              </button>
+            </footer>
           </section>
         ) : (
           <section className="onboard-step" key="leash">
@@ -192,7 +238,7 @@ export default function OnboardingWizard({
               ))}
             </div>
             {leashError ? <p className="onboard-step-error">{leashError}</p> : null}
-            <StepFooter onContinue={confirmLeash} continueLabel="Activate my workspace" loading={leashSaving} />
+            <StepFooter onContinue={confirmLeash} continueLabel="Activate my workspace" loading={leashSaving} onSkip={skipOnboarding} skipping={skipping} />
           </section>
         )}
       </div>
@@ -214,10 +260,14 @@ function StepFooter({
   onContinue,
   continueLabel,
   loading,
+  onSkip,
+  skipping,
 }: {
   onContinue: () => void;
   continueLabel: string;
   loading?: boolean;
+  onSkip?: () => void;
+  skipping?: boolean;
 }) {
   return (
     <footer className="onboard-step-footer">
@@ -225,6 +275,11 @@ function StepFooter({
         {loading ? <Loader2 className="onboard-spin" size={15} /> : <ArrowRight size={15} />}
         {continueLabel}
       </button>
+      {onSkip ? (
+        <button type="button" className="onboard-skip-link" onClick={onSkip} disabled={skipping}>
+          {skipping ? "Skipping…" : "Skip setup for now"}
+        </button>
+      ) : null}
     </footer>
   );
 }

@@ -112,6 +112,7 @@ export default function DoblyDashboardClient({
     hasBusinessContext: boolean;
     hasConnection: boolean;
     hasWorkflow: boolean;
+    skipped?: boolean;
   };
   firstName?: string;
   team?: TeamMember[];
@@ -125,7 +126,7 @@ export default function DoblyDashboardClient({
   const [prompt, setPrompt] = useState("");
   const [showWelcome, setShowWelcome] = useState(justOnboarded);
   const name = firstName || "there";
-  const setupComplete = onboarding.hasBusinessContext && onboarding.hasConnection && onboarding.hasWorkflow;
+  const setupComplete = (onboarding.hasBusinessContext && onboarding.hasConnection && onboarding.hasWorkflow) || Boolean(onboarding.skipped);
   const quickPrompts = [
     "Research an opportunity",
     "Plan a recurring operation",
