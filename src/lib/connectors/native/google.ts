@@ -5,7 +5,24 @@ import {
   storeConnectionSecrets,
 } from "@/lib/connections";
 import { anthropic } from "@/lib/anthropic";
+import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import type { ConnectorExecutor } from "@/lib/connectors/sdk";
+
+// "Research this and email me the results" is a completely normal
+// request that never names a recipient, because the recipient is
+// obviously the owner. Every one of these calls used to hard-fail with
+// "Gmail action requires a recipient" instead of just sending it to the
+// account's own email - this was the single largest cause of real run
+// failures on the platform (6 of the 40 real runs logged this exact
+// error). Falls back to the Supabase auth email, then profiles.email,
+// in case one is null.
+async function resolveOwnerEmail(userId: string) {
+  const admin = createAdminSupabaseClient();
+  const { data: authUser } = await admin.auth.admin.getUserById(userId);
+  if (authUser?.user?.email) return authUser.user.email;
+  const { data: profile } = await admin.from("profiles").select("email").eq("id", userId).maybeSingle();
+  return profile?.email ?? null;
+}
 
 // Google access tokens expire (typically ~1 hour) and nothing anywhere in
 // this codebase ever refreshed one before use - every Google-connected
@@ -74,9 +91,12 @@ export const googleGmailSendExecutor: ConnectorExecutor = {
       context.workflow.user_id,
       typeof context.config.connectionId === "string" ? context.config.connectionId : undefined
     );
-    const to = String(context.config.to ?? "").trim();
+    let to = String(context.config.to ?? "").trim();
     if (!to) {
-      throw new Error("Gmail action requires a recipient.");
+      to = (await resolveOwnerEmail(context.workflow.user_id)) ?? "";
+    }
+    if (!to) {
+      throw new Error("Gmail action requires a recipient, and the account has no email on file to default to.");
     }
 
     const subject = String(context.config.subject ?? context.step.name);
