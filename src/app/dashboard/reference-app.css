@@ -622,7 +622,6 @@ html[data-theme="dark"] .dashboard-shell.app-shell {
   border: 1px solid var(--app-line);
   border-radius: 8px;
   background: color-mix(in srgb, var(--app-paper) 92%, transparent);
-  box-shadow: var(--app-shadow);
 }
 .ref-empty-state {
   min-height: 220px;
@@ -2120,9 +2119,17 @@ html.theme-transitioning * {
   border-top: 3px solid var(--app-rust) !important;
 }
 
+/* This one rule forced a heavy drop shadow onto every card-like class
+   used across all ~37 dashboard pages at once - the actual root cause
+   of the whole app reading as "boxy", independent of any individual
+   page's own CSS. It was written to flatten legacy glass/gradient UI
+   (see the rules above this one), which is still needed; the shadow
+   it also forced is not - dropped per DESIGN.md (hairline borders,
+   no default elevation). .ref-panel in particular has no border or
+   background of its own (see its base rule) - its entire "card" look
+   came only from this override, so it's now plain padding as intended. */
 .dashboard-shell :is(.card, .premium-tile, .ref-card, .ref-panel, .card-hover, .surface-panel) {
   background: var(--app-paper) !important;
-  box-shadow: var(--app-shadow) !important;
   backdrop-filter: none !important;
 }
 
