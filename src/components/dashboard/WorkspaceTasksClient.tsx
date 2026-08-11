@@ -39,14 +39,17 @@ export default function WorkspaceTasksClient({
 }) {
   const searchParams = useSearchParams();
   const projectParam = searchParams?.get("project") ?? "";
+  // Coming from a coworker's "Assign a task" quick action (?assignee=<operatorId>)
+  // should actually preselect them, not just land on a blank form.
+  const assigneeParam = searchParams?.get("assignee") ?? "";
   const [tasks, setTasks] = useState(initialTasks);
-  const [creating, setCreating] = useState(searchParams?.get("create") === "true");
+  const [creating, setCreating] = useState(searchParams?.get("create") === "true" || Boolean(assigneeParam));
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Task["priority"]>("medium");
   const [dueAt, setDueAt] = useState("");
   const [projectId, setProjectId] = useState(projectParam);
-  const [assignee, setAssignee] = useState(""); // "" | `user:<id>` | `operator:<id>`
+  const [assignee, setAssignee] = useState(assigneeParam ? `operator:${assigneeParam}` : ""); // "" | `user:<id>` | `operator:<id>`
   const [filter, setFilter] = useState<"all" | Task["status"]>("all");
   const [view, setView] = useState<"list" | "board">("list");
   const [projectFilter, setProjectFilter] = useState(projectParam);
@@ -120,10 +123,10 @@ export default function WorkspaceTasksClient({
   }
 
   return (
-    <div className="ref-page">
+    <div className="ref-page tasks-page">
       <header className="ref-header">
         <div>
-          <div className="ref-greeting"><Sparkles size={16} /> Workspace tasks</div>
+          <div className="ref-greeting"><Sparkles size={16} /> Your work table</div>
           <h1>Tasks</h1>
           <p className="ref-subtitle">Assign to a teammate to track it, or to a coworker to have it done.</p>
         </div>

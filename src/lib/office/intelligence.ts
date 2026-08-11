@@ -40,7 +40,6 @@ export interface BoardroomReport {
   period: string;
   strategicQuestion: string;
   members: Array<{
-    agentName: string;
     role: string;
     mandate: string;
     finding: string;
@@ -446,6 +445,16 @@ async function buildBoardroomOperatingContext(userId: string) {
     ...reception.records,
   ];
 
+  // Each member used to also carry a hardcoded human name (Amina, Kito, Nia,
+  // Otieno, Maya, Sage) rendered as the card's headline in both
+  // HomebaseCommandCenter.tsx and the Reports page - a fabricated persona
+  // with zero connection to any coworker the owner actually hired, shown
+  // giving findings and recommendations as if it were a real person. The
+  // underlying synthesis is real (grounded in this user's own department
+  // records via loadDepartmentOperatingData), so the fix is to stop
+  // personifying it, not to fake the personification correctly - the role
+  // title alone ("Chief Financial Officer") is an honest lens/grouping
+  // label, not a claim that a specific named entity exists.
   const members = [
     buildCfoMember(financeRecords),
     buildCroMember(leads),
@@ -508,7 +517,6 @@ function buildCfoMember(records: DepartmentOperatingRecord[]): BoardroomReport["
   const open = countNeedsAction(records);
   const overdue = records.filter((record) => /overdue|needs_review|queued_followup/i.test(record.status));
   return {
-    agentName: "Amina",
     role: "Chief Financial Officer",
     mandate: "Cash clarity, collections, reconciliation, and spend discipline.",
     finding:
@@ -529,7 +537,6 @@ function buildCroMember(records: DepartmentOperatingRecord[]): BoardroomReport["
   const open = countNeedsAction(records);
   const valuable = records.filter((record) => record.moneyLabel || record.priority === "high");
   return {
-    agentName: "Kito",
     role: "Chief Revenue Officer",
     mandate: "Pipeline velocity, lead quality, conversion discipline, and revenue experiments.",
     finding:
@@ -551,7 +558,6 @@ function buildCmoMember(content: DepartmentOperatingRecord[], leads: DepartmentO
   const marketInputs = leads.length + support.length;
   const records = [...content, ...leads, ...support];
   return {
-    agentName: "Nia",
     role: "Chief Marketing Officer",
     mandate: "Market narrative, content cadence, customer language, and demand creation.",
     finding:
@@ -571,7 +577,6 @@ function buildCmoMember(content: DepartmentOperatingRecord[], leads: DepartmentO
 function buildCooMember(records: DepartmentOperatingRecord[]): BoardroomReport["members"][number] {
   const blocked = records.filter((record) => /blocked|open|in_progress/i.test(record.status));
   return {
-    agentName: "Otieno",
     role: "Chief Operations Officer",
     mandate: "Delivery reliability, supplier handoffs, blockers, and operational throughput.",
     finding:
@@ -592,7 +597,6 @@ function buildCcoMember(cases: DepartmentOperatingRecord[], conversations: Depar
   const records = [...cases, ...conversations];
   const trustPressure = records.filter((record) => needsAction(record.status) || record.priority === "high" || record.priority === "critical");
   return {
-    agentName: "Maya",
     role: "Chief Customer Officer",
     mandate: "Customer trust, support quality, retention signals, and recovery paths.",
     finding:
@@ -613,7 +617,6 @@ function buildCsoMember(records: DepartmentOperatingRecord[], recentOutcomes: st
   const active = records.filter((record) => needsAction(record.status));
   const high = records.filter((record) => record.priority === "high" || record.priority === "critical");
   return {
-    agentName: "Sage",
     role: "Chief Strategy Officer",
     mandate: "Cross-department tradeoffs, sequencing, and what the owner should change next.",
     finding:

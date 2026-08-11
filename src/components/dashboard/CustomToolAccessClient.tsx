@@ -123,7 +123,29 @@ export default function CustomToolAccessClient() {
         setError(data.error ?? "Could not connect that tool.");
         return;
       }
-      setTestResult(`${selected.definition.label} connected.`);
+      // This used to unconditionally say "X connected." regardless of what
+      // the backend actually did - for oauth-flavored connectors with no
+      // real provider wired up yet, that meant a placeholder row got created
+      // (honestly marked pending in the database) while the screen claimed
+      // success. Now: a real OAuth redirect actually navigates there, and
+      // anything short of an active connection says so honestly instead of
+      // celebrating early.
+      if (data.redirectTo) {
+        window.location.href = data.redirectTo;
+        return;
+      }
+      const status = data.connection?.status;
+      if (status === "active" || status === "connected") {
+        setTestResult(`${selected.definition.label} connected.`);
+      } else if (status === "pending") {
+        setTestResult(
+          `${selected.definition.label} setup started, but isn't connected yet - ${
+            selected.definition.setupSteps[0] ?? "finish the remaining setup steps"
+          }.`,
+        );
+      } else {
+        setTestResult(`${selected.definition.label} setup was recorded, but is not yet active.`);
+      }
       refresh();
     });
   }

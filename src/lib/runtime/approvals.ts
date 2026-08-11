@@ -80,6 +80,29 @@ export async function listRuntimeApprovals(input: {
   return (data ?? []) as RuntimeApprovalRecord[];
 }
 
+// `runtime_approvals.status` has always had an "expired" value in its
+// type, but nothing anywhere ever wrote it - every approval that wasn't
+// manually decided just sat "pending" forever. Combined with the
+// over-classification fixed in operator-brain.ts/capabilities.ts (which
+// was generating far more approvals than necessary in the first place),
+// this made the pending count only ever grow. Called from the daily
+// scheduler pass; a stale approval almost certainly belongs to a run
+// whose moment has passed, not one still worth surfacing.
+const APPROVAL_STALE_AFTER_DAYS = 4;
+
+export async function expireStaleRuntimeApprovals() {
+  const admin = createAdminSupabaseClient();
+  const cutoff = new Date(Date.now() - APPROVAL_STALE_AFTER_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await admin
+    .from("runtime_approvals")
+    .update({ status: "expired", decided_at: new Date().toISOString(), decision_note: `Auto-expired after ${APPROVAL_STALE_AFTER_DAYS} days with no decision.` })
+    .eq("status", "pending")
+    .lt("requested_at", cutoff)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return data?.length ?? 0;
+}
+
 export async function decideRuntimeApproval(input: {
   approvalId: string;
   userId: string;

@@ -33,6 +33,28 @@ const config: Config = {
           muted: "rgb(var(--text-muted-rgb) / <alpha-value>)",
           dim: "rgb(var(--text-dim-rgb) / <alpha-value>)",
         },
+        // shadcn/ui theming for the dashboard — new keys only, deliberately
+        // not touching `accent`/`border`/`text` above (the marketing site's
+        // own system). Backed by --shadcn-* in reference-app.css, which is
+        // where the dashboard's real Dobly palette (--app-*) lives.
+        primary: {
+          DEFAULT: "var(--shadcn-primary)",
+          foreground: "var(--shadcn-primary-foreground)",
+        },
+        secondary: {
+          DEFAULT: "var(--shadcn-secondary)",
+          foreground: "var(--shadcn-secondary-foreground)",
+        },
+        muted: {
+          DEFAULT: "var(--shadcn-muted)",
+          foreground: "var(--shadcn-muted-foreground)",
+        },
+        destructive: "var(--shadcn-destructive)",
+        ring: "var(--shadcn-ring)",
+        popover: {
+          DEFAULT: "var(--shadcn-popover)",
+          foreground: "var(--shadcn-popover-foreground)",
+        },
       },
       fontFamily: {
         display: ["var(--font-sora)", "sans-serif"],

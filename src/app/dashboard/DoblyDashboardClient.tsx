@@ -2,20 +2,22 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
-  Bot,
-  CheckCircle2,
-  Clock3,
-  Link2,
+  ArrowUp,
+  Bell,
+  Calendar,
+  Mail,
   Play,
   Plus,
-  Send,
-  ShieldCheck,
+  Rocket,
+  Search,
   Sparkles,
-  Workflow,
+  X,
 } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 type LoopRecord = {
   id: string;
@@ -84,19 +86,40 @@ type Snapshot = {
   whatNeedsAttention: string[];
 };
 
+const MATERIALS = ["paper", "clay", "stone", "slate"] as const;
+
+const STARTERS = [
+  { label: "Launch my product", icon: Rocket, prompt: "Help me launch my product" },
+  { label: "Research this market", icon: Search, prompt: "Research my market and competitors" },
+  { label: "Automate lead outreach", icon: Mail, prompt: "Automate outreach to new leads" },
+  { label: "Plan my week", icon: Calendar, prompt: "Plan my week and flag what needs my attention" },
+];
+
+// The handwritten note at the top changes with the hour, so the canvas
+// feels lived-in rather than a static mockup. A few options per bracket
+// so reloading doesn't always land on the same line.
+const ANNOTATIONS: Array<{ from: number; to: number; lines: [string, string][] }> = [
+  { from: 0, to: 4, lines: [["Midnight grind.", "Dobly's up too."], ["The quiet hours.", "Good ones for big ideas."], ["Still awake?", "Let's make it count."]] },
+  { from: 4, to: 7, lines: [["Up before the sun.", "Dobly handles the rest."], ["Early bird energy.", "Let's use it."]] },
+  { from: 7, to: 11, lines: [["Start with anything.", "Dobly handles the rest."], ["Fresh start.", "What are we building today?"], ["Coffee's on.", "Let's move."]] },
+  { from: 11, to: 14, lines: [["Midday momentum.", "Keep it going."], ["Halfway through.", "Dobly's still on it."]] },
+  { from: 14, to: 18, lines: [["Afternoon push.", "Let's close things out."], ["Second wind.", "Dobly handles the rest."]] },
+  { from: 18, to: 22, lines: [["Winding down —", "or one more thing?"], ["Golden hour.", "Let's get it done."], ["Evening shift.", "Dobly's on the clock."]] },
+  { from: 22, to: 24, lines: [["Late one tonight.", "Dobly doesn't mind."], ["Night owl mode.", "What's on your mind?"]] },
+];
+
+function pickAnnotation(hour: number): [string, string] {
+  const bracket = ANNOTATIONS.find((b) => hour >= b.from && hour < b.to) ?? ANNOTATIONS[2];
+  return bracket.lines[Math.floor(Math.random() * bracket.lines.length)];
+}
+
 export default function DoblyDashboardClient({
   recentLoops,
-  latestRuns,
   latestApprovals,
-  latestConnections,
   snapshot,
-  workflowTitles,
-  runLabels,
   onboarding,
   firstName,
   team = [],
-  signalSummary,
-  pulseScore = 100,
   runsThisWeek = 0,
   completedRunsThisWeek = 0,
   justOnboarded = false,
@@ -125,14 +148,22 @@ export default function DoblyDashboardClient({
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [showWelcome, setShowWelcome] = useState(justOnboarded);
+  const [suggestDismissed, setSuggestDismissed] = useState(false);
   const name = firstName || "there";
   const setupComplete = (onboarding.hasBusinessContext && onboarding.hasConnection && onboarding.hasWorkflow) || Boolean(onboarding.skipped);
-  const quickPrompts = [
-    "Research an opportunity",
-    "Plan a recurring operation",
-    "Handle customer conversations",
-    "Build and ship something",
-  ];
+
+  // Real coworkers, deduped by id (defensive — a merged team list from
+  // multiple sources shouldn't ever render the same person twice).
+  const uniqueTeam = useMemo(() => Array.from(new Map(team.map((member) => [member.id, member])).values()), [team]);
+
+  // Deterministic default on first paint (server and client agree, no
+  // hydration mismatch — see dobly-silent-success-bugs on Date/locale
+  // drift); swapped for a time-aware, varied line right after mount so
+  // the canvas feels alive rather than a fixed mockup string.
+  const [annotation, setAnnotation] = useState<[string, string]>(["Start with anything.", "Dobly handles the rest."]);
+  useEffect(() => {
+    setAnnotation(pickAnnotation(new Date().getHours()));
+  }, []);
 
   function submitWork() {
     const value = prompt.trim();
@@ -140,336 +171,199 @@ export default function DoblyDashboardClient({
     router.push(`/dashboard/generate?prompt=${encodeURIComponent(value)}`);
   }
 
-  const hour = new Date().getHours();
-  const daypart = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
-  const todayLabel = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
-  const workingCount = team.filter((member) => member.status === "active").length;
+  const suggestion = useMemo(() => {
+    if (!setupComplete) {
+      return {
+        text: "Dobly still needs a little context before it can do trustworthy work on its own.",
+        href: "/dashboard/onboarding",
+        cta: "Finish setup",
+      };
+    }
+    if (latestApprovals.length) {
+      return {
+        text: `${latestApprovals[0].title || latestApprovals[0].message} is waiting on your decision.`,
+        href: "/dashboard/approvals",
+        cta: "Review",
+      };
+    }
+    if (snapshot.recommendations.length) {
+      return { text: snapshot.recommendations[0].title, href: "/dashboard/coworkers", cta: "View plan" };
+    }
+    if (snapshot.whatNeedsAttention.length) {
+      return { text: snapshot.whatNeedsAttention[0], href: "/dashboard/tasks", cta: "Take a look" };
+    }
+    return null;
+  }, [setupComplete, latestApprovals, snapshot]);
+
+  const focusItems = snapshot.whatNeedsAttention.slice(0, 3);
 
   return (
-    <div className="ref-page home-editorial">
+    <div className="canvas-page">
+      <div className="canvas-topbar">
+        <Link href="/dashboard/notifications" className="canvas-icon-btn" aria-label="Notifications">
+          <Bell size={17} />
+        </Link>
+        <Link href="/dashboard/coworkers?create=true" className="canvas-icon-btn is-accent" aria-label="Start something new">
+          <Plus size={19} />
+        </Link>
+      </div>
+
       {showWelcome ? (
-        <div className="home-welcome-banner dobly-anim-rise">
+        <div className="canvas-welcome-banner dobly-anim-rise">
           <Sparkles size={16} />
-          <span>Your workspace is live. This is Homebase — everything your team does shows up here from now on.</span>
-          <button type="button" onClick={() => setShowWelcome(false)} aria-label="Dismiss">Got it</button>
+          <span>Your workspace is live, {name}. This is your Canvas — everything your team does shows up here from now on.</span>
+          <button type="button" onClick={() => setShowWelcome(false)}>Got it</button>
         </div>
       ) : null}
-      <div className="ref-page-grid">
-        <main className="ref-page-main">
-          <header className="home-masthead">
-            <span className="home-date">{todayLabel}</span>
-            <h1>Good {daypart}, {name}.</h1>
-            <p>
-              {team.length
-                ? `${workingCount ? `${workingCount} of your ${team.length} coworker${team.length === 1 ? " is" : "s are"} on the clock.` : "Your team is standing by."} ${snapshot.metrics.waitingApprovals ? `${snapshot.metrics.waitingApprovals} decision${snapshot.metrics.waitingApprovals === 1 ? " needs" : "s need"} you.` : "Nothing needs your decision right now."}`
-                : snapshot.corePromise || "Hire your first coworker and hand over the work you shouldn't be doing."}
-            </p>
-          </header>
 
-          {!setupComplete ? (
-            <div className="home-setup-line">
-              <span>Before Dobly can do trustworthy work: {[!onboarding.hasBusinessContext && "business context", !onboarding.hasConnection && "one connection", !onboarding.hasWorkflow && "a first outcome"].filter(Boolean).join(", ")}.</span>
-              <Link href="/dashboard/onboarding">Finish setup <ArrowRight size={13} /></Link>
-            </div>
-          ) : null}
+      <section className="canvas-hero">
+        <div className="canvas-hero-main">
+          <p className="canvas-annotation">
+            {annotation[0]}<br />{annotation[1]}
+            <svg className="canvas-annotation-arrow" viewBox="0 0 52 34" fill="none" aria-hidden="true">
+              <path d="M4 3 C 12 20, 28 26, 46 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M36 15 L47 20 L40 29" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
+          </p>
 
-          <div className="home-command">
+          <h1 className="canvas-heading">
+            What needs<br />to get <span className="accent">done?</span>
+          </h1>
+
+          <div className="canvas-command">
+            <Sparkles />
             <input
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") submitWork();
               }}
-              placeholder="Describe an outcome, a problem, or a recurring job..."
+              placeholder="Describe what you want to get done…"
               aria-label="Tell Dobly what to handle"
             />
-            <button type="button" onClick={submitWork} aria-label="Send to Dobly"><Send size={16} /></button>
+            <button type="button" onClick={submitWork} disabled={!prompt.trim()} aria-label="Send to Dobly">
+              <ArrowUp size={18} />
+            </button>
           </div>
-          <div className="home-command-starters" aria-label="Suggested starting points">
-            {quickPrompts.map((item) => <button type="button" key={item} onClick={() => setPrompt(item)}>{item}</button>)}
+
+          <div className="canvas-starters">
+            <span className="canvas-starters-label">Try these <ArrowRight size={13} style={{ display: "inline", verticalAlign: "middle" }} /></span>
+            {STARTERS.map((starter) => {
+              const Icon = starter.icon;
+              return (
+                <button type="button" key={starter.label} className="canvas-chip" onClick={() => setPrompt(starter.prompt)}>
+                  <Icon /> {starter.label}
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          <section className="home-section home-hub-section">
-            <header className="home-section-head">
-              <h2><i>01</i> Your business</h2>
-              <Link href="/dashboard/coworkers">Open workspace</Link>
-            </header>
-            <BusinessHub team={team} pulseScore={pulseScore} />
-          </section>
-
-          <section className="home-section">
-            <header className="home-section-head">
-              <h2><i>02</i> Your team</h2>
-              <Link href="/dashboard/coworkers">Open workspace</Link>
-            </header>
-            <div className="home-roster">
-              {team.map((member) => (
-                <Link key={member.id} href={`/dashboard/coworkers?operatorId=${member.id}`} className="home-roster-row">
-                  <span className="home-roster-avatar" aria-hidden="true">{member.name.slice(0, 1).toUpperCase()}</span>
-                  <span className="home-roster-name">{member.name}</span>
-                  <span className="home-roster-mission">{member.mission}</span>
-                  <span className="home-roster-status" data-status={member.status}>
-                    <i aria-hidden="true" />
-                    {member.status === "active"
-                      ? member.lastRunAt ? `active ${formatDate(member.lastRunAt)}` : "ready"
-                      : member.status}
-                  </span>
-                </Link>
-              ))}
-              <Link href="/dashboard/coworkers?create=true" className="home-roster-row home-roster-hire">
-                <span className="home-roster-avatar" aria-hidden="true"><Plus size={15} /></span>
-                <span className="home-roster-name">Hire a coworker</span>
-                <span className="home-roster-mission">Describe a job. Dobly proposes the person, tools, and rules.</span>
-                <span className="home-roster-status"><ArrowRight size={14} /></span>
-              </Link>
-            </div>
-          </section>
-
-          <section className="home-section">
-            <header className="home-section-head">
-              <h2><i>03</i> The numbers</h2>
-            </header>
-            <div className="home-figures">
-              <div><b>{snapshot.metrics.activeSystems}</b><span>Active systems</span></div>
-              <div><b>{snapshot.metrics.ranToday}</b><span>Runs today</span></div>
-              <div><b>{snapshot.metrics.waitingApprovals}</b><span>Awaiting you</span></div>
-              <div><b>{Math.round(snapshot.metrics.timeSavedHours || 0)}h</b><span>Time returned</span></div>
-            </div>
-          </section>
-
-          <section className="home-section">
-            <header className="home-section-head">
-              <h2><i>04</i> Loops</h2>
-              <Link href="/dashboard/workflows">View all</Link>
-            </header>
-            {recentLoops.length ? (
-              <div className="home-list">
-                {recentLoops.map((loop) => (
-                  <Link className="home-list-row" href={`/dashboard/coworkers?operatorId=${loop.operatorId}`} key={loop.id}>
-                    <span className="home-list-main">
-                      <strong>{loop.name}</strong>
-                      <small>{loop.operatorName}</small>
-                    </span>
-                    <span className="home-list-meta">
-                      <em data-status={loop.status}>{loop.status}</em>
-                      <time>{formatDate(loop.updatedAt)}</time>
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="home-empty-line">Nothing is running yet. Describe the first outcome you want Dobly to own, above.</p>
-            )}
-          </section>
-
-          <section className="home-section home-columns">
-            <div>
-              <header className="home-section-head">
-                <h2><i>05</i> Recent runs</h2>
-                <Link href="/dashboard/activity">History</Link>
-              </header>
-              {latestRuns.length ? (
-                <div className="home-list">
-                  {latestRuns.slice(0, 4).map((run) => (
-                    <div className="home-list-row" key={run.id}>
-                      <span className="home-list-main">
-                        <strong>{workflowTitles[run.workflow_id] || runLabels[run.id] || "Coworker run"}</strong>
-                        <small>{run.status}</small>
-                      </span>
-                      <span className="home-list-meta"><time>{formatDate(run.started_at)}</time></span>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="home-empty-line">Runs will appear once a system starts working.</p>}
-            </div>
-            <div>
-              <header className="home-section-head">
-                <h2><i>06</i> Dobly recommends</h2>
-              </header>
-              {snapshot.recommendations.length ? (
-                <div className="home-list">
-                  {snapshot.recommendations.slice(0, 4).map((item) => (
-                    <div className="home-list-row" key={item.title}>
-                      <span className="home-list-main"><strong>{item.title}</strong></span>
-                      <span className="home-list-meta"><ArrowRight size={14} /></span>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="home-empty-line">Recommendations form as Dobly learns the business.</p>}
-            </div>
-          </section>
-        </main>
-
-        <aside className="ref-page-rail ref-stack">
-          <section className="ref-card ref-panel home-pulse">
-            <div className="ref-between"><strong>Pulse</strong><span className="home-pulse-score">{Math.round(pulseScore)}<em>%</em></span></div>
-            <p className="ref-muted" style={{ margin: "2px 0 12px" }}>Overall business health</p>
-            <div className="home-pulse-bar"><div style={{ width: `${Math.round(pulseScore)}%` }} /></div>
-          </section>
-
-          {signalSummary && signalSummary.totalSignals > 0 ? (
-            <section className="ref-card ref-panel">
-              <div className="ref-between"><strong>Signals</strong><span className="ref-pill">{signalSummary.unresolvedSignals}</span></div>
-              {signalSummary.recentSignals.length ? (
-                <div className="ref-simple-rows">
-                  {signalSummary.recentSignals.slice(0, 4).map((signal) => (
-                    <div className="ref-between" key={signal.id}>
-                      <span>{signal.title || signal.description || signal.signal_type.replaceAll("_", " ")}</span>
-                      <i data-status={signal.impact_level === "critical" || signal.impact_level === "high" ? "amber" : undefined} aria-hidden="true" />
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="ref-muted">Nothing flagged right now.</p>}
-            </section>
-          ) : null}
-
-          <section className="ref-card ref-panel ref-focus">
-            <div className="ref-between"><strong><ShieldCheck size={17} /> Needs attention</strong><span className="ref-pill">{snapshot.whatNeedsAttention.length}</span></div>
-            {snapshot.whatNeedsAttention.length ? (
-              <div className="ref-simple-rows">
-                {snapshot.whatNeedsAttention.slice(0, 4).map((item) => <div className="ref-between" key={item}><span>{item}</span><ArrowRight size={14} /></div>)}
-              </div>
-            ) : <div className="ref-focus-box"><CheckCircle2 size={28} color="var(--app-green)" /><span>Nothing needs intervention.</span></div>}
-          </section>
-
-          <section className="ref-card ref-panel">
-            <div className="ref-between"><strong>Approvals</strong><Link href="/dashboard/approvals">Open queue</Link></div>
-            {latestApprovals.length ? (
-              <div className="ref-simple-rows">
-                {latestApprovals.slice(0, 3).map((approval) => (
-                  <div key={approval.id}><span>{approval.title || approval.message}</span></div>
-                ))}
-              </div>
-            ) : <p className="ref-muted">No actions are waiting for approval.</p>}
-          </section>
-
-          <section className="ref-card ref-panel">
-            <div className="ref-between"><strong>Connections</strong><Link href="/dashboard/connections">Manage</Link></div>
-            {latestConnections.length ? (
-              <div className="ref-simple-rows">
-                {latestConnections.map((connection) => (
-                  <div className="ref-between" key={connection.id}>
-                    <span><Link2 size={13} /> {connection.provider}</span>
-                    <span className={`ref-pill ${connection.status === "connected" ? "green" : "amber"}`}>{connection.status}</span>
-                  </div>
-                ))}
-              </div>
-            ) : <p className="ref-muted">Connect the tools Dobly needs to take action.</p>}
-          </section>
-
-          <section className="ref-card ref-panel">
-            <div className="ref-between"><strong>This week</strong><Clock3 size={17} /></div>
-            <h2 style={{ margin: "18px 0 4px", fontSize: 34, fontFamily: "var(--font-display), Georgia, serif" }}>{runsThisWeek}</h2>
-            <p className="ref-muted">
-              {runsThisWeek
-                ? `${completedRunsThisWeek} of ${runsThisWeek} run${runsThisWeek === 1 ? "" : "s"} completed cleanly in the last 7 days.`
-                : "No runs yet this week - tell a coworker what to handle above."}
+        {/* Real proof of work, not a vanity number — once there's a real
+            week of activity, this replaces the generic intro card instead
+            of burying the count in a footnote. No fabricated "hours
+            saved": time_saved_minutes is permanently 0 for every current
+            coworker (nothing ever computes it — see DoblyDashboardPage.tsx),
+            so this shows what's actually true instead: real completed
+            runs, honestly counted. */}
+        {runsThisWeek > 0 ? (
+          <aside className="canvas-assist-card canvas-proof-card">
+            <Sparkles />
+            <p className="canvas-proof-figure">{completedRunsThisWeek}<span> of {runsThisWeek} run{runsThisWeek === 1 ? "" : "s"} completed this week</span></p>
+            <p className="canvas-proof-sub">
+              {uniqueTeam.filter((m) => m.status === "active").length || 0} coworker{uniqueTeam.filter((m) => m.status === "active").length === 1 ? "" : "s"} on the clock.
             </p>
-          </section>
-        </aside>
+            <Link href="/dashboard/activity"><Play size={13} /> See what happened</Link>
+          </aside>
+        ) : (
+          <aside className="canvas-assist-card">
+            <Sparkles />
+            <p><strong>Dobly is here to work with you.</strong><br />I can plan, research, build, write, automate and more.</p>
+            <Link href="/dashboard/help"><Play size={13} /> How it works</Link>
+          </aside>
+        )}
+      </section>
+
+      <section className="work-table" aria-label="Your work table">
+        <div className="work-table-head">
+          <span className="work-table-label">Your work table <ArrowRight size={14} style={{ display: "inline", verticalAlign: "middle" }} /></span>
+        </div>
+
+        <div className="work-table-row">
+          {uniqueTeam.map((member, index) => (
+            <Link
+              key={member.id}
+              href={`/dashboard/coworkers?operatorId=${member.id}`}
+              className="work-tile"
+              data-material={MATERIALS[index % MATERIALS.length]}
+            >
+              <Badge variant="secondary" className="work-tile-badge">{member.status === "active" ? "Active" : member.status}</Badge>
+              <div className="work-tile-body">
+                <h3 className="work-tile-title">{member.name}</h3>
+                <span className="work-tile-meta">{member.mission}</span>
+              </div>
+              <div className="work-tile-foot">
+                <Avatar size="sm" className="work-tile-avatar" aria-hidden="true">
+                  <AvatarFallback>{member.name.slice(0, 1).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <span className="work-tile-meta">
+                  {member.loopCount ? `${member.loopCount} loop${member.loopCount === 1 ? "" : "s"} · ` : ""}
+                  {member.status === "active"
+                    ? member.lastRunAt ? `active ${formatDate(member.lastRunAt)}` : "ready"
+                    : member.status}
+                </span>
+              </div>
+            </Link>
+          ))}
+          {/* Nothing hired yet: one honest invitation, not placeholder
+              names/details standing in for work that hasn't happened. */}
+          <Link href="/dashboard/coworkers?create=true" className="work-tile-add">
+            <span className="plus"><Plus size={16} /></span>
+            <strong>{uniqueTeam.length ? "New workspace" : "Create your first Operator"}</strong>
+            <small>{uniqueTeam.length ? "Or describe a job to Dobly above" : "Describe the job and Dobly proposes who should do it"}</small>
+          </Link>
+        </div>
+
+        {suggestion && !suggestDismissed ? (
+          <div className="dobly-suggest-bar">
+            <span className="suggest-mark"><Sparkles /> dobly</span>
+            <p>{suggestion.text}</p>
+            <Link href={suggestion.href}>{suggestion.cta} <ArrowRight size={13} /></Link>
+            <button type="button" className="dismiss" onClick={() => setSuggestDismissed(true)} aria-label="Dismiss">
+              <X size={14} />
+            </button>
+          </div>
+        ) : null}
+      </section>
+
+      <div className="canvas-footrow">
+        <div className="sticky-note">
+          <h4>Today's focus</h4>
+          {focusItems.length ? (
+            <ul>
+              {focusItems.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          ) : (
+            <ul><li>Nothing urgent — pick something above.</li></ul>
+          )}
+        </div>
+
+        {recentLoops.length ? (
+          <div className="home-list" style={{ flex: 1, minWidth: 0 }}>
+            {recentLoops.slice(0, 4).map((loop) => (
+              <Link className="home-list-row" href={`/dashboard/coworkers?operatorId=${loop.operatorId}`} key={loop.id}>
+                <span className="home-list-main"><strong>{loop.name}</strong><small>{loop.operatorName}</small></span>
+                <span className="home-list-meta"><em data-status={loop.status}>{loop.status}</em><time>{formatDate(loop.updatedAt)}</time></span>
+              </Link>
+            ))}
+          </div>
+        ) : null}
       </div>
-    </div>
-  );
-}
-
-function Metric({ value, label }: { value: number; label: string }) {
-  return <div><b>{value}</b><span>{label}</span></div>;
-}
-
-function EmptyState({ title, copy, href, action }: { title: string; copy: string; href: string; action: string }) {
-  return (
-    <div className="ref-panel" style={{ textAlign: "center", padding: 36 }}>
-      <h2 style={{ margin: 0 }}>{title}</h2>
-      <p className="ref-muted">{copy}</p>
-      <Link className="ref-button primary" href={href}><Play size={14} /> {action}</Link>
     </div>
   );
 }
 
 function formatDate(value: string) {
   if (!value) return "";
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
-}
-
-// A literal picture of "your business": each hired coworker as a node
-// orbiting the center. Deliberately shows real coworkers, not invented
-// department buckets (dobly_operators has no office/department column -
-// only a free-text scope string - so anything claiming to group by
-// "Sales, Marketing, Finance" would be fabricated for most Dobly users).
-function BusinessHub({ team, pulseScore }: { team: TeamMember[]; pulseScore: number }) {
-  if (!team.length) {
-    return (
-      <div className="home-hub home-hub-empty">
-        <div className="home-hub-center">
-          <strong>D</strong>
-          <span>Your business</span>
-        </div>
-        <p>Hire your first coworker and it will show up here, orbiting the business it works for.</p>
-        <Link href="/dashboard/coworkers?create=true" className="ref-button primary"><Plus size={14} /> Hire a coworker</Link>
-      </div>
-    );
-  }
-
-  const activeCount = team.filter((member) => member.status === "active").length;
-  const totalLoops = team.reduce((sum, member) => sum + (member.loopCount ?? 0), 0);
-  // Wider spacing for fewer nodes so 1-3 coworkers don't crowd the
-  // center; tightens gracefully as the roster grows.
-  const radius = team.length <= 3 ? 176 : team.length <= 6 ? 196 : 216;
-  const angleStep = (2 * Math.PI) / team.length;
-  // Start pointing up (-90deg) so a single or first coworker sits at the top.
-  const startAngle = -Math.PI / 2;
-  const half = radius + 130;
-
-  return (
-    <div className="home-hub" role="img" aria-label={`${team.length} coworkers orbiting your business`}>
-      <svg viewBox={`-${half} -${half} ${half * 2} ${half * 2}`} width="100%" height={half * 2} aria-hidden="true">
-        {team.map((member, index) => {
-          const angle = startAngle + angleStep * index;
-          const x = Math.cos(angle) * radius;
-          const y = Math.sin(angle) * radius;
-          return (
-            <line
-              key={member.id}
-              x1={0}
-              y1={0}
-              x2={x}
-              y2={y}
-              className="home-hub-spoke"
-              data-status={member.status}
-              strokeDasharray="1 6"
-            />
-          );
-        })}
-      </svg>
-      <div className="home-hub-center">
-        <strong>{Math.round(pulseScore)}</strong>
-        <span>business pulse</span>
-        <em>{activeCount} on shift &middot; {totalLoops} loop{totalLoops === 1 ? "" : "s"}</em>
-      </div>
-      {team.map((member, index) => {
-        const angle = startAngle + angleStep * index;
-        const x = Math.cos(angle) * radius;
-        const y = Math.sin(angle) * radius;
-        return (
-          <Link
-            key={member.id}
-            href={`/dashboard/coworkers?operatorId=${member.id}`}
-            className="home-hub-node"
-            data-status={member.status}
-            style={{ transform: `translate(${x}px, ${y}px)` }}
-          >
-            <span className="home-hub-node-avatar">{member.name.slice(0, 1).toUpperCase()}</span>
-            <span className="home-hub-node-name">{member.name}</span>
-            <span className="home-hub-node-meta">
-              <i data-status={member.status} aria-hidden="true" />
-              {member.status === "active"
-                ? member.lastRunAt ? `active ${formatDate(member.lastRunAt)}` : "ready"
-                : member.status}
-            </span>
-          </Link>
-        );
-      })}
-      <Link href="/dashboard/coworkers?create=true" className="home-hub-add" aria-label="Hire a coworker"><Plus size={16} /></Link>
-    </div>
-  );
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }

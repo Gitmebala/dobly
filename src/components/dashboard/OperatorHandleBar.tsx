@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle2, Loader2, PlugZap, Rocket, ShieldCheck, Sparkles, TestTube2, UserRoundPlus } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2, MessageCircle, PlugZap, Rocket, ShieldCheck, Sparkles, TestTube2, UserRoundPlus } from "lucide-react";
+import ConnectProviderModal from "@/components/dashboard/ConnectProviderModal";
 
 type ProposalRecord = {
   id: string;
@@ -49,6 +50,14 @@ type ProposalRecord = {
     summary?: string;
     scenarios?: Array<{ title: string; status: string; observed: string }>;
     connectionReadiness?: Array<{ id: string; label: string; provider: string; ready: boolean; detail: string }>;
+    simulation?: Array<{
+      scenarioTitle: string;
+      risk: string;
+      incomingMessage: string | null;
+      coworkerReply: string | null;
+      flaggedForApproval: boolean;
+      error?: string;
+    }>;
   };
 };
 
@@ -65,15 +74,19 @@ function formatConnectionMeta(value: string) {
 export default function OperatorHandleBar({
   compact = false,
   onDeployed,
+  initialPrompt = "",
 }: {
   compact?: boolean;
   onDeployed?: (result: { operatorId: string; operatorName: string; approvalMode: string }) => void;
+  initialPrompt?: string;
 }) {
   const router = useRouter();
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(initialPrompt);
   const [proposal, setProposal] = useState<ProposalRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
+  const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
 
   async function requestJson(url: string, init: RequestInit) {
     const response = await fetch(url, {
@@ -109,6 +122,19 @@ export default function OperatorHandleBar({
         setProposal(data.proposal);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not test the Operator.");
+      }
+    });
+  }
+
+  function simulateProposal() {
+    if (!proposal) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        const data = await requestJson(`/api/operators/proposals/${proposal.id}/simulate`, { method: "POST" });
+        setProposal(data.proposal);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not simulate a conversation.");
       }
     });
   }
@@ -221,15 +247,32 @@ export default function OperatorHandleBar({
             <div className="hire-panel">
               <div className="hire-panel-title">Tools they will ask to use</div>
               <div className="hire-panel-list">
-                {proposal.proposal.requiredConnections.slice(0, 4).map((connection) => (
-                  <div key={connection.id} className="hire-connection">
-                    <strong>{connection.label}</strong>
-                    <span>
-                      {connection.setupMode.replace("_", " ")}
-                      {connection.costModes?.length ? ` · ${connection.costModes.map(formatConnectionMeta).join(", ")}` : ""}
-                    </span>
-                  </div>
-                ))}
+                {/* Click any tool to connect it right here — a popup handles
+                    OAuth, this page polls for the real connection and
+                    updates in place, no navigating away from the hire
+                    review to /dashboard/connections and back. */}
+                {proposal.proposal.requiredConnections.slice(0, 4).map((connection) => {
+                  const connected = connectedProviders.has(connection.provider);
+                  return (
+                    <button
+                      key={connection.id}
+                      type="button"
+                      className="hire-connection hire-connection-button"
+                      onClick={() => setConnectingProvider(connection.provider)}
+                    >
+                      <span>
+                        <strong>{connection.label}</strong>
+                        <span>
+                          {connection.setupMode.replace("_", " ")}
+                          {connection.costModes?.length ? ` · ${connection.costModes.map(formatConnectionMeta).join(", ")}` : ""}
+                        </span>
+                      </span>
+                      <span className="hire-connection-cta" data-connected={connected}>
+                        {connected ? <><CheckCircle2 size={11} aria-hidden="true" /> Connected</> : <><PlugZap size={11} aria-hidden="true" /> Connect</>}
+                      </span>
+                    </button>
+                  );
+                })}
                 {!proposal.proposal.requiredConnections.length ? (
                   <p>No external account required for the first safe run.</p>
                 ) : null}
@@ -252,6 +295,62 @@ export default function OperatorHandleBar({
           {proposal.test_results?.summary ? (
             <div className="hire-test-result dobly-anim-rise" data-status={proposal.test_results.status}>
               {proposal.test_results.summary}
+            </div>
+          ) : null}
+
+          {/* Real per-scenario results — the backend already computes exactly
+              what each trial scenario would do (blocked on setup, gated
+              behind approval, or clear to run) and why, but it was being
+              silently dropped instead of shown. This is the "try a
+              scenario, see what Dobly would actually do" surface the spec
+              asks for, using data that already existed. */}
+          {proposal.test_results?.scenarios?.length ? (
+            <div className="hire-panel hire-scenarios dobly-anim-rise">
+              <div className="hire-panel-title">What happens in each scenario</div>
+              <div className="hire-scenario-list">
+                {proposal.test_results.scenarios.map((scenario) => (
+                  <div key={scenario.title} className="hire-scenario" data-status={scenario.status}>
+                    <div className="hire-scenario-head">
+                      <strong>{scenario.title}</strong>
+                      <span>{scenario.status.replace(/_/g, " ")}</span>
+                    </div>
+                    <p>{scenario.observed}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* A real simulated exchange, not a summary of one — the pattern
+              Lindy's "Test" button and Intercom Fin's "Simulations" both
+              use: an LLM plays the incoming message, the real coworker
+              (its real mission and approval rules, not a template) replies,
+              and you watch it happen before hiring anyone. Doesn't need any
+              connection to be live — drafting a reply never did. */}
+          {proposal.test_results?.simulation?.length ? (
+            <div className="hire-panel hire-transcript dobly-anim-rise">
+              <div className="hire-panel-title">A sample conversation</div>
+              <div className="hire-transcript-list">
+                {proposal.test_results.simulation.map((turn) => (
+                  <div key={turn.scenarioTitle} className="hire-transcript-turn">
+                    <span className="hire-transcript-scenario">{turn.scenarioTitle}</span>
+                    {turn.error ? (
+                      <p className="hire-transcript-error">{turn.error}</p>
+                    ) : (
+                      <>
+                        <div className="hire-bubble hire-bubble-in">{turn.incomingMessage}</div>
+                        <div className="hire-bubble hire-bubble-reply">
+                          <strong>{proposal.proposal.name}</strong>
+                          {turn.coworkerReply}
+                        </div>
+                        {turn.flaggedForApproval ? (
+                          <span className="hire-transcript-flag"><ShieldCheck size={11} aria-hidden="true" /> Held for your approval, as configured</span>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -278,7 +377,11 @@ export default function OperatorHandleBar({
             <div>
               <button type="button" onClick={testProposal} disabled={isPending} className="hire-test-button">
                 {isPending ? <Loader2 className="hire-spin" aria-hidden="true" /> : <TestTube2 aria-hidden="true" />}
-                Run a trial first
+                Check tools are ready
+              </button>
+              <button type="button" onClick={simulateProposal} disabled={isPending} className="hire-test-button">
+                {isPending ? <Loader2 className="hire-spin" aria-hidden="true" /> : <MessageCircle aria-hidden="true" />}
+                See a sample conversation
               </button>
               <button type="button" onClick={deployProposal} disabled={isPending} className="hire-deploy-button">
                 {isPending ? <Loader2 className="hire-spin" aria-hidden="true" /> : <Rocket aria-hidden="true" />}
@@ -288,6 +391,23 @@ export default function OperatorHandleBar({
           </footer>
         </div>
       )}
+
+      <ConnectProviderModal
+        providerId={connectingProvider}
+        open={Boolean(connectingProvider)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setConnectingProvider(null);
+        }}
+        onConnected={() => {
+          if (connectingProvider) {
+            setConnectedProviders((current) => new Set(current).add(connectingProvider));
+          }
+          // Re-check readiness so "Not connected yet" clears and the
+          // scenario results reflect the tool that just went live,
+          // without the user having to re-click "Run a trial".
+          if (proposal) testProposal();
+        }}
+      />
     </section>
   );
 }

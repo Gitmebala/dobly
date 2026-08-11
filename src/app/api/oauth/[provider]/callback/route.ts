@@ -11,7 +11,7 @@ import {
   type GenericOAuthProvider,
 } from "@/lib/oauth/generic";
 
-const SUPPORTED = new Set<GenericOAuthProvider>(["microsoft", "notion", "hubspot", "airtable", "stripe", "meta"]);
+const SUPPORTED = new Set<GenericOAuthProvider>(["microsoft", "notion", "hubspot", "airtable", "stripe", "meta", "linkedin"]);
 
 export async function GET(
   req: NextRequest,

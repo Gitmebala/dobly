@@ -44,7 +44,7 @@ export async function POST(
       metadata: {
         source: "operator_run_api",
         loopId: parsed.data.loopId ?? null,
-        approved: parsed.data.approved ?? false,
+        approved: parsed.data.approved,
       },
     });
     await recordOperatorChatEvent({
@@ -58,7 +58,7 @@ export async function POST(
       summary: parsed.data.prompt.slice(0, 240),
       payload: {
         loopId: parsed.data.loopId ?? null,
-        approved: parsed.data.approved ?? false,
+        approved: parsed.data.approved,
       },
     });
 
@@ -68,7 +68,10 @@ export async function POST(
       prompt: parsed.data.prompt,
       workspaceId: parsed.data.workspaceId ?? null,
       loopId: parsed.data.loopId ?? null,
-      approved: parsed.data.approved ?? false,
+      // Deliberately NOT `?? false` — see chat/route.ts for why: it was
+      // silently forcing every manual run into "unapproved" regardless of
+      // the risk brain's actual decision.
+      approved: parsed.data.approved,
       conversationId: conversation.id,
       sourceMessageId: sourceMessage.id,
     });

@@ -13,13 +13,13 @@ export const metadata = { title: "Coworkers" };
 export default async function CoworkersPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ operatorId?: string; create?: string }>;
+  searchParams?: Promise<{ operatorId?: string; create?: string; prompt?: string }>;
 }) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { operatorId, create } = (await searchParams) ?? {};
+  const { operatorId, create, prompt } = (await searchParams) ?? {};
   const operators = await listDoblyOperators({ userId: user.id }).catch((): OperatorWithLoops[] => []);
   const activeOperators = operators.filter((operator) => operator.status === "active");
   const primaryOperator =
@@ -27,7 +27,11 @@ export default async function CoworkersPage({
     activeOperators[0] ??
     operators[0] ??
     null;
-  const creating = create === "true" || operators.length === 0;
+  // A prompt arriving from the templates gallery (or any other deep link)
+  // always means "start a new coworker" - without this, landing here with
+  // ?prompt=... while the user already has coworkers would silently drop
+  // the prompt and just open their existing chat instead.
+  const creating = create === "true" || operators.length === 0 || Boolean(prompt);
   const primaryChat = !creating && primaryOperator
     ? await listOperatorChat({ userId: user.id, operatorId: primaryOperator.id, operator: primaryOperator }).catch(() => null)
     : null;
@@ -81,7 +85,12 @@ export default async function CoworkersPage({
                 </div>
                 {operators.length ? <Link href={`/dashboard/coworkers?operatorId=${primaryOperator?.id ?? ""}`}><ArrowLeft /> Back to team</Link> : null}
               </header>
-              <div className="coworker-create-scroll"><OperatorCreator /></div>
+              {/* Next.js already URL-decodes searchParams values - decoding
+                  again here would throw on a prompt containing a literal
+                  "%" (e.g. "chase invoices, 50% deposits") and was an easy
+                  mistake to make since most manual query-param handling in
+                  this app does need an explicit decode. */}
+              <div className="coworker-create-scroll"><OperatorCreator initialPrompt={prompt} /></div>
             </section>
           ) : primaryChat ? (
             <OperatorChatConsole
@@ -95,6 +104,8 @@ export default async function CoworkersPage({
               approvals={primaryChat.approvals}
               voiceRecords={primaryChat.voiceRecords}
               memoryProposals={primaryChat.memoryProposals}
+              channels={primaryChat.channels}
+              knowledge={primaryChat.knowledge}
             />
           ) : (
             <section className="coworker-workspace-unavailable">

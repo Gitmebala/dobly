@@ -59,6 +59,25 @@ export interface OperatorChatSnapshot {
   approvals: JsonRecord[];
   voiceRecords: JsonRecord[];
   memoryProposals: JsonRecord[];
+  channels: JsonRecord[];
+  knowledge: JsonRecord[];
+}
+
+// `dobly_operators.scope` is a free-text field written at hire time as
+// "Office: X. Department: Y. <outcome>" (see buildOperatorProposal in
+// dobly-operator-proposals.ts) — there's no clean department column, so
+// this pulls the department back out to loosely match it against
+// business_memory_items.scope (which IS a real enum: reception, sales,
+// marketing, support, finance, operations, general_manager, boardroom).
+// Always includes "global" since that's relevant to every coworker.
+const KNOWN_MEMORY_SCOPES = ["reception", "sales", "marketing", "support", "finance", "operations", "general_manager", "boardroom"];
+function guessMemoryScopes(operator: OperatorWithLoops): string[] {
+  const scopes = new Set(["global"]);
+  const match = /Department:\s*([^.]+)\./i.exec(operator.scope || "");
+  const dept = (match?.[1] || operator.kind || "").trim().toLowerCase().replace(/\s+/g, "_");
+  const hit = KNOWN_MEMORY_SCOPES.find((known) => dept.includes(known) || known.includes(dept));
+  if (hit) scopes.add(hit);
+  return Array.from(scopes);
 }
 
 function inferChatIntent(prompt: string) {
@@ -239,7 +258,7 @@ export async function listOperatorChat(input: {
     title: `${operator.name} Chat`,
   });
 
-  const [messagesResult, eventsResult, feedbackResult, recentRunsResult, voiceByOperatorResult] = await Promise.all([
+  const [messagesResult, eventsResult, feedbackResult, recentRunsResult, voiceByOperatorResult, channelsResult, knowledgeResult] = await Promise.all([
     admin
       .from("operator_messages")
       .select("*")
@@ -273,12 +292,31 @@ export async function listOperatorChat(input: {
       .contains("telemetry", { operatorId: input.operatorId })
       .order("started_at", { ascending: false })
       .limit(8),
+    // Real per-coworker channel access — business_channel_connections got
+    // an operator_id FK months ago (for inbound call/message routing) but
+    // nothing ever queried it back out for display. This is that query.
+    admin
+      .from("business_channel_connections")
+      .select("id, channel_id, display_name, external_identifier, status, updated_at")
+      .eq("user_id", input.userId)
+      .eq("operator_id", input.operatorId)
+      .order("updated_at", { ascending: false })
+      .limit(8),
+    admin
+      .from("business_memory_items")
+      .select("id, kind, scope, title, body, updated_at")
+      .eq("user_id", input.userId)
+      .in("scope", guessMemoryScopes(operator))
+      .order("updated_at", { ascending: false })
+      .limit(6),
   ]);
   const { data: messages, error: messagesError } = messagesResult;
   if (messagesError) throw new Error(messagesError.message);
   const events = eventsResult.data;
   const feedback = feedbackResult.data;
   const recentRuns = recentRunsResult.data;
+  const channels = channelsResult.data;
+  const knowledge = knowledgeResult.data;
 
   const runIds = (recentRuns ?? []).map((run: any) => run.id);
   const [artifactsResult, approvalsResult, voiceByRunResult, memoryResult] = runIds.length
@@ -338,6 +376,8 @@ export async function listOperatorChat(input: {
     approvals: (approvals ?? []) as JsonRecord[],
     voiceRecords: voiceRecords as JsonRecord[],
     memoryProposals: (memoryProposals ?? []) as JsonRecord[],
+    channels: (channels ?? []) as JsonRecord[],
+    knowledge: (knowledge ?? []) as JsonRecord[],
   };
 }
 
@@ -394,7 +434,13 @@ export async function sendOperatorChatMessage(input: {
     operatorId: operator.id,
     prompt: input.prompt,
     workspaceId: input.workspaceId ?? operator.workspace_id,
-    approved: input.approved ?? false,
+    // Deliberately NOT `?? false` — that forced every normal chat message
+    // into "unapproved" regardless of what runDoblyOperator's own risk
+    // brain actually decided, since `false ?? X` is always `false`. This
+    // was the real cause behind "approvals are too many" / coworkers
+    // feeling stuck: routine, non-risky replies were never able to reach
+    // the brain's "just act" decision, even in approve_risky mode.
+    approved: input.approved,
     conversationId: conversation.id,
     sourceMessageId: userMessage.id,
   });

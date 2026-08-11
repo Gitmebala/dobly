@@ -1,17 +1,83 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ExternalLink, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { getProviderFlow, type ConnectionProviderDefinition } from "@/lib/connection-catalog";
 import type { PlanId } from "@/types";
 
+// Polls /api/connections while a popup is open, so a modal-hosted connect
+// flow can tell the moment a provider actually goes live — without the
+// page ever navigating away, and without touching the OAuth callback
+// routes themselves (which still redirect wherever they always did; we
+// just stop caring what they show once the popup closes or the
+// connection appears, whichever comes first).
+function usePopupConnectionWatch(providerId: string, onConnected: () => void) {
+  const popupRef = useRef<Window | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [watching, setWatching] = useState(false);
+
+  function stop() {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = null;
+    setWatching(false);
+  }
+
+  function open(url: string) {
+    const popup = window.open(url, "dobly-connect", "width=560,height=720,noopener,noreferrer");
+    popupRef.current = popup;
+    setWatching(true);
+    pollRef.current = setInterval(async () => {
+      if (popup?.closed) {
+        // Popup closed - check once more in case the callback landed a
+        // beat before the window closed, then give up either way.
+        try {
+          const response = await fetch("/api/connections", { cache: "no-store" });
+          const data = await response.json().catch(() => ({}));
+          const connected = (data.connections ?? []).some(
+            (c: { provider: string; status: string }) => c.provider === providerId && (c.status === "active" || c.status === "connected"),
+          );
+          if (connected) onConnected();
+        } finally {
+          stop();
+        }
+        return;
+      }
+      try {
+        const response = await fetch("/api/connections", { cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        const connected = (data.connections ?? []).some(
+          (c: { provider: string; status: string }) => c.provider === providerId && (c.status === "active" || c.status === "connected"),
+        );
+        if (connected) {
+          popup?.close();
+          onConnected();
+          stop();
+        }
+      } catch {
+        // transient - keep polling until the popup closes
+      }
+    }, 1500);
+  }
+
+  useEffect(() => () => stop(), []);
+
+  return { open, watching };
+}
+
 export default function ProviderConnectClient({
   provider,
   planId,
+  mode = "page",
+  onConnected,
 }: {
   provider: ConnectionProviderDefinition;
   planId: PlanId;
+  /** "modal" keeps the user on the current page: OAuth opens in a popup
+   * and connection status is polled instead of relying on a full-page
+   * redirect back to /dashboard/connections. */
+  mode?: "page" | "modal";
+  onConnected?: () => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string>("");
@@ -20,6 +86,10 @@ export default function ProviderConnectClient({
   const [verificationId, setVerificationId] = useState<string | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [developmentHint, setDevelopmentHint] = useState<string | null>(null);
+  const popupWatch = usePopupConnectionWatch(provider.id, () => {
+    setMessage(`${provider.label} connected.`);
+    onConnected?.();
+  });
 
   const { flow, advancedAllowed } = useMemo(() => getProviderFlow(provider, planId), [planId, provider]);
 
@@ -33,6 +103,11 @@ export default function ProviderConnectClient({
 
     try {
       if (!showAdvanced && flow.method === "oauth" && flow.oauthHref) {
+        if (mode === "modal") {
+          setMessage(`Waiting for ${provider.label} in the popup — finish signing in there, this page will update itself.`);
+          popupWatch.open(flow.oauthHref);
+          return;
+        }
         window.location.href = flow.oauthHref;
         return;
       }
@@ -43,7 +118,13 @@ export default function ProviderConnectClient({
           setMessage("Enter your Shopify store domain first.");
           return;
         }
-        window.location.href = `/api/oauth/shopify/start?shop=${encodeURIComponent(shop)}`;
+        const storeUrl = `/api/oauth/shopify/start?shop=${encodeURIComponent(shop)}`;
+        if (mode === "modal") {
+          setMessage(`Waiting for ${provider.label} in the popup — finish signing in there, this page will update itself.`);
+          popupWatch.open(storeUrl);
+          return;
+        }
+        window.location.href = storeUrl;
         return;
       }
 
@@ -155,7 +236,30 @@ export default function ProviderConnectClient({
         return;
       }
 
+      // The connections-table row above is just a record of intent - on its
+      // own it never buys a number or files the Africa's Talking request, so
+      // "connected" would be a lie for Kenya calls/SMS specifically. Chain
+      // into the real provisioning backend so the guided form the user
+      // actually reaches does the same work the (previously unlinked)
+      // /dashboard/connections/phone/provision page does.
+      if (!showAdvanced && provider.id === "kenya_local_comms") {
+        const provisionResponse = await fetch("/api/business-channels/phone/provision", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ country: "KE", friendlyName: values.businessName || provider.label }),
+        }).catch(() => null);
+        const provisionData = await provisionResponse?.json().catch(() => null);
+        setMessage(
+          provisionResponse?.ok && provisionData?.nextStep
+            ? provisionData.nextStep
+            : `${provider.label} saved. Dobly will confirm your number setup shortly.`,
+        );
+        onConnected?.();
+        return;
+      }
+
       setMessage(`${provider.label} connected.`);
+      onConnected?.();
     } finally {
       setLoading(false);
     }
@@ -190,26 +294,32 @@ export default function ProviderConnectClient({
       setMessage(
         `${provider.label} number verified. Finish the messaging setup before Dobly can send outbound WhatsApp messages.`
       );
-      window.setTimeout(() => {
-        window.location.href = "/dashboard/connections?success=whatsapp_number_verified";
-      }, 700);
+      if (mode === "modal") {
+        onConnected?.();
+      } else {
+        window.setTimeout(() => {
+          window.location.href = "/dashboard/connections?success=whatsapp_number_verified";
+        }, 700);
+      }
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <Link href="/dashboard/connections" className="btn-ghost inline-flex">
-        <ArrowLeft className="h-4 w-4" />
-        Back to access
-      </Link>
+    <div className={mode === "modal" ? "space-y-5" : "mx-auto max-w-3xl space-y-6"}>
+      {mode === "page" ? (
+        <Link href="/dashboard/connections" className="btn-ghost inline-flex">
+          <ArrowLeft className="h-4 w-4" />
+          Back to access
+        </Link>
+      ) : null}
 
       <section className="card">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="badge-green mb-5">Use {provider.label}</div>
-            <h1 className="font-display text-4xl font-bold tracking-tight text-text">{flow.title}</h1>
+            <h1 className={mode === "modal" ? "font-display text-2xl font-bold tracking-tight text-text" : "font-display text-4xl font-bold tracking-tight text-text"}>{flow.title}</h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-text-muted">{flow.description}</p>
           </div>
           <div className="badge-muted capitalize">{planId === "free" ? "Simple setup" : `${planId} mode`}</div>
@@ -241,6 +351,19 @@ export default function ProviderConnectClient({
             That is okay. Dobly should adapt to the tools you already have. Go back and choose another option or keep building the setup first.
           </p>
         </div>
+
+        {provider.id === "kenya_local_comms" ? (
+          <div className="mt-4 rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-4 text-sm text-text-muted">
+            <div className="text-text">Need a specific or international number?</div>
+            <p className="mt-2">
+              This quick setup requests a Kenya number automatically. To search and pick an exact number — including
+              international lines — use the full number picker instead.
+            </p>
+            <Link href="/dashboard/connections/phone/provision" className="btn-secondary mt-3 inline-flex">
+              Open number picker
+            </Link>
+          </div>
+        ) : null}
       </section>
 
       <form onSubmit={handleSubmit} className="card space-y-5">

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -16,10 +17,13 @@ import {
   FileJson,
   FileText,
   Image as ImageIcon,
+  Link2,
   Loader2,
+  NotebookText,
   Paperclip,
   PanelRightOpen,
   PauseCircle,
+  Pencil,
   ShieldCheck,
   Share2,
   Sparkles,
@@ -27,6 +31,8 @@ import {
   Video,
   X,
 } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 type JsonRecord = Record<string, any>;
 
@@ -72,6 +78,8 @@ type OperatorChatConsoleProps = {
   approvals: JsonRecord[];
   voiceRecords: JsonRecord[];
   memoryProposals: JsonRecord[];
+  channels: JsonRecord[];
+  knowledge: JsonRecord[];
 };
 
 const quickDirections = [
@@ -220,6 +228,11 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
   const [decisionLoading, setDecisionLoading] = useState<string | null>(null);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("overview");
   const [dateFilter, setDateFilter] = useState("");
+  const [operatorName, setOperatorName] = useState(props.operator.name);
+  const [renamingOperator, setRenamingOperator] = useState(false);
+  const [nameDraft, setNameDraft] = useState(props.operator.name);
+  const [renameSaving, setRenameSaving] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
   const [shiftTapeOpen, setShiftTapeOpen] = useState(false);
   const [leash, setLeash] = useState(() => {
     const index = leashModes.findIndex((mode) => mode.value === props.operator.approval_mode);
@@ -278,6 +291,35 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
       setError("Could not change autonomy.");
     } finally {
       setLeashSaving(false);
+    }
+  }
+
+  async function saveRename() {
+    const nextName = nameDraft.trim();
+    if (!nextName || nextName === operatorName) {
+      setRenamingOperator(false);
+      setNameDraft(operatorName);
+      return;
+    }
+    setRenameSaving(true);
+    setRenameError(null);
+    try {
+      const response = await fetch(`/api/operators/${props.operator.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: nextName }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setRenameError(data.error ?? "Could not rename this coworker.");
+        return;
+      }
+      setOperatorName(nextName);
+      setRenamingOperator(false);
+    } catch {
+      setRenameError("Could not rename this coworker.");
+    } finally {
+      setRenameSaving(false);
     }
   }
 
@@ -527,13 +569,56 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
         <div className="operator-conversation">
           <div className="console-head">
             <div className="console-identity">
-              <span className="console-tile" aria-hidden="true">{props.operator.name.slice(0, 1).toUpperCase()}</span>
+              <Avatar className="console-tile" aria-hidden="true">
+                <AvatarFallback>{operatorName.slice(0, 1).toUpperCase()}</AvatarFallback>
+              </Avatar>
               <div>
                 <div className="console-name-row">
-                  <strong>{props.operator.name}</strong>
-                  <code>#{props.operator.id.slice(0, 4)} · {props.operator.kind ?? "custom"}</code>
+                  {renamingOperator ? (
+                    <form
+                      className="console-rename-form"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        saveRename();
+                      }}
+                    >
+                      <input
+                        autoFocus
+                        value={nameDraft}
+                        onChange={(event) => setNameDraft(event.target.value)}
+                        onBlur={saveRename}
+                        onKeyDown={(event) => {
+                          if (event.key === "Escape") {
+                            setNameDraft(operatorName);
+                            setRenamingOperator(false);
+                          }
+                        }}
+                        maxLength={80}
+                        aria-label="Coworker name"
+                        disabled={renameSaving}
+                      />
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      className="console-rename-trigger"
+                      onClick={() => {
+                        setNameDraft(operatorName);
+                        setRenamingOperator(true);
+                      }}
+                      title="Rename this coworker"
+                    >
+                      <strong>{operatorName}</strong>
+                      <Pencil aria-hidden="true" />
+                    </button>
+                  )}
+                  <Badge variant="secondary" className="console-status-pill" data-status={props.operator.status}>
+                    <i aria-hidden="true" />
+                    {props.operator.status === "active" ? "Active" : props.operator.status}
+                  </Badge>
                 </div>
-                <p>{props.operator.mission}</p>
+                {renameError ? <p className="console-rename-error">{renameError}</p> : null}
+                <p>{props.operator.kind ?? "Coworker"} · {props.operator.mission}</p>
               </div>
             </div>
             <div className="console-presence">
@@ -596,7 +681,16 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                 </div>
                 {group.entries.map((entry) =>
                   entry.kind === "message"
-                    ? <MessageBubble key={entry.message.id} message={entry.message} coworkerName={props.operator.name} />
+                    ? (
+                      <MessageBubble
+                        key={entry.message.id}
+                        message={entry.message}
+                        coworkerName={operatorName}
+                        approvals={approvals}
+                        decisionLoading={decisionLoading}
+                        onDecision={decideApproval}
+                      />
+                    )
                     : <ActivityRow key={`event-${entry.event.id}`} event={entry.event} />
                 )}
               </div>
@@ -605,7 +699,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
               <div className="operator-thread-empty">
                 <Bot aria-hidden="true" />
                 <strong>{dateFilter ? "Nothing happened on this day" : "No conversation yet"}</strong>
-                <span>{dateFilter ? "Pick another date, or show everything." : `Say hello. Tell ${props.operator.name} what you need.`}</span>
+                <span>{dateFilter ? "Pick another date, or show everything." : `Say hello. Tell ${operatorName} what you need.`}</span>
               </div>
             ) : null}
             {pendingApprovals.length ? (
@@ -633,7 +727,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
             {isPending ? (
               <div className="operator-typing" aria-live="polite">
                 <span className="operator-typing-dots" aria-hidden="true"><i /><i /><i /></span>
-                {props.operator.name} is thinking: planning the work, checking risk, choosing tools...
+                {operatorName} is thinking: planning the work, checking risk, choosing tools...
               </div>
             ) : null}
           </div>
@@ -658,7 +752,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 rows={3}
-                placeholder={`Tell ${props.operator.name} what changed…`}
+                placeholder={`Tell ${operatorName} what changed…`}
                 className="ledger-composer-input"
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
@@ -750,7 +844,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
           <nav aria-label="Coworker details">
             {([
               ["overview", "Overview"],
-              ["review", `Review ${pendingApprovals.length || ""}`],
+              ["review", `Tasks ${pendingApprovals.length || ""}`],
               ["outputs", `Outputs ${artifacts.length || ""}`],
               ["activity", "Activity"],
               ["control", "Control"],
@@ -772,10 +866,41 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                   {props.recentRuns.slice(0, 8).map((run) => <RunItem key={run.id} run={run} />)}
                   {!props.recentRuns.length ? <p>No runs yet.</p> : null}
                 </ControlCard>
+                <ControlCard icon={Link2} title="Channels" value={props.channels.length ? `${props.channels.filter((c) => c.status === "live").length}/${props.channels.length} live` : "None"}>
+                  {props.channels.slice(0, 6).map((channel) => <ChannelRow key={String(channel.id)} channel={channel} />)}
+                  {!props.channels.length ? (
+                    <p>
+                      No channels connected to {operatorName} yet. <Link href="/dashboard/connections">Connect one →</Link>
+                    </p>
+                  ) : null}
+                </ControlCard>
+                <ControlCard icon={NotebookText} title="Knowledge" value={props.knowledge.length ? `${props.knowledge.length}` : "None"}>
+                  {props.knowledge.slice(0, 5).map((item) => (
+                    <SideMini key={String(item.id)} title={String(item.title || item.kind)} meta={`${String(item.scope)} · updated ${formatTime(String(item.updated_at))}`} />
+                  ))}
+                  <Link href="/dashboard/memory" className="operator-inspector-link">View all knowledge →</Link>
+                  {!props.knowledge.length ? <p>Nothing on file yet — add business knowledge and {operatorName} can draw on it.</p> : null}
+                </ControlCard>
                 <ControlCard icon={Sparkles} title="Memory and voice" value={`${props.memoryProposals.length + props.voiceRecords.length}`}>
                   {props.memoryProposals.slice(0, 4).map((memory) => <SideMini key={memory.id} title={memory.title} meta={`memory ${memory.status}`} />)}
                   {props.voiceRecords.slice(0, 3).map((voice) => <SideMini key={voice.id} title="Voice transcript" meta={voice.status} />)}
                   {!props.memoryProposals.length && !props.voiceRecords.length ? <p>No signals yet.</p> : null}
+                </ControlCard>
+                <ControlCard icon={ArrowRight} title="Quick actions" value="">
+                  <Link href={`/dashboard/tasks?assignee=${props.operator.id}`} className="operator-control-prompt">
+                    Assign a task
+                  </Link>
+                  <button type="button" className="operator-control-prompt" onClick={() => setInspectorTab("control")}>
+                    Update instructions
+                  </button>
+                  <button
+                    type="button"
+                    className="operator-control-prompt"
+                    onClick={() => sendPrompt("Pause this Operator and explain what is blocked.")}
+                    disabled={isPending}
+                  >
+                    Pause {operatorName}
+                  </button>
                 </ControlCard>
               </>
             ) : null}
@@ -906,8 +1031,29 @@ function ActivityRow({ event }: { event: JsonRecord }) {
   );
 }
 
-function MessageBubble({ message, coworkerName }: { message: ChatMessage; coworkerName: string }) {
+function MessageBubble({
+  message,
+  coworkerName,
+  approvals,
+  decisionLoading,
+  onDecision,
+}: {
+  message: ChatMessage;
+  coworkerName: string;
+  approvals?: JsonRecord[];
+  decisionLoading?: string | null;
+  onDecision?: (approvalId: string, decision: "approved" | "rejected") => void;
+}) {
   const isUser = message.role === "user";
+
+  // The core identity move: an action a coworker took (or wants to
+  // take) is a receipt, not a paragraph - what, to whom, and its
+  // status, with the decision if one is still owed.
+  if (message.role === "approval" && message.approval_id) {
+    const linked = approvals?.find((approval) => approval.id === message.approval_id);
+    return <ReceiptMessage message={message} approval={linked} loading={decisionLoading ?? null} onDecision={onDecision} />;
+  }
+
   const author = isUser
     ? "You"
     : message.role === "operator"
@@ -930,6 +1076,75 @@ function MessageBubble({ message, coworkerName }: { message: ChatMessage; cowork
       <OperatorThinking message={message} />
       <MessageArtifactPreview message={message} />
     </article>
+  );
+}
+
+function ReceiptMessage({
+  message,
+  approval,
+  loading,
+  onDecision,
+}: {
+  message: ChatMessage;
+  approval?: JsonRecord;
+  loading: string | null;
+  onDecision?: (approvalId: string, decision: "approved" | "rejected") => void;
+}) {
+  const status = String(approval?.status ?? "pending");
+  const isPending = status === "pending";
+  const title = String(approval?.title ?? message.body ?? "Action");
+  const detail = approval?.message ? String(approval.message) : null;
+  const riskLevel = approval?.risk_level ? String(approval.risk_level) : null;
+
+  return (
+    <article className="dobly-receipt" data-state={isPending ? "pending" : status}>
+      <header className="dobly-receipt-head" data-state={isPending ? "pending" : status}>
+        <span>{isPending ? "Waiting on you" : status.replace(/_/g, " ")}</span>
+        <time dateTime={message.created_at}>{formatClock(message.created_at)}</time>
+      </header>
+      <div className="dobly-receipt-body">
+        <p className="dobly-receipt-title">{title}</p>
+        {detail ? <p className="dobly-receipt-detail">{detail}</p> : null}
+        {riskLevel ? <span className="dobly-receipt-risk" data-level={riskLevel}>{riskLevel} risk</span> : null}
+        {isPending && approval?.id ? (
+          <div className="dobly-receipt-actions">
+            <button
+              type="button"
+              data-kind="approve"
+              disabled={Boolean(loading)}
+              onClick={() => onDecision?.(String(approval.id), "approved")}
+            >
+              {loading === `${approval.id}:approved` ? <Loader2 className="onboard-spin" size={14} /> : "Approve"}
+            </button>
+            <button
+              type="button"
+              data-kind="decline"
+              disabled={Boolean(loading)}
+              onClick={() => onDecision?.(String(approval.id), "rejected")}
+            >
+              {loading === `${approval.id}:rejected` ? <Loader2 className="onboard-spin" size={14} /> : "Decline"}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+// A "missing info" line that says a connected account is needed used to
+// just be inert text - the user had to already know to go find
+// /dashboard/connections themselves. Now it renders as a direct link
+// there, since "go connect it" is always the actual next step.
+function MissingInfoLine({ text }: { text: string }) {
+  const isConnectionGap = /connect(ed|ion)?\s+account|approved tool path|no.{0,20}connection/i.test(text);
+  if (!isConnectionGap) return <li>{text}</li>;
+  return (
+    <li className="ledger-info-connect-line">
+      <span>{text}</span>
+      <Link href="/dashboard/connections" className="ledger-info-connect-link">
+        Connect <ArrowRight size={12} />
+      </Link>
+    </li>
   );
 }
 
@@ -1012,7 +1227,7 @@ function OperatorThinking({ message }: { message: ChatMessage }) {
                 <p className="ledger-info-block-detail">Needed before this can go further:</p>
                 <ul>
                   {missingRequired.map((item) => (
-                    <li key={item}>{item}</li>
+                    <MissingInfoLine key={item} text={item} />
                   ))}
                 </ul>
               </>
@@ -1022,7 +1237,7 @@ function OperatorThinking({ message }: { message: ChatMessage }) {
                 <p className="ledger-info-block-detail">Would help, but not blocking:</p>
                 <ul>
                   {missingHelpful.map((item) => (
-                    <li key={item}>{item}</li>
+                    <MissingInfoLine key={item} text={item} />
                   ))}
                 </ul>
               </>
@@ -1164,6 +1379,32 @@ function EventItem({ event }: { event: JsonRecord }) {
         <span className={tone}>{event.severity}</span>
       </div>
       <div className="mt-2 text-[10px] uppercase tracking-[0.13em] text-[var(--dobly-text-dim)]">{String(event.event_type ?? "").replaceAll("_", " ")}</div>
+    </div>
+  );
+}
+
+const CHANNEL_LABELS: Record<string, string> = {
+  business_phone: "Phone",
+  business_sms: "SMS",
+  whatsapp_business: "WhatsApp",
+  business_email: "Email",
+  website_chat: "Live chat",
+  calendar: "Calendar",
+  crm: "CRM",
+  content_tools: "Content tools",
+};
+
+function ChannelRow({ channel }: { channel: JsonRecord }) {
+  const status = String(channel.status ?? "not_connected");
+  const label = CHANNEL_LABELS[String(channel.channel_id)] ?? String(channel.channel_id);
+  const live = status === "live";
+  return (
+    <div className="operator-channel-row" data-status={live ? "live" : status === "needs_attention" ? "attention" : "pending"}>
+      <span>{label}</span>
+      <em>
+        <i aria-hidden="true" />
+        {live ? "Connected" : status.replace(/_/g, " ")}
+      </em>
     </div>
   );
 }

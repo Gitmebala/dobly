@@ -26,6 +26,13 @@ const APPROVAL_OPTIONS: Array<{ id: ApprovalMode; title: string; copy: string }>
   { id: "trusted", title: "Trusted", copy: "Dobly runs the role end to end and only escalates real exceptions." },
 ];
 
+const FIRST_JOB_CHOICES = [
+  { label: "Chase unpaid invoices", prompt: "Follow up on unpaid invoices, remind customers, and ask before escalating.", detail: "Reminders, follow-ups, aging reports" },
+  { label: "Reply to customers", prompt: "Answer incoming customer messages and questions, and ask before anything unusual.", detail: "Email, WhatsApp, or web chat" },
+  { label: "Watch stock levels", prompt: "Watch inventory and stock levels and alert me before anything runs out.", detail: "Low-stock alerts, reorder reminders" },
+  { label: "Something recurring", prompt: "Handle a recurring weekly task and check in with me on progress.", detail: "Reports, check-ins, scheduled work" },
+] as const;
+
 const STEP_META = [
   { key: "business", label: "The business", icon: Building2 },
   { key: "connect", label: "One connection", icon: Link2 },
@@ -67,6 +74,15 @@ export default function OnboardingWizard({
   // whichever step they were on, not through the intro again.
   const [showWelcome, setShowWelcome] = useState(!hasBusinessContext && !hasConnection && !hasWorkflow);
   const [skipping, setSkipping] = useState(false);
+  // The chip picked on the welcome question seeds the "hire" step's
+  // prompt, so answering "what do you want off your plate" up front
+  // actually carries through instead of being decorative.
+  const [seededPrompt, setSeededPrompt] = useState("");
+
+  function chooseFirstJob(prompt: string) {
+    setSeededPrompt(prompt);
+    setShowWelcome(false);
+  }
 
   async function skipOnboarding() {
     setSkipping(true);
@@ -101,7 +117,13 @@ export default function OnboardingWizard({
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? "Could not save the leash setting.");
       setRevealing(true);
-      window.setTimeout(() => router.push("/dashboard?justOnboarded=1"), 1600);
+      // Land inside the coworker that was just hired, not a generic
+      // dashboard - onboarding's job is to get one thing working, and
+      // "working" means being in the room where the work happens.
+      window.setTimeout(
+        () => router.push(`/dashboard/coworkers?operatorId=${deployedOperator.id}&justOnboarded=1`),
+        1600,
+      );
     } catch (err) {
       setLeashError(err instanceof Error ? err.message : "Could not save the leash setting.");
     } finally {
@@ -122,21 +144,29 @@ export default function OnboardingWizard({
   if (showWelcome) {
     return (
       <div className="onboard-welcome">
-        <Sparkles className="onboard-reveal-icon" />
         <span className="onboard-step-eyebrow">Welcome, {firstName}</span>
-        <h1>Dobly is where you hire people, not software.</h1>
+        <h1>What's the first thing you want off your plate?</h1>
         <p>
-          Describe a job in plain language and Dobly proposes who should do it, with what tools, under what rules.
-          Each coworker keeps a running chat - that thread is the permanent record of everything it does, so you
-          never have to guess what happened while you were away.
+          Pick the closest one, or describe it yourself. Dobly proposes a coworker for it — with a name, a mission,
+          and the tools it needs — and you hire them in a couple minutes.
         </p>
-        <p>
-          Setting up takes about three minutes: tell Dobly about the business, connect one place work happens, and
-          hire your first coworker. You can stop at any point and pick it back up later.
-        </p>
+        <div className="onboard-welcome-chips" role="list">
+          {FIRST_JOB_CHOICES.map((choice) => (
+            <button
+              key={choice.prompt}
+              type="button"
+              role="listitem"
+              className="onboard-welcome-chip"
+              onClick={() => chooseFirstJob(choice.prompt)}
+            >
+              <strong>{choice.label}</strong>
+              <small>{choice.detail}</small>
+            </button>
+          ))}
+        </div>
         <div className="onboard-welcome-actions">
-          <button type="button" className="onboard-continue-button" onClick={() => setShowWelcome(false)}>
-            <ArrowRight size={15} /> Get started
+          <button type="button" className="onboard-skip-link" onClick={() => chooseFirstJob("")}>
+            Something else <ArrowRight size={13} />
           </button>
           <button type="button" className="onboard-skip-link" onClick={skipOnboarding} disabled={skipping}>
             {skipping ? "Skipping…" : "Skip setup for now"}
@@ -186,9 +216,10 @@ export default function OnboardingWizard({
                 planId={planId}
                 launchReadyProviderIds={launchReadyProviderIds}
                 optionalLaunchProviderIds={optionalLaunchProviderIds}
+                mode="modal"
               />
             </div>
-            <p className="onboard-step-note">Connecting a provider opens its sign-in elsewhere. Come back to this tab afterward and continue.</p>
+            <p className="onboard-step-note">Connecting opens right here — sign in in the popup, and Dobly picks it up automatically. No need to leave this page.</p>
             <StepFooter onContinue={recheck} continueLabel="I've connected — continue" onSkip={skipOnboarding} skipping={skipping} />
           </section>
         ) : stepIndex === 2 ? (
@@ -201,6 +232,7 @@ export default function OnboardingWizard({
             <div className="onboard-step-body">
               <OperatorHandleBar
                 compact
+                initialPrompt={seededPrompt}
                 onDeployed={(result) => {
                   setDeployedOperator({ id: result.operatorId, name: result.operatorName, approvalMode: result.approvalMode });
                   setSelectedMode((result.approvalMode as ApprovalMode) || "approve_risky");

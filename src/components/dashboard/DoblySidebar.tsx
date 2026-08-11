@@ -5,28 +5,33 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
+  Activity,
   BarChart3,
   BookOpenText,
-  BrainCircuit,
+  Building2,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   CircleHelp,
-  Files,
-  FolderKanban,
-  Home,
-  Inbox,
+  ClipboardList,
+  Clock,
   Link2,
-  ListTodo,
   Menu,
-  MoreHorizontal,
+  MoonStar,
+  Network,
+  NotebookText,
   RadioTower,
+  Search,
   Settings,
-  Users,
+  Sparkles,
+  SunMedium,
+  Table2,
   WalletCards,
   Workflow,
   X,
 } from "lucide-react";
 import SignOutButton from "@/components/dashboard/SignOutButton";
+import { useTheme } from "@/components/providers/ThemeProvider";
 
 type NavItem = {
   label: string;
@@ -40,29 +45,27 @@ type SidebarProfile = {
   email?: string;
 };
 
-const workspaceItems: NavItem[] = [
-  { label: "Home", href: "/dashboard", icon: Home },
-  { label: "Work", href: "/dashboard/tasks", icon: ListTodo },
-  { label: "Coworkers", href: "/dashboard/coworkers", icon: Users },
-  { label: "Connections", href: "/dashboard/connections", icon: Link2 },
-];
-
-const todayItems: NavItem[] = [
-  { label: "Inbox", href: "/dashboard/inbox", icon: Inbox },
-  { label: "Approvals", href: "/dashboard/approvals", icon: CheckCircle2 },
-  { label: "Briefings", href: "/dashboard/briefings", icon: BookOpenText },
+// The five places in Dobly: Canvas (intent), Table (work), Assistants
+// (coworkers), Knowledge (the Room), Activity (history). This is the
+// primary taxonomy from the reference design — not a feature list.
+const placeItems: NavItem[] = [
+  { label: "Canvas", href: "/dashboard", icon: Sparkles },
+  { label: "Table", href: "/dashboard/tasks", icon: Table2 },
+  { label: "Assistants", href: "/dashboard/coworkers", icon: Network },
+  { label: "Knowledge", href: "/dashboard/memory", icon: NotebookText },
+  { label: "Activity", href: "/dashboard/activity", icon: Clock },
 ];
 
 const routeFamilies: Record<string, string[]> = {
-  "/dashboard/tasks": ["/dashboard/tasks", "/dashboard/inbox", "/dashboard/projects", "/dashboard/documents", "/dashboard/activity"],
+  "/dashboard/tasks": ["/dashboard/tasks", "/dashboard/projects", "/dashboard/documents"],
   "/dashboard/coworkers": ["/dashboard/coworkers"],
+  "/dashboard/memory": ["/dashboard/memory", "/dashboard/business"],
 };
 
 const moreGroups = [
   {
     label: "Intelligence",
     items: [
-      { label: "Memory", href: "/dashboard/memory", icon: BrainCircuit },
       { label: "Briefings", href: "/dashboard/briefings", icon: BookOpenText },
       { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
       { label: "Reports", href: "/dashboard/reports", icon: RadioTower },
@@ -73,14 +76,21 @@ const moreGroups = [
     items: [
       { label: "Loops", href: "/dashboard/workflows", icon: Workflow },
       { label: "Approvals", href: "/dashboard/approvals", icon: CheckCircle2 },
+      { label: "Connections", href: "/dashboard/connections", icon: Link2 },
+      { label: "Health", href: "/dashboard/health", icon: Activity },
     ],
   },
   {
     label: "Library",
     items: [
-      { label: "Files", href: "/dashboard/documents", icon: Files },
-      { label: "Projects", href: "/dashboard/projects", icon: FolderKanban },
-      { label: "Inbox", href: "/dashboard/inbox", icon: Inbox },
+      { label: "Inbox", href: "/dashboard/inbox", icon: ClipboardList },
+      // A real, complete page (tasks/projects/documents/coworkers, already
+      // had one real bug fixed in it - see its own file comment) with zero
+      // inbound links anywhere in the app before this. The sidebar's
+      // "Search" button opens the instant command palette instead
+      // (onOpenSearch), which is a different, complementary surface - this
+      // gives the fuller results page a real way in too.
+      { label: "Search", href: "/dashboard/search", icon: Search },
     ],
   },
 ] satisfies Array<{ label: string; items: NavItem[] }>;
@@ -101,23 +111,40 @@ function NavRow({ item, active, collapsed }: { item: NavItem; active: boolean; c
       aria-label={collapsed ? item.label : undefined}
       title={collapsed ? item.label : undefined}
     >
-      <Icon className="dobly-nav-icon" />
+      <span className="dobly-nav-icon-frame">
+        <Icon className="dobly-nav-icon" />
+      </span>
       <span className="dobly-nav-label">{item.label}</span>
       {item.count ? <span className="dobly-count">{item.count}</span> : null}
     </Link>
   );
 }
 
+type WorkspaceChoice = { id: string; name: string };
+
 export default function DoblySidebar({
   profile,
   collapsed,
+  onToggle,
+  onOpenSearch,
+  workspaces = [],
+  activeWorkspaceId = null,
+  switchingWorkspace = false,
+  onSwitchWorkspace,
 }: {
   profile: SidebarProfile;
   isAdmin?: boolean;
   collapsed: boolean;
   onToggle: () => void;
+  onOpenSearch?: () => void;
+  workspaces?: WorkspaceChoice[];
+  activeWorkspaceId?: string | null;
+  switchingWorkspace?: boolean;
+  onSwitchWorkspace?: (workspaceId: string) => void;
 }) {
   const pathname = usePathname() ?? "";
+  const { resolvedTheme, setTheme } = useTheme();
+  const dark = resolvedTheme === "dark";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -156,22 +183,30 @@ export default function DoblySidebar({
       </header>
       <button type="button" className="dobly-mobile-scrim" data-open={mobileOpen} onClick={() => setMobileOpen(false)} aria-label="Close navigation" />
       <aside className="dobly-sidebar" data-mobile-open={mobileOpen} data-collapsed={collapsed}>
+        <button
+          type="button"
+          className="dobly-sidebar-collapse-toggle"
+          onClick={onToggle}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <ChevronLeft aria-hidden="true" />
+        </button>
         <Link href="/dashboard" className="dobly-brand">
           <span className="dobly-mark" aria-hidden="true">D</span>
           <span className="dobly-brand-name">Dobly</span>
         </Link>
 
-        {/* Search lives in the top bar only. Duplicating it here cost a row of
-            sidebar height for a control that already exists one row away. */}
+        {/* Five places in Dobly — Canvas, Table, Assistants, Knowledge,
+            Activity — shown as a calm vertical rail (icon over label),
+            matching the reference workspace design. Everything else
+            (Loops, Approvals, Connections, Inbox, Briefings...) is one
+            step away behind "More" rather than crowding this rail. */}
         <nav className="dobly-nav-scroll" aria-label="Workspace navigation">
-          <span className="dobly-nav-eyebrow">Workspace</span>
-          {workspaceItems.map((item) => (
+          {placeItems.map((item) => (
             <NavRow key={item.href} item={item} active={activePath(pathname, item.href)} collapsed={collapsed} />
           ))}
-          <span className="dobly-nav-eyebrow dobly-today-eyebrow">Today</span>
-          {todayItems.map((item) => (
-            <NavRow key={item.href} item={item} active={activePath(pathname, item.href)} collapsed={collapsed} />
-          ))}
+          <div className="dobly-nav-divider" role="separator" />
           <DropdownMenu.Root open={moreOpen} onOpenChange={setMoreOpen} modal={false}>
             <DropdownMenu.Trigger asChild>
               <button
@@ -180,16 +215,17 @@ export default function DoblySidebar({
                 aria-label={collapsed ? "More" : undefined}
                 title={collapsed ? "More" : undefined}
               >
-                <MoreHorizontal className="dobly-nav-icon" />
+                <span className="dobly-nav-icon-frame">
+                  <ChevronRight className="dobly-nav-icon dobly-more-icon" />
+                </span>
                 <span className="dobly-nav-label">More</span>
-                <ChevronRight className="dobly-more-chevron" />
               </button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
               <DropdownMenu.Content className="dobly-more-menu" side="right" sideOffset={10} align="start">
                 <div className="dobly-more-intro">
                   <strong>Explore Dobly</strong>
-                  <span>Intelligence, systems, and your shared library.</span>
+                  <span>Loops, approvals, connections, and your shared library.</span>
                 </div>
                 {moreGroups.map((group) => (
                   <div className="dobly-more-group" key={group.label}>
@@ -215,6 +251,11 @@ export default function DoblySidebar({
         </nav>
 
         <div className="dobly-sidebar-footer">
+          <button type="button" className="dobly-sidebar-search" onClick={onOpenSearch} aria-label="Search Dobly">
+            <Search className="dobly-nav-icon" />
+            {!collapsed ? <span>Search</span> : null}
+            {!collapsed ? <kbd>Ctrl K</kbd> : null}
+          </button>
           <DropdownMenu.Root open={accountOpen} onOpenChange={setAccountOpen} modal={false}>
             <DropdownMenu.Trigger asChild>
               <button
@@ -248,6 +289,31 @@ export default function DoblySidebar({
                     <small>{profile?.email || ""}</small>
                   </span>
                 </div>
+                <DropdownMenu.Separator className="dobly-profile-separator" />
+                <DropdownMenu.Item
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    setTheme(dark ? "light" : "dark");
+                  }}
+                >
+                  {dark ? <SunMedium /> : <MoonStar />} {dark ? "Light mode" : "Dark mode"}
+                </DropdownMenu.Item>
+                {workspaces.length > 1 ? (
+                  <>
+                    <DropdownMenu.Separator className="dobly-profile-separator" />
+                    {workspaces.map((workspace) => (
+                      <DropdownMenu.Item
+                        key={workspace.id}
+                        onSelect={() => onSwitchWorkspace?.(workspace.id)}
+                        data-active={workspace.id === activeWorkspaceId}
+                        style={{ opacity: switchingWorkspace ? 0.6 : 1 }}
+                      >
+                        <Building2 />
+                        <span>{workspace.name}</span>
+                      </DropdownMenu.Item>
+                    ))}
+                  </>
+                ) : null}
                 <DropdownMenu.Separator className="dobly-profile-separator" />
                 <DropdownMenu.Item asChild><Link href="/dashboard/billing"><WalletCards /> Billing</Link></DropdownMenu.Item>
                 <DropdownMenu.Item asChild><Link href="/dashboard/settings"><Settings /> Settings</Link></DropdownMenu.Item>

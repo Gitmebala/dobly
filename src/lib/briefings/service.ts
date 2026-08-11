@@ -215,7 +215,7 @@ function boardroomToBriefingContent(
   return {
     business_status: report.synthesis,
     what_happened: report.members.map((member) => ({
-      title: `${member.role}: ${member.agentName}`,
+      title: member.role,
       description: member.finding,
       confidence: member.confidence,
     })),

@@ -3,46 +3,122 @@
    var(--app-*) silently resolves to nothing for anything portaled
    (dropdowns, popovers, dialogs, toasts), falling back to transparent. */
 :root {
-  --app-bg: #f4eee7;
-  --app-paper: #fbf8f3;
-  --app-paper-2: #f0e8df;
-  --app-text: #27221e;
-  --app-muted: #796d64;
-  --app-line: rgba(69, 53, 42, .11);
-  --app-line-strong: rgba(69, 53, 42, .17);
-  --app-rust: #d76f4e;
-  --app-rust-dark: #b95435;
-  --app-green: #4f8766;
-  --app-shadow: 0 12px 34px rgba(79, 52, 34, .055);
+  --app-bg: #efdfcb;
+  --app-paper: #faf5ec;
+  --app-paper-2: #e1be98;
+  --app-text: #35251a;
+  --app-muted: #8d8066;
+  --app-line: rgba(53, 37, 26, .12);
+  --app-line-strong: rgba(53, 37, 26, .2);
+  --app-rust: #b74513;
+  --app-rust-dark: #8f3610;
+  --app-green: #2f8f5f;
+  --app-shadow: 0 12px 34px rgba(53, 37, 26, .08);
+  /* Material palette — physical work-table objects (Canvas + Table design) */
+  --app-clay: #c1502e;
+  --app-clay-dark: #9c3e21;
+  --app-stone: #ece3d3;
+  --app-stone-text: #6b5e4a;
+  --app-slate: #2c2926;
+  --app-slate-text: #efdfcb;
+  --app-wood: #4a3524;
+  --app-wood-2: #33231a;
+  --app-wood-text: #f1e6d6;
+  --app-gold: #c9862f;
+  --app-kraft: #e4d3b0;
+  --app-kraft-text: #4a3a22;
+  /* shadcn/ui theming — components.json points at globals.css, but these
+     live here so they're defined wherever --app-* is (see the note above
+     about portals). Deliberately separate from the marketing site's own
+     --accent/--border/--text system in globals.css (tailwind.config.ts)
+     rather than repointing those — that system has its own consumers and
+     redefining it out from under them was a bigger, riskier change than
+     this rebuild needed. New shadcn components in the dashboard should
+     read Dobly's actual palette instead of Tailwind's default gray/black,
+     without touching what marketing pages already rely on. */
+  --shadcn-primary: #b74513;
+  --shadcn-primary-foreground: #faf5ec;
+  --shadcn-secondary: #e1be98;
+  --shadcn-secondary-foreground: #35251a;
+  --shadcn-muted: #efdfcb;
+  --shadcn-muted-foreground: #8d8066;
+  --shadcn-destructive: #b3261e;
+  --shadcn-ring: #b74513;
+  --shadcn-popover: #faf5ec;
+  --shadcn-popover-foreground: #35251a;
 }
 
 html.dark:root,
 html[data-theme="dark"]:root {
-  --app-bg: #191715;
-  --app-paper: #211e1b;
-  --app-paper-2: #2a2622;
-  --app-text: #f3ece5;
-  --app-muted: #b5a89e;
-  --app-line: rgba(244, 234, 226, .09);
-  --app-line-strong: rgba(244, 234, 226, .16);
-  --app-rust: #dd8062;
-  --app-rust-dark: #c76445;
-  --app-green: #6ca27f;
-  --app-shadow: 0 16px 44px rgba(0, 0, 0, .17);
+  --app-bg: #35251a;
+  --app-paper: #472a18;
+  --app-paper-2: #5c3a24;
+  --app-text: #efdfcb;
+  --app-muted: #c7b8a0;
+  --app-line: rgba(239, 223, 203, .10);
+  --app-line-strong: rgba(239, 223, 203, .18);
+  --app-rust: #d9622f;
+  --app-rust-dark: #b74513;
+  --app-green: #5fbf8a;
+  --app-shadow: 0 16px 44px rgba(0, 0, 0, .4);
+  --app-clay: #d9622f;
+  --app-clay-dark: #b74513;
+  --app-stone: #5c4d3a;
+  --app-stone-text: #efdfcb;
+  --app-slate: #17130f;
+  --app-slate-text: #efdfcb;
+  --app-wood: #241a12;
+  --app-wood-2: #170f0a;
+  --app-wood-text: #f1e6d6;
+  --app-gold: #e0a04a;
+  --app-kraft: #5c4a2f;
+  --app-kraft-text: #efdfcb;
+  --shadcn-primary: #d9622f;
+  --shadcn-primary-foreground: #35251a;
+  --shadcn-secondary: #5c3a24;
+  --shadcn-secondary-foreground: #efdfcb;
+  --shadcn-muted: #35251a;
+  --shadcn-muted-foreground: #c7b8a0;
+  --shadcn-destructive: #e05c50;
+  --shadcn-ring: #d9622f;
+  --shadcn-popover: #472a18;
+  --shadcn-popover-foreground: #efdfcb;
 }
 
 .dashboard-shell.app-shell {
-  --app-bg: #f4eee7;
-  --app-paper: #fbf8f3;
-  --app-paper-2: #f0e8df;
-  --app-text: #27221e;
-  --app-muted: #796d64;
-  --app-line: rgba(69, 53, 42, .11);
-  --app-line-strong: rgba(69, 53, 42, .17);
-  --app-rust: #d76f4e;
-  --app-rust-dark: #b95435;
-  --app-green: #4f8766;
-  --app-shadow: 0 12px 34px rgba(79, 52, 34, .055);
+  --app-bg: #efdfcb;
+  --app-paper: #faf5ec;
+  --app-paper-2: #e1be98;
+  --app-text: #35251a;
+  --app-muted: #8d8066;
+  --app-line: rgba(53, 37, 26, .12);
+  --app-line-strong: rgba(53, 37, 26, .2);
+  --app-rust: #b74513;
+  --app-rust-dark: #8f3610;
+  --app-green: #2f8f5f;
+  --app-shadow: 0 12px 34px rgba(53, 37, 26, .08);
+  --app-clay: #c1502e;
+  --app-clay-dark: #9c3e21;
+  --app-stone: #ece3d3;
+  --app-stone-text: #6b5e4a;
+  --app-slate: #2c2926;
+  --app-slate-text: #efdfcb;
+  --app-wood: #4a3524;
+  --app-wood-2: #33231a;
+  --app-wood-text: #f1e6d6;
+  --app-gold: #c9862f;
+  --app-kraft: #e4d3b0;
+  --app-kraft-text: #4a3a22;
+  --shadcn-primary: #b74513;
+  --shadcn-primary-foreground: #faf5ec;
+  --shadcn-secondary: #e1be98;
+  --shadcn-secondary-foreground: #35251a;
+  --shadcn-muted: #efdfcb;
+  --shadcn-muted-foreground: #8d8066;
+  --shadcn-destructive: #b3261e;
+  --shadcn-ring: #b74513;
+  --shadcn-popover: #faf5ec;
+  --shadcn-popover-foreground: #35251a;
   min-height: 100vh;
   color: var(--app-text);
   background: var(--app-bg);
@@ -390,17 +466,39 @@ html[data-theme="dark"]:root {
 }
 
 html[data-theme="dark"] .dashboard-shell.app-shell {
-  --app-bg: #191715;
-  --app-paper: #211e1b;
-  --app-paper-2: #2a2622;
-  --app-text: #f3ece5;
-  --app-muted: #b5a89e;
-  --app-line: rgba(244, 234, 226, .09);
-  --app-line-strong: rgba(244, 234, 226, .16);
-  --app-rust: #dd8062;
-  --app-rust-dark: #c76445;
-  --app-green: #6ca27f;
-  --app-shadow: 0 16px 44px rgba(0, 0, 0, .17);
+  --app-bg: #35251a;
+  --app-paper: #472a18;
+  --app-paper-2: #5c3a24;
+  --app-text: #efdfcb;
+  --app-muted: #c7b8a0;
+  --app-line: rgba(239, 223, 203, .10);
+  --app-line-strong: rgba(239, 223, 203, .18);
+  --app-rust: #d9622f;
+  --app-rust-dark: #b74513;
+  --app-green: #5fbf8a;
+  --app-shadow: 0 16px 44px rgba(0, 0, 0, .4);
+  --app-clay: #d9622f;
+  --app-clay-dark: #b74513;
+  --app-stone: #5c4d3a;
+  --app-stone-text: #efdfcb;
+  --app-slate: #17130f;
+  --app-slate-text: #efdfcb;
+  --app-wood: #241a12;
+  --app-wood-2: #170f0a;
+  --app-wood-text: #f1e6d6;
+  --app-gold: #e0a04a;
+  --app-kraft: #5c4a2f;
+  --app-kraft-text: #efdfcb;
+  --shadcn-primary: #d9622f;
+  --shadcn-primary-foreground: #35251a;
+  --shadcn-secondary: #5c3a24;
+  --shadcn-secondary-foreground: #efdfcb;
+  --shadcn-muted: #35251a;
+  --shadcn-muted-foreground: #c7b8a0;
+  --shadcn-destructive: #e05c50;
+  --shadcn-ring: #d9622f;
+  --shadcn-popover: #472a18;
+  --shadcn-popover-foreground: #efdfcb;
   background: var(--app-bg);
   color-scheme: dark;
 }
@@ -545,6 +643,31 @@ html[data-theme="dark"] .dashboard-shell.app-shell {
   font-size: 10px;
 }
 .dashboard-shell .is-active .dobly-count { color: var(--app-rust); background: var(--app-paper); }
+
+.dashboard-shell .dobly-sidebar-utility {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px solid var(--app-line);
+}
+.dashboard-shell .dobly-utility-row {
+  width: 100%;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+.dashboard-shell .dobly-utility-kbd {
+  margin-left: auto;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--app-line-strong);
+  color: var(--app-muted);
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
 
 .dashboard-shell .dobly-sidebar-footer {
   width: 100%;
@@ -3151,19 +3274,19 @@ html.theme-transitioning * {
    and auth rendered warm cream. The palette below is now the same
    warm one defined at the top; only the status tokens are new. */
 .dashboard-shell.app-shell {
-  --app-bg: #f4eee7;
-  --app-paper: #fbf8f3;
-  --app-paper-2: #f0e8df;
-  --app-text: #27221e;
-  --app-muted: #796d64;
-  --app-line: rgba(69, 53, 42, .11);
-  --app-line-strong: rgba(69, 53, 42, .17);
-  --app-rust: #d76f4e;
-  --app-rust-dark: #b95435;
-  --app-green: #4f8766;
-  --app-blue: #5b7d9c;
-  --app-gold: #a8792f;
-  --app-shadow: 0 12px 34px rgba(79, 52, 34, .055);
+  --app-bg: #efdfcb;
+  --app-paper: #faf5ec;
+  --app-paper-2: #e1be98;
+  --app-text: #35251a;
+  --app-muted: #8d8066;
+  --app-line: rgba(53, 37, 26, .12);
+  --app-line-strong: rgba(53, 37, 26, .2);
+  --app-rust: #b74513;
+  --app-rust-dark: #8f3610;
+  --app-green: #2f8f5f;
+  --app-blue: #3d6fd8;
+  --app-gold: #b8842f;
+  --app-shadow: 0 12px 34px rgba(53, 37, 26, .08);
   --ui-success: var(--app-green);
   --ui-warning: var(--app-gold);
   --ui-info: var(--app-blue);
@@ -3172,19 +3295,19 @@ html.theme-transitioning * {
 /* Same correction for dark: warm charcoal, not green-black. */
 html[data-theme="dark"] .dashboard-shell.app-shell,
 html.dark .dashboard-shell.app-shell {
-  --app-bg: #191715;
-  --app-paper: #211e1b;
-  --app-paper-2: #2a2622;
-  --app-text: #f3ece5;
-  --app-muted: #b5a89e;
-  --app-line: rgba(244, 234, 226, .09);
-  --app-line-strong: rgba(244, 234, 226, .16);
-  --app-rust: #dd8062;
-  --app-rust-dark: #c76445;
-  --app-green: #6ca27f;
-  --app-blue: #8aa6c2;
-  --app-gold: #c69a58;
-  --app-shadow: 0 16px 44px rgba(0, 0, 0, .17);
+  --app-bg: #35251a;
+  --app-paper: #472a18;
+  --app-paper-2: #5c3a24;
+  --app-text: #efdfcb;
+  --app-muted: #c7b8a0;
+  --app-line: rgba(239, 223, 203, .10);
+  --app-line-strong: rgba(239, 223, 203, .18);
+  --app-rust: #d9622f;
+  --app-rust-dark: #b74513;
+  --app-green: #5fbf8a;
+  --app-blue: #6f93e0;
+  --app-gold: #d19a4a;
+  --app-shadow: 0 16px 44px rgba(0, 0, 0, .4);
 }
 
 .dashboard-shell *,
@@ -4950,6 +5073,40 @@ html[data-theme="dark"] .hire-error {
   line-height: 1.5;
   color: var(--app-text);
 }
+.hire-scenario-list { display: grid; gap: 8px; margin-top: 10px; }
+.hire-scenario {
+  padding: 10px 12px;
+  border: 1px solid var(--app-line);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--app-paper-2) 40%, var(--app-paper));
+}
+.hire-scenario-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.hire-scenario-head strong { font-size: 12.5px; font-weight: 650; color: var(--app-text); }
+.hire-scenario-head span {
+  flex: none;
+  padding: 2px 9px;
+  border-radius: 999px;
+  color: var(--app-green);
+  background: color-mix(in srgb, var(--app-green) 14%, var(--app-paper));
+  font-size: 10px;
+  font-weight: 650;
+  text-transform: capitalize;
+}
+.hire-scenario[data-status="blocked_on_setup"] .hire-scenario-head span {
+  color: var(--app-rust-dark);
+  background: color-mix(in srgb, var(--app-rust) 14%, var(--app-paper));
+}
+.hire-scenario[data-status="needs_approval_guard_passed"] .hire-scenario-head span {
+  color: var(--app-gold);
+  background: color-mix(in srgb, var(--app-gold) 16%, var(--app-paper));
+}
+.hire-scenario p { margin: 6px 0 0; color: var(--app-muted); font-size: 12px; line-height: 1.5; }
+
 .hire-readiness-row svg {
   width: 15px;
   height: 15px;
@@ -5269,6 +5426,86 @@ html[data-theme="dark"] .hire-error {
   margin: 0 0 24px;
 }
 
+/* The receipt: how a coworker action (done, or waiting on you) renders
+   in the thread. Every pending-act or completed-act message is this,
+   not a paragraph - what, to whom, its status, the decision if owed. */
+.dobly-receipt {
+  max-width: 440px;
+  margin: 0 0 24px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--app-paper-2);
+  border: 1px solid var(--app-line);
+}
+
+.dobly-receipt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--app-text) 4%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--app-muted);
+}
+.dobly-receipt-head[data-state="approved"],
+.dobly-receipt-head[data-state="completed"] { color: var(--app-green); }
+.dobly-receipt-head[data-state="pending"] { color: var(--app-rust); }
+.dobly-receipt-head[data-state="rejected"] { color: var(--app-muted); }
+
+.dobly-receipt-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dobly-receipt-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.dobly-receipt-detail {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--app-muted);
+}
+
+.dobly-receipt-risk {
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--app-muted);
+  background: color-mix(in srgb, var(--app-text) 6%, transparent);
+}
+.dobly-receipt-risk[data-level="high"] { color: var(--app-rust-dark); background: color-mix(in srgb, var(--app-rust) 14%, transparent); }
+
+.dobly-receipt-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.dobly-receipt-actions button {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.dobly-receipt-actions button[data-kind="approve"] { background: var(--app-rust); color: #fff; }
+.dobly-receipt-actions button[data-kind="approve"]:hover { background: var(--app-rust-dark); }
+.dobly-receipt-actions button[data-kind="decline"] { background: transparent; border: 1px solid var(--app-line-strong); color: var(--app-text); }
+.dobly-receipt-actions button:disabled { opacity: 0.6; }
+
 .ledger-entry-meta {
   display: flex;
   align-items: baseline;
@@ -5540,6 +5777,29 @@ html[data-theme="dark"] .ledger-entry-user .ledger-entry-body {
   line-height: 1.6;
   word-break: break-word;
 }
+
+.ledger-info-connect-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  list-style: none !important;
+  margin-left: -16px;
+}
+.ledger-info-connect-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-rust) 14%, transparent);
+  color: var(--app-rust-dark);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ledger-info-connect-link:hover { background: color-mix(in srgb, var(--app-rust) 22%, transparent); }
 
 .ledger-workings-refs {
   margin: 0;
@@ -7662,11 +7922,53 @@ html[data-theme="dark"] .dashboard-shell {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  max-width: 560px;
+  max-width: 640px;
   min-height: calc(100vh - 64px);
   margin: 0 auto;
   padding: 0 24px;
   animation: onboard-reveal-in 700ms var(--ease-premium, ease) both;
+}
+
+.onboard-welcome-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin: 22px 0 4px;
+}
+
+.onboard-welcome-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  text-align: left;
+  background: transparent;
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.onboard-welcome-chip:hover {
+  border-color: var(--app-rust);
+  background: color-mix(in srgb, var(--app-rust) 6%, transparent);
+  transform: translateY(-1px);
+}
+
+.onboard-welcome-chip strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.onboard-welcome-chip small {
+  font-size: 12px;
+  color: var(--app-muted);
+}
+
+@media (max-width: 640px) {
+  .onboard-welcome-chips { grid-template-columns: 1fr; }
 }
 
 .onboard-welcome h1 {
@@ -8101,197 +8403,1369 @@ html[data-theme="dark"] .dashboard-shell {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   HOME - business hub + pulse
+   HOME - single flowing column (no rail, no card grid, no radial hub).
+   Everything below the hero is one continuous stream: whitespace and
+   thin rules separate sections, not borders/shadows/boxes.
    ═══════════════════════════════════════════════════════════════════ */
 
-.home-hub-section { padding-bottom: 8px; }
-
-.home-hub {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 460px;
-  margin: 12px 0;
-}
-
-.home-hub svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.home-hub-spoke {
-  stroke: var(--app-line-strong);
-  stroke-width: 1.25;
-  stroke-linecap: round;
-}
-.home-hub-spoke[data-status="active"] { stroke: color-mix(in srgb, var(--app-rust) 45%, var(--app-line-strong)); }
-
-.home-hub-center {
-  position: relative;
-  z-index: 1;
+.home-stream {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 4px 64px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 144px;
-  height: 144px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--app-rust) 16%, var(--app-paper)), color-mix(in srgb, var(--app-rust) 7%, var(--app-paper)));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-rust) 22%, var(--app-line));
-  text-align: center;
+  gap: 40px;
 }
 
-.home-hub-center strong {
+.home-hero {
+  padding-top: clamp(24px, 6vh, 72px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: dobly-rise-in 420ms var(--ease-premium) both;
+}
+
+.home-hero h1 {
+  margin: 0;
   font-family: var(--font-display), Georgia, serif;
-  font-size: 40px;
+  font-size: clamp(28px, 4vw, 40px);
   font-weight: 500;
-  color: var(--app-rust-dark);
+  letter-spacing: -0.02em;
+  color: var(--app-text);
+}
+
+.home-hero > p {
+  margin: 0;
+  max-width: 58ch;
+  color: var(--app-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.home-hero .home-command { margin-top: 10px; }
+
+.home-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  padding: 18px 0;
+  border-top: 1px solid var(--app-line);
+  border-bottom: 1px solid var(--app-line);
+}
+
+.home-status-strip > div { display: flex; flex-direction: column; gap: 3px; }
+
+.home-status-strip b {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--app-text);
   line-height: 1;
 }
 
-.home-hub-center span {
-  margin-top: 5px;
+.home-status-strip span {
+  font-size: 11px;
   color: var(--app-muted);
-  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
-.home-hub-center em {
-  margin-top: 8px;
-  padding: 0 14px;
-  color: var(--app-text);
-  font-size: 11px;
-  font-style: normal;
+.home-section-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-rust) 14%, transparent);
+  color: var(--app-rust-dark);
+  font-size: 10px;
   font-weight: 600;
 }
 
-.home-hub-node {
+@media (max-width: 720px) {
+  .home-status-strip { gap: 18px 24px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SIDEBAR — five places (Canvas / Table / Assistants / Knowledge /
+   Activity) as a calm vertical rail: icon-frame over label, not a
+   left-aligned icon+label list row. Wordmark is a plain script
+   lettermark, no boxed "D" tile. Appended last so it wins the cascade
+   over the earlier row-list sidebar rules above.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dashboard-shell .dobly-sidebar {
+  width: 152px;
+  padding: 22px 10px 18px;
+  gap: 0;
+  border-right: 0;
+  background: var(--app-bg);
+  backdrop-filter: none;
+  box-shadow: none;
+}
+.dashboard-shell[data-sidebar-collapsed="true"] .dobly-sidebar,
+.dobly-sidebar[data-collapsed="true"] {
+  width: 72px;
+}
+
+/* main-stage's margin-left was still hardcoded to the OLD 252px sidebar
+   width from before this rebuild (176px in round 1, 152px now) — the
+   real bug behind "still wide" / "goes to the bottom": a ~100px band of
+   bare --app-bg (a visibly different, darker tan than the paper content)
+   ran the full page height between the sidebar and the actual content,
+   reading as an oversized, never-ending sidebar even though the sidebar
+   itself was already correctly sized. Keep these two in lockstep with
+   the widths above — they are not automatically derived from each other. */
+.dashboard-shell .main-stage { margin-left: 152px; }
+.dashboard-shell[data-sidebar-collapsed="true"] .main-stage { margin-left: 72px; }
+
+.dashboard-shell .dobly-sidebar-collapse-toggle {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 1;
+  top: 26px;
+  right: -11px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--app-line);
+  background: var(--app-paper);
+  color: var(--app-muted);
+  box-shadow: 0 2px 6px rgba(53,37,26,.12);
+  cursor: pointer;
+  transition: color .16s ease, border-color .16s ease, transform .2s cubic-bezier(.22,1,.36,1);
+}
+.dashboard-shell .dobly-sidebar-collapse-toggle:hover { color: var(--app-rust); border-color: color-mix(in srgb, var(--app-rust) 35%, var(--app-line)); }
+.dashboard-shell .dobly-sidebar-collapse-toggle svg { width: 12px; height: 12px; transition: transform .2s cubic-bezier(.22,1,.36,1); }
+.dobly-sidebar[data-collapsed="true"] .dobly-sidebar-collapse-toggle svg { transform: rotate(180deg); }
+
+.dashboard-shell .dobly-brand {
+  padding: 2px 6px 22px;
+  gap: 0;
+}
+.dashboard-shell .dobly-mark { display: none; }
+.dashboard-shell .dobly-brand-name,
+.dashboard-shell .dobly-brand span:not(.dobly-mark) {
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: 25px;
+  color: var(--app-rust);
+  letter-spacing: -0.01em;
+}
+
+.dashboard-shell .dobly-nav-scroll {
+  gap: 18px;
+  padding: 6px 0 18px;
+}
+
+.dashboard-shell .dobly-nav-row {
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 0;
+  gap: 5px;
+  padding: 0 4px;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
+}
+.dashboard-shell .dobly-nav-row.is-active {
+  background: transparent;
+  box-shadow: none;
+  color: var(--app-text);
+}
+.dashboard-shell .dobly-nav-row:hover {
+  background: transparent;
+  color: var(--app-rust);
+}
+
+.dashboard-shell .dobly-nav-icon-frame {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: transparent;
+  transition: background .18s ease, transform .18s cubic-bezier(.22,1,.36,1);
+}
+.dashboard-shell .dobly-nav-row:hover .dobly-nav-icon-frame {
+  background: color-mix(in srgb, var(--app-rust) 9%, transparent);
+}
+.dashboard-shell .dobly-nav-row.is-active .dobly-nav-icon-frame {
+  background: color-mix(in srgb, var(--app-rust) 16%, var(--app-paper));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-rust) 22%, transparent);
+}
+.dashboard-shell .dobly-nav-row.is-active .dobly-nav-icon { color: var(--app-rust-dark); }
+
+.dashboard-shell .dobly-nav-label {
+  padding-left: 2px;
+  font-size: 12.5px;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+}
+
+/* ── Approvals: bulk low-risk approve bar ─────────────────────── */
+.approvals-workspace .bulk-approval-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 0 22px 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--dobly-border);
+  border-left: 2px solid var(--dobly-accent);
+  background: var(--dobly-surface-raised);
+}
+.approvals-workspace .bulk-approval-bar p {
+  margin: 0;
+  flex: 1 1 220px;
+  color: var(--dobly-text-muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.approvals-workspace .bulk-approval-bar p strong {
+  color: var(--dobly-text);
+}
+.approvals-workspace .bulk-approval-error {
+  flex-basis: 100%;
+  color: var(--text-warning, #b45309);
+  font-size: 12px;
+}
+
+.dashboard-shell .dobly-nav-divider {
+  height: 1px;
+  margin: 6px 8px 8px;
+  background: var(--app-line);
+}
+
+.dashboard-shell .dobly-more-trigger {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px;
+}
+.dashboard-shell .dobly-more-trigger .dobly-nav-icon-frame { width: 32px; height: 32px; }
+.dashboard-shell .dobly-more-icon { transform: rotate(90deg); width: 15px; height: 15px; }
+.dashboard-shell .dobly-more-trigger .dobly-nav-label { padding-left: 0; }
+
+/* Deliberately NOT margin-top:auto — the reference profile row sits a
+   comfortable distance below the nav, not glued to the viewport's bottom
+   edge with a boxed panel filling the space between. Same background as
+   the page, so the empty space below just reads as more desk, not UI. */
+.dashboard-shell .dobly-sidebar-footer {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  margin-top: 28px;
+  padding: 10px 0 0;
+}
+.dashboard-shell .dobly-sidebar-search {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  width: 148px;
-  margin-top: -46px;
-  margin-left: -74px;
-  padding: 12px 10px;
-  border-radius: 14px;
-  color: var(--app-text);
-  text-align: center;
-  transition: background 140ms ease, transform 160ms var(--ease-premium, ease);
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--app-muted);
+  background: transparent;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease;
+}
+.dashboard-shell .dobly-sidebar-search:hover { color: var(--app-rust); background: color-mix(in srgb, var(--app-rust) 7%, transparent); }
+.dashboard-shell .dobly-sidebar-search span { flex: 1; text-align: left; }
+.dashboard-shell .dobly-sidebar-search kbd {
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--app-line-strong);
+  color: var(--app-muted);
+  font-size: 9px;
+  font-family: var(--font-mono);
 }
 
-.home-hub-node:hover {
-  background: color-mix(in srgb, var(--app-text) 4%, transparent);
-  transform: translate(var(--tx, 0), var(--ty, 0)) scale(1.04);
+.dobly-sidebar[data-collapsed="true"] .dobly-brand-name,
+.dobly-sidebar[data-collapsed="true"] .dobly-nav-label,
+.dobly-sidebar[data-collapsed="true"] .dobly-sidebar-search span,
+.dobly-sidebar[data-collapsed="true"] .dobly-sidebar-search kbd,
+.dobly-sidebar[data-collapsed="true"] .dobly-account-copy,
+.dobly-sidebar[data-collapsed="true"] .dobly-account-chevron {
+  display: none;
+}
+.dobly-sidebar[data-collapsed="true"] .dobly-brand { justify-content: center; }
+.dobly-sidebar[data-collapsed="true"] .dobly-nav-row { align-items: center; }
+.dobly-sidebar[data-collapsed="true"] .dobly-account { grid-template-columns: 38px; justify-content: center; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   CANVAS + TABLE HOME — the reference design. A canvas for intent up
+   top (handwritten prompt, big question, command bar, starters, an
+   assistant intro card) and a physical work table below it holding
+   the team as tactile objects (paper / clay / stone / slate), a
+   proactive suggestion bar, and a "today's focus" sticky note.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.canvas-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 4px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 }
 
-.home-hub-node-avatar {
+.canvas-topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+.canvas-icon-btn {
   width: 40px;
   height: 40px;
   display: grid;
   place-items: center;
-  border-radius: 11px;
-  background: var(--app-paper);
+  flex: 0 0 auto;
+  border-radius: 50%;
   border: 1px solid var(--app-line);
+  color: var(--app-text);
+  background: var(--app-paper);
+  box-shadow: var(--app-shadow);
+  transition: transform .16s cubic-bezier(.22,1,.36,1), border-color .16s ease;
+}
+.canvas-icon-btn:hover { transform: translateY(-1px); border-color: var(--app-line-strong); }
+.canvas-icon-btn.is-accent {
+  color: white;
+  border-color: transparent;
+  background: linear-gradient(160deg, var(--app-rust), var(--app-rust-dark));
+}
+
+.canvas-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 32px;
+  align-items: start;
+  padding-top: clamp(8px, 3vh, 28px);
+}
+
+.canvas-hero-main {
+  min-width: 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+.canvas-annotation {
+  position: relative;
+  font-family: var(--font-hand), cursive;
+  font-size: 22px;
+  line-height: 1.25;
   color: var(--app-rust-dark);
+  transform: rotate(-1.5deg);
+}
+.canvas-annotation u { text-decoration: none; border-bottom: 2px solid currentColor; padding-bottom: 1px; }
+.canvas-annotation-arrow {
+  display: block;
+  margin: 2px auto 0;
+  width: 52px;
+  height: 34px;
+  color: var(--app-rust-dark);
+  opacity: .75;
+}
+
+/* Specificity note: `.dashboard-shell :is(h1, .page-title)` (0,1,1) beats a
+   bare `.canvas-heading` (0,1,0) regardless of source order — that generic
+   page-title rule was silently clobbering this to 29px. Qualify with the
+   shell ancestor so this reliably wins without an !important war. */
+.dashboard-shell .canvas-heading {
+  margin: 0;
   font-family: var(--font-display), Georgia, serif;
   font-weight: 600;
-  font-size: 16px;
+  font-size: clamp(38px, 5.4vw, 60px);
+  line-height: 1.06;
+  letter-spacing: -0.01em !important;
+  color: var(--app-text);
+}
+.canvas-heading .accent {
+  color: var(--app-rust);
+  font-style: italic;
+  position: relative;
+}
+.canvas-heading .accent::after {
+  content: "";
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  bottom: -0.06em;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--app-rust);
+  opacity: .55;
 }
 
-.home-hub-node[data-status="active"] .home-hub-node-avatar {
-  border-color: color-mix(in srgb, var(--app-rust) 40%, var(--app-line));
-  background: color-mix(in srgb, var(--app-rust) 10%, var(--app-paper));
+.canvas-command {
+  width: 100%;
+  max-width: 620px;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 22px;
+  border-radius: 999px;
+  border: 1px solid var(--app-line);
+  background: var(--app-paper);
+  box-shadow: 0 14px 34px rgba(53,37,26,.09);
+  transition: border-color .18s ease, box-shadow .18s ease;
 }
+.canvas-command:focus-within {
+  border-color: color-mix(in srgb, var(--app-rust) 45%, var(--app-line));
+  box-shadow: 0 16px 38px rgba(53,37,26,.13);
+}
+.canvas-command > svg { flex: 0 0 auto; width: 18px; height: 18px; color: var(--app-rust); }
+.canvas-command input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--app-text);
+  font-size: 15.5px;
+  font-family: var(--font-body), Arial, sans-serif;
+}
+.canvas-command input::placeholder { color: var(--app-muted); }
+.canvas-command button {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: white;
+  background: linear-gradient(160deg, var(--app-rust), var(--app-rust-dark));
+  cursor: pointer;
+  transition: transform .16s cubic-bezier(.22,1,.36,1);
+}
+.canvas-command button:hover:not(:disabled) { transform: translateY(-1px) scale(1.03); }
+.canvas-command button:disabled { opacity: .45; cursor: default; }
 
-.home-hub-node-name {
-  overflow-wrap: break-word;
+.canvas-starters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 12px;
+}
+.canvas-starters-label {
+  font-family: var(--font-hand), cursive;
+  font-size: 19px;
+  color: var(--app-muted);
+  white-space: nowrap;
+}
+.canvas-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 15px;
+  border-radius: 999px;
+  border: 1px solid var(--app-line);
+  background: var(--app-paper);
+  color: var(--app-text);
+  font-size: 12.5px;
+  font-weight: 540;
+  cursor: pointer;
+  transition: transform .16s cubic-bezier(.22,1,.36,1), border-color .16s ease, color .16s ease;
+}
+.canvas-chip svg { width: 14px; height: 14px; color: var(--app-rust); }
+.canvas-chip:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--app-rust) 35%, var(--app-line)); color: var(--app-rust-dark); }
+
+.canvas-assist-card {
+  padding: 18px 18px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--app-line);
+  background: var(--app-paper);
+  box-shadow: var(--app-shadow);
+}
+.canvas-assist-card > svg { width: 18px; height: 18px; color: var(--app-rust); }
+.canvas-assist-card p {
+  margin: 10px 0 0;
   font-size: 13px;
+  line-height: 1.55;
+  color: var(--app-text);
+}
+.canvas-assist-card a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  color: var(--app-rust);
+  font-size: 12.5px;
   font-weight: 600;
-  line-height: 1.3;
+}
+.canvas-assist-card a svg { width: 13px; height: 13px; }
+
+/* Work table */
+/* An actual wooden tray, not a rounded rectangle: an organic, slightly
+   uneven radius per corner (hand-shaped, not machine-cut), plus a faint
+   grain running through the wood. */
+.work-table {
+  position: relative;
+  padding: 26px 26px 96px;
+  border-radius: 64px 40px 48px 88px / 48px 56px 88px 40px;
+  background:
+    radial-gradient(120% 140% at 12% -10%, color-mix(in srgb, var(--app-rust) 10%, transparent), transparent 55%),
+    repeating-linear-gradient(97deg, rgba(0,0,0,.05) 0px, rgba(0,0,0,.05) 1px, transparent 1px, transparent 7px),
+    linear-gradient(165deg, var(--app-wood), var(--app-wood-2));
+  box-shadow: 0 30px 60px rgba(15,10,6,.28), inset 0 1px rgba(255,255,255,.06);
+  overflow: hidden;
 }
 
-.home-hub-node-meta {
+.work-table-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.work-table-label {
+  font-family: var(--font-hand), cursive;
+  font-size: 21px;
+  color: var(--app-wood-text);
+  opacity: .92;
+}
+/* No filter/view-toggle bars — with a handful of coworkers on the table
+   at a time, they were two empty-looking pill bars earning their space
+   with nothing in them. Tiles just wrap, no scrollbar, no slider. */
+.work-table-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 18px;
+}
+
+.work-tile {
+  position: relative;
+  flex: 0 0 auto;
+  width: 176px;
+  min-height: 208px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  box-shadow: 0 14px 26px rgba(0,0,0,.22);
+  transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s ease;
+}
+.work-tile:hover { transform: translateY(-4px) rotate(0deg); box-shadow: 0 20px 34px rgba(0,0,0,.3); }
+
+/* Paper: a stacked pad, not a flat card — layered edges behind it read
+   as the pages underneath, a slight lean, a paperclip pinning the top. */
+.work-tile[data-material="paper"] {
+  background:
+    radial-gradient(140% 100% at 15% 0%, rgba(0,0,0,.03), transparent 60%),
+    #f5efe2;
+  color: #3a2e22;
+  transform: rotate(-1.4deg);
+  box-shadow: 0 3px 0 #e9dfc9, 0 6px 0 #e6dcc6, 0 10px 0 #ddd0b3, 0 18px 26px rgba(0,0,0,.26);
+}
+.work-tile[data-material="paper"]:hover { transform: translateY(-4px) rotate(-1.4deg); }
+.work-tile[data-material="paper"]::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 22px;
+  width: 15px;
+  height: 30px;
+  border: 2.5px solid #9b9082;
+  border-radius: 8px;
+  transform: rotate(-18deg);
+  box-shadow: inset 0 0 0 3px transparent;
+}
+
+/* Clay: matte terracotta with faint mottling, not a flat gradient. */
+.work-tile[data-material="clay"] {
+  background:
+    radial-gradient(60% 50% at 25% 20%, rgba(255,255,255,.10), transparent 60%),
+    radial-gradient(50% 40% at 80% 85%, rgba(0,0,0,.14), transparent 60%),
+    linear-gradient(160deg, var(--app-clay), var(--app-clay-dark));
+  color: #fdf1e8;
+}
+
+/* Stone: a clean upright pebble/egg — `border-radius: 50%` on a taller
+   rectangle produces a proper ellipse, not a random lumpy blob — with a
+   light speckle texture. Extra side padding keeps text off the curve. */
+.work-tile[data-material="stone"] {
+  background:
+    radial-gradient(3px 3px at 34% 26%, rgba(0,0,0,.12), transparent 60%),
+    radial-gradient(2px 2px at 60% 42%, rgba(0,0,0,.10), transparent 60%),
+    radial-gradient(2.5px 2.5px at 48% 66%, rgba(0,0,0,.1), transparent 60%),
+    radial-gradient(2px 2px at 68% 72%, rgba(0,0,0,.09), transparent 60%),
+    radial-gradient(120% 90% at 30% 10%, rgba(255,255,255,.4), transparent 55%),
+    linear-gradient(160deg, var(--app-stone), color-mix(in srgb, var(--app-stone) 78%, #6b5e42));
+  color: var(--app-stone-text);
+  border-radius: 50%;
+  padding: 30px 26px;
+  text-align: center;
+  align-items: center;
+}
+.work-tile[data-material="stone"] .work-tile-badge,
+.work-tile[data-material="stone"] .work-tile-foot { align-self: center; }
+
+/* Slate: dark stone with a soft diagonal sheen. */
+.work-tile[data-material="slate"] {
+  background:
+    linear-gradient(115deg, transparent 40%, rgba(255,255,255,.05) 50%, transparent 60%),
+    linear-gradient(160deg, var(--app-slate), #17140f);
+  color: var(--app-slate-text);
+}
+
+/* This is a shadcn <Badge variant="secondary"> underneath — its default
+   variant classes are a fixed tan pill, wrong on a clay/slate/stone tile
+   that needs to read as "translucent ink on top of the material," not a
+   separate sticker. Override with !important since Tailwind utility
+   classes and this rule have no reliable load-order guarantee otherwise. */
+/* Specificity note: a global compatibility rule,
+   `.dashboard-shell [class*="border"][class*="rounded-"]:not([class*="rounded-full"])`,
+   forces border-radius:8px !important on anything with Tailwind border+
+   rounded-* classes that isn't literally "rounded-full" — shadcn's Badge
+   uses `rounded-4xl` (not "rounded-full"), so it was getting silently
+   caught and squared off. That rule is 4 selector-parts deep (:not()'s
+   specificity counts its argument) = (0,4,0); .work-tile-badge alone is
+   (0,1,0) and loses even with !important on both sides (higher
+   specificity wins ties between !important declarations). Chain enough
+   real ancestors to clear (0,4,0) rather than fight it with !important
+   stacking, which the compat rule would always win on specificity anyway. */
+.dashboard-shell .dashboard-page-shell .canvas-page .work-table .work-tile-badge {
+  align-self: flex-start !important;
+  padding: 3px 10px !important;
+  border-radius: 999px !important;
+  background: rgba(0,0,0,.14) !important;
+  color: inherit !important;
+  font-size: 10px !important;
+  font-weight: 650 !important;
+  text-transform: capitalize;
+  height: auto !important;
+}
+.work-tile[data-material="paper"] .work-tile-badge { background: rgba(53,37,26,.08) !important; color: #6b5636 !important; }
+
+.work-tile-body { display: flex; flex-direction: column; gap: 6px; }
+.work-tile-title {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 16.5px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.work-tile-meta { font-size: 11px; opacity: .8; }
+
+.work-tile-foot { display: flex; align-items: center; gap: 8px; }
+.work-tile-avatars { display: flex; }
+/* shadcn <Avatar size="sm"> underneath — same reasoning as the badge
+   above: its default ring/fallback colors are fixed, wrong sitting on a
+   colored tile that needs a translucent ring instead of a separate sticker. */
+.work-tile-avatar {
+  width: 22px !important;
+  height: 22px !important;
+  flex: 0 0 auto;
+}
+.work-tile-avatar::after { border-color: rgba(255,255,255,.5) !important; }
+.work-tile-avatar [data-slot="avatar-fallback"] {
+  background: rgba(0,0,0,.18) !important;
+  color: inherit !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+}
+.work-tile-avatars .work-tile-avatar { margin-left: -8px; }
+.work-tile-avatars .work-tile-avatar:first-child { margin-left: 0; }
+
+.work-tile-add {
+  flex: 0 0 auto;
+  width: 176px;
+  min-height: 208px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 22px;
+  border: 1.5px dashed rgba(241,230,214,.35);
+  color: var(--app-wood-text);
+  background: rgba(241,230,214,.03);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease;
+}
+.work-tile-add:hover { border-color: rgba(241,230,214,.6); background: rgba(241,230,214,.06); }
+.work-tile-add span.plus {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1.5px solid rgba(241,230,214,.4);
+}
+.work-tile-add strong { font-size: 13px; font-weight: 600; }
+.work-tile-add small { font-size: 10.5px; opacity: .7; max-width: 130px; }
+
+.dobly-suggest-bar {
+  position: absolute;
+  left: 26px;
+  right: 26px;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  padding: 10px 12px 10px 16px;
+  border-radius: 999px;
+  background: rgba(20,14,9,.88);
+  border: 1px solid rgba(241,230,214,.1);
+  color: #f1e6d6;
+  backdrop-filter: blur(6px);
+}
+.dobly-suggest-bar .suggest-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  color: var(--app-rust);
+  font-size: 15px;
+}
+.dobly-suggest-bar .suggest-mark svg { width: 15px; height: 15px; }
+.dobly-suggest-bar p { flex: 1; min-width: 0; margin: 0; font-size: 12.5px; line-height: 1.4; }
+.dobly-suggest-bar a {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--app-rust);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.dobly-suggest-bar button.dismiss {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: rgba(241,230,214,.7);
+  background: transparent;
+  cursor: pointer;
+}
+.dobly-suggest-bar button.dismiss:hover { background: rgba(241,230,214,.1); color: #f1e6d6; }
+
+.canvas-footrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+}
+
+.sticky-note {
+  position: relative;
+  flex: 0 0 auto;
+  width: 216px;
+  padding: 20px 18px 18px;
+  border-radius: 3px;
+  background: var(--app-kraft);
+  color: var(--app-kraft-text);
+  box-shadow: 0 10px 22px rgba(0,0,0,.14);
+  transform: rotate(-2deg);
+}
+.sticky-note::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 54px;
+  height: 20px;
+  transform: translateX(-50%) rotate(-1deg);
+  background: color-mix(in srgb, var(--app-kraft) 60%, #fff 20%);
+  opacity: .55;
+}
+.sticky-note h4 {
+  margin: 0 0 10px;
+  font-family: var(--font-hand), cursive;
+  font-size: 20px;
+  font-weight: 700;
+}
+.sticky-note ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.sticky-note li {
+  font-family: var(--font-hand), cursive;
+  font-size: 16px;
+  line-height: 1.25;
+  padding-left: 14px;
+  position: relative;
+}
+.sticky-note li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .55;
+}
+
+.canvas-welcome-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--app-rust) 24%, var(--app-line));
+  background: color-mix(in srgb, var(--app-rust) 8%, var(--app-paper));
+  color: var(--app-text);
+  font-size: 13px;
+}
+.canvas-welcome-banner svg { flex: 0 0 auto; color: var(--app-rust); }
+.canvas-welcome-banner span { flex: 1; }
+.canvas-welcome-banner button {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--app-line);
+  background: var(--app-paper);
+  color: var(--app-text);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+@media (max-width: 980px) {
+  .canvas-hero { grid-template-columns: minmax(0,1fr); }
+  .canvas-assist-card { justify-self: center; max-width: 480px; }
+}
+
+@media (max-width: 640px) {
+  .canvas-footrow { flex-direction: column; }
+  .sticky-note { width: 100%; transform: none; }
+  .dobly-suggest-bar { position: static; margin-top: 18px; flex-wrap: wrap; }
+  .work-table { padding-bottom: 26px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ASSISTANTS (coworker chat) — bring the header, message bubbles and
+   details panel closer to the reference "Maya" screen: a round
+   presence avatar with a name-line status pill, a warm bubble for
+   what you said, and plain ink (not a card) for what the coworker
+   said. Appended last so it wins over the earlier console-* rules.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* .console-tile is a shadcn <Avatar>; its visible fill lives on the
+   AvatarFallback child, not the root — style both, !important since
+   Tailwind's own size-8/bg-muted classes carry equal specificity and
+   load order between the Tailwind sheet and this file isn't guaranteed. */
+.dashboard-shell .console-tile {
+  width: 48px !important;
+  height: 48px !important;
+}
+.dashboard-shell .console-tile [data-slot="avatar-fallback"] {
+  background: linear-gradient(160deg, var(--app-clay), var(--app-clay-dark)) !important;
+  color: #fdf1e8 !important;
+  font-size: 18px !important;
+}
+
+.dashboard-shell .console-name-row strong { font-size: 20px; }
+
+/* .console-status-pill is a shadcn <Badge variant="secondary"> — same
+   compat-layer specificity trap as .work-tile-badge above, needs the
+   same ancestor-chain fix for border-radius to actually win. */
+.dashboard-shell .operator-chat-console .console-head .console-name-row .console-status-pill {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px 2px 7px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--app-green) 14%, var(--app-paper)) !important;
+  color: var(--app-green) !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+  text-transform: capitalize;
+  height: auto !important;
+}
+.dashboard-shell .console-status-pill i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.dashboard-shell .console-status-pill[data-status="paused"],
+.dashboard-shell .console-status-pill[data-status="idle"] {
+  background: color-mix(in srgb, var(--app-gold) 16%, var(--app-paper)) !important;
+  color: var(--app-gold) !important;
+}
+
+.dashboard-shell .ledger-entry-user .ledger-entry-body {
+  color: var(--app-rust-dark);
+  background: color-mix(in srgb, var(--app-rust) 13%, var(--app-paper));
+  border: 1px solid color-mix(in srgb, var(--app-rust) 20%, transparent);
+}
+
+.dashboard-shell .ledger-entry-coworker::before {
+  top: 1px;
+  left: -30px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(160deg, var(--app-clay), var(--app-clay-dark));
+}
+
+.dashboard-shell .console-stats {
+  gap: 10px;
+  padding: 14px max(28px, calc((100% - 820px) / 2)) 16px;
+  background: transparent;
+  border-bottom: 1px solid var(--app-line);
+}
+.dashboard-shell .console-stats > div {
+  border-radius: 12px;
+  border: 1px solid var(--app-line);
+  background: var(--app-paper);
+}
+.dashboard-shell .console-stats b { font-size: 22px; font-family: var(--font-display), Georgia, serif; }
+
+.dashboard-shell .operator-chat-inspector.operator-inspector-drawer {
+  border-radius: 20px 0 0 20px;
+}
+
+/* Real per-coworker Channels + Knowledge, in the Overview tab. */
+.dashboard-shell .operator-channel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px solid var(--app-line);
+  font-size: 12.5px;
+}
+.dashboard-shell .operator-channel-row:first-child { border-top: 0; }
+.dashboard-shell .operator-channel-row em {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   color: var(--app-muted);
+  font-style: normal;
   font-size: 11px;
+  text-transform: capitalize;
 }
-
-.home-hub-node-meta > i {
+.dashboard-shell .operator-channel-row i {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--app-muted);
 }
-.home-hub-node-meta > i[data-status="active"] { background: var(--app-green); }
-.home-hub-node-meta > i[data-status="paused"] { background: #c9862f; }
+.dashboard-shell .operator-channel-row[data-status="live"] em { color: var(--app-green); }
+.dashboard-shell .operator-channel-row[data-status="live"] i { background: var(--app-green); }
+.dashboard-shell .operator-channel-row[data-status="attention"] em { color: var(--app-gold); }
+.dashboard-shell .operator-channel-row[data-status="attention"] i { background: var(--app-gold); }
 
-.home-hub-add {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border: 1px dashed var(--app-line-strong);
+.dashboard-shell .operator-inspector-link {
+  display: inline-block;
+  margin-top: 2px;
+  color: var(--app-rust);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TABLE (/dashboard/tasks) — same visual language as Canvas (Playfair
+   headings, warm cream cards, rust accents) applied to what was a
+   generic dense list. Functionality (list/board, filters, subtasks,
+   create form, assignment) is untouched — this is a skin, not a rebuild.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.tasks-page.ref-page { max-width: 980px; }
+.tasks-page .ref-header h1 {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 38px;
+  font-weight: 600;
+}
+.tasks-page .ref-greeting { font-family: var(--font-hand), cursive; font-size: 19px; color: var(--app-muted); text-transform: none; letter-spacing: 0; }
+.tasks-page .ref-greeting svg { display: none; }
+
+.tasks-page .ref-progress b { font-family: var(--font-display), Georgia, serif; font-size: 32px; }
+
+.tasks-page .ref-card {
+  border-radius: 18px !important;
+  border: 1px solid var(--app-line);
+  background: var(--app-paper);
+}
+
+.tasks-page .ref-task-row {
+  min-height: 68px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  transition: background .16s ease, transform .16s cubic-bezier(.22,1,.36,1);
+}
+.tasks-page .ref-task-row:hover { background: color-mix(in srgb, var(--app-rust) 5%, transparent); }
+.tasks-page .ref-task-row strong { font-size: 13px; font-weight: 600; }
+
+.tasks-page .task-assignee-chip {
+  padding: 4px 10px 4px 4px;
+  font-size: 10.5px;
+}
+.tasks-page .task-assignee-chip[data-kind="coworker"] {
+  padding-left: 4px;
+}
+.tasks-page .task-assignee-chip[data-kind="coworker"]::before {
+  content: "";
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  color: var(--app-muted);
-  transition: color 140ms ease, border-color 140ms ease;
-}
-.home-hub-add:hover { color: var(--app-rust); border-color: var(--app-rust); }
-
-.home-hub-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  min-height: 240px;
-  text-align: center;
-}
-.home-hub-empty p { max-width: 360px; margin: 0; color: var(--app-muted); font-size: 13px; }
-
-@media (max-width: 720px) {
-  .home-hub-center { width: 108px; height: 108px; }
-  .home-hub-center strong { font-size: 28px; }
-  .home-hub-node { width: 120px; margin-left: -60px; }
+  background: linear-gradient(160deg, var(--app-clay), var(--app-clay-dark));
 }
 
-.home-pulse-score {
+.tasks-page .task-board-column {
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--app-paper-2) 45%, var(--app-paper));
+  padding: 12px;
+}
+.tasks-page .task-board-card {
+  border-radius: 13px !important;
+  box-shadow: 0 6px 14px rgba(53,37,26,.06) !important;
+  transition: transform .16s cubic-bezier(.22,1,.36,1), box-shadow .16s ease;
+}
+.tasks-page .task-board-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(53,37,26,.1) !important; }
+.tasks-page .task-board-card strong { font-family: var(--font-display), Georgia, serif; font-size: 14.5px; font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   KNOWLEDGE (/dashboard/memory) — this page previously used a
+   different, older token system (--dobly-text-dim etc. with literal
+   near-white rgba overlays) built for a dark hero, so form fields
+   rendered almost invisible on the light cream dashboard. Rebuilt on
+   the same ref-* primitives as Table so it's both correct and
+   consistent, not just restyled.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.memory-page .ref-header h1 { font-family: var(--font-display), Georgia, serif; font-size: 34px; font-weight: 600; }
+.memory-grid { align-items: start; }
+
+.memory-composer h2 {
+  margin: 12px 0 4px;
   font-family: var(--font-display), Georgia, serif;
   font-size: 22px;
   font-weight: 600;
+}
+.memory-composer-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0 0; }
+.memory-composer-row label,
+.memory-field { display: flex; flex-direction: column; gap: 6px; }
+.memory-composer-row span,
+.memory-field span { color: var(--app-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.memory-field { margin-top: 12px; }
+.memory-textarea { min-height: 130px; padding: 12px 14px; resize: vertical; line-height: 1.6; }
+
+.memory-save-button { width: 100%; justify-content: center; margin-top: 16px; }
+
+.memory-starters {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--app-line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.memory-starters .ref-greeting { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--app-muted); }
+.memory-starter-row {
+  padding: 10px 12px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  background: var(--app-paper);
+  color: var(--app-muted);
+  text-align: left;
+  font-size: 12px;
+}
+.memory-starter-row:hover { color: var(--app-rust-dark); border-color: color-mix(in srgb, var(--app-rust) 30%, var(--app-line)); }
+.memory-cancel-edit { justify-content: center; }
+
+.memory-results { display: flex; flex-direction: column; gap: 16px; }
+.memory-search-row { display: flex; gap: 10px; align-items: center; }
+.memory-search { flex: 1; min-height: 48px; grid-template-columns: 18px minmax(0,1fr); }
+.memory-scope-chips { margin-top: 12px; }
+.memory-message { margin-top: 10px; }
+
+.memory-item-list { display: flex; flex-direction: column; gap: 12px; }
+.memory-item h3 { margin: 10px 0 0; font-family: var(--font-display), Georgia, serif; font-size: 18px; font-weight: 600; }
+.memory-item p { margin: 8px 0 0; color: var(--app-muted); font-size: 13px; line-height: 1.65; white-space: pre-wrap; }
+.memory-item-footer { display: flex; justify-content: flex-end; margin-top: 12px; }
+
+@media (max-width: 860px) {
+  .memory-composer-row { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ONBOARDING — the real conversational first-time business-context
+   flow: one question at a time, Dobly paraphrasing understanding back,
+   instead of the 13-field form this replaced for first-time accounts.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.biz-convo { display: flex; justify-content: center; padding: 8px 0; }
+.biz-convo-step {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  animation: dobly-rise-in 380ms var(--ease-premium, cubic-bezier(.22,1,.36,1)) both;
+}
+.biz-convo-intro { align-items: center; text-align: center; }
+.biz-convo-intro > svg { color: var(--app-rust); }
+.biz-convo-intro h2 { margin: 0; }
+.biz-convo-intro p { margin: 0; color: var(--app-muted); font-size: 14px; max-width: 38ch; }
+
+.biz-convo-ack {
+  margin: 0;
+  color: var(--app-rust-dark);
+  font-size: 13px;
+  font-weight: 600;
+}
+.biz-convo-step h2 {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--app-text);
+}
+.biz-convo-hint { margin: -6px 0 0; color: var(--app-muted); font-size: 12.5px; }
+.biz-convo-field { width: 100%; }
+.biz-convo-input {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 16px;
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  background: var(--app-paper);
+  color: var(--app-text);
+  font-size: 16px;
+  outline: none;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.biz-convo-input:focus { border-color: color-mix(in srgb, var(--app-rust) 45%, var(--app-line)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-rust) 10%, transparent); }
+.biz-convo-textarea { min-height: 90px; padding: 14px 16px; resize: vertical; line-height: 1.6; font-family: var(--font-body), Arial, sans-serif; }
+
+.biz-convo-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  color: white;
+  background: linear-gradient(160deg, var(--app-rust), var(--app-rust-dark));
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .16s cubic-bezier(.22,1,.36,1), opacity .16s ease;
+}
+.biz-convo-primary:hover:not(:disabled) { transform: translateY(-1px); }
+.biz-convo-primary:disabled { opacity: .45; cursor: default; }
+
+.biz-convo-skip {
+  border: 0;
+  background: none;
+  color: var(--app-muted);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.biz-convo-skip:hover { color: var(--app-text); }
+.biz-convo-error { margin: 0; color: #b3261e; font-size: 12.5px; }
+
+.biz-convo-review { max-width: 560px; }
+.biz-convo-eyebrow { color: var(--app-muted); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; }
+.biz-convo-review dl { width: 100%; margin: 4px 0 0; display: flex; flex-direction: column; gap: 10px; }
+.biz-convo-review dl > div { padding: 10px 0; border-top: 1px solid var(--app-line); }
+.biz-convo-review dt { color: var(--app-muted); font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; }
+.biz-convo-review dd { margin: 4px 0 0; color: var(--app-text); font-size: 14px; line-height: 1.5; }
+.biz-convo-review-actions { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   IN-CONTEXT CONNECT MODAL — the friction fix: a required tool anywhere
+   in the app (hire review, onboarding, a coworker's Overview) opens
+   this instead of navigating to /dashboard/connect/[provider] and back.
+   ═══════════════════════════════════════════════════════════════════ */
+.connect-modal-content {
+  max-width: 480px !important;
+  width: calc(100% - 32px);
+  padding: 24px !important;
+  border-radius: 18px !important;
+  background: var(--app-paper) !important;
+  border: 1px solid var(--app-line);
+  color: var(--app-text);
+}
+.connect-modal-content .card {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.connect-modal-content h1 { font-size: 20px !important; }
+
+.hire-connection-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.hire-connection-button:hover strong { color: var(--app-rust-dark); }
+.hire-connection-cta {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--app-rust) 30%, var(--app-line));
+  color: var(--app-rust-dark);
+  background: color-mix(in srgb, var(--app-rust) 8%, var(--app-paper));
+  font-size: 10.5px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.hire-connection-cta[data-connected="true"] {
+  color: var(--app-green);
+  border-color: color-mix(in srgb, var(--app-green) 34%, var(--app-line));
+  background: color-mix(in srgb, var(--app-green) 10%, var(--app-paper));
+}
+
+/* A real simulated exchange — same bubble language as the coworker chat
+   (.ledger-entry-user etc.) so hiring and talking to a coworker feel
+   like the same product, not two different UIs. */
+.hire-transcript-list { display: flex; flex-direction: column; gap: 16px; margin-top: 10px; }
+.hire-transcript-turn { display: flex; flex-direction: column; gap: 8px; }
+.hire-transcript-scenario {
+  color: var(--app-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.hire-bubble {
+  max-width: 88%;
+  padding: 10px 13px;
+  border-radius: 13px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.hire-bubble-in {
+  align-self: flex-start;
+  border-radius: 13px 13px 13px 3px;
+  background: var(--app-paper-2);
+  color: var(--app-text);
+}
+.hire-bubble-reply {
+  align-self: flex-end;
+  border-radius: 13px 13px 3px 13px;
+  background: color-mix(in srgb, var(--app-rust) 13%, var(--app-paper));
   color: var(--app-rust-dark);
 }
-.home-pulse-score em { font-size: 13px; font-style: normal; color: var(--app-muted); }
-
-.home-pulse-bar {
-  height: 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--app-text) 7%, transparent);
-  overflow: hidden;
+.hire-bubble-reply strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  opacity: .75;
 }
-.home-pulse-bar > div {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--app-rust);
-  transition: width 400ms var(--ease-premium, ease);
+.hire-transcript-flag {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--app-gold);
+  font-size: 11px;
+  font-weight: 600;
 }
+.hire-transcript-error { margin: 0; color: var(--app-muted); font-size: 12px; font-style: italic; }
 
-@media (max-width: 720px) {
-  .home-hub { min-height: 300px; }
+/* Real proof of work on the Canvas — replaces the generic intro card once
+   there's an actual week of activity to show, instead of burying the
+   count in a footnote nobody reads. */
+.canvas-proof-figure {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0 !important;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+.canvas-proof-figure span {
+  font-family: var(--font-body), Arial, sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--app-muted);
+}
+.canvas-proof-sub { margin: 6px 0 0 !important; color: var(--app-muted); font-size: 12px; }
+
+/* ── Coworker chat: rename ─────────────────────────────────────
+   Every auto-suggested coworker name should be editable - including
+   because some auto-suggested names carry associations an owner may not
+   want attached to their business, and the owner should never be stuck
+   with a name Dobly picked. */
+.console-rename-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 8px;
+  background: transparent;
+  transition: background .15s ease;
+}
+.console-rename-trigger:hover {
+  background: color-mix(in srgb, var(--app-rust) 8%, transparent);
+}
+.console-rename-trigger strong {
+  color: var(--text-primary);
+  font-size: 19px;
+  font-weight: 560;
+}
+.console-rename-trigger svg {
+  width: 13px;
+  height: 13px;
+  color: var(--app-muted);
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+.console-rename-trigger:hover svg,
+.console-rename-trigger:focus-visible svg {
+  opacity: 1;
+}
+.console-rename-form input {
+  min-width: 160px;
+  padding: 3px 8px;
+  border: 1px solid var(--app-rust);
+  border-radius: 8px;
+  background: var(--app-paper);
+  color: var(--text-primary);
+  font-size: 19px;
+  font-weight: 560;
+  font-family: inherit;
+  outline: none;
+}
+.console-rename-error {
+  margin: 2px 0 0;
+  color: var(--app-rust-dark);
+  font-size: 11.5px;
 }

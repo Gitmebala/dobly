@@ -140,7 +140,7 @@ export function boardroomReportToMarkdown(report: Awaited<ReturnType<typeof crea
     ``,
     `## Boardroom Members`,
     ...report.members.flatMap((member) => [
-      `### ${member.role} — ${member.agentName}`,
+      `### ${member.role}`,
       `Mandate: ${member.mandate}`,
       `Finding: ${member.finding}`,
       `Recommendation: ${member.recommendation}`,

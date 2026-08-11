@@ -64,7 +64,14 @@ export const DOBLY_CAPABILITIES: CapabilityDefinition[] = [
   // capability id.
   { id: "check_availability", label: "Check calendar availability", aliases: ["availability", "conflict", "conflicts", "free/busy", "freebusy", "double-booked", "double booked", "am i free", "any conflicts", "time slot"], riskLevel: "low" },
   { id: "organize_documents", label: "Organize documents", aliases: ["file", "organize", "folder", "rename", "document filing"], riskLevel: "low" },
-  { id: "send_message", label: "Send message", aliases: ["email", "message", "send", "whatsapp", "sms"], riskLevel: "high" },
+  // Was "high" — that meant every routine reply a support/reception
+  // coworker sends got the same risk tag as issuing a refund or invoice,
+  // so approve_risky (and even trusted) could never let ordinary
+  // messaging run on its own. Content that's actually sensitive — a
+  // refund, a legal complaint, a discount — is still caught by the
+  // coworker's own configured guardrail rules (checked first, always,
+  // regardless of this tag) via enforceGuardrails in operator-brain.ts.
+  { id: "send_message", label: "Send message", aliases: ["email", "message", "send", "whatsapp", "sms"], riskLevel: "medium" },
   { id: "make_call", label: "Make a phone call", aliases: ["call", "phone", "ring", "dial", "voice call"], riskLevel: "high" },
   { id: "monitor_market", label: "Monitor market", aliases: ["stock", "crypto", "market", "price", "coindesk", "coinbase"], riskLevel: "medium" },
   { id: "book_travel", label: "Book travel", aliases: ["flight", "hotel", "trip", "travel", "itinerary"], riskLevel: "high" },

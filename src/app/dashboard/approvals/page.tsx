@@ -2,9 +2,10 @@ import { redirect } from "next/navigation";
 import { AlertTriangle, CheckCircle2, ChevronDown, Clock3 } from "lucide-react";
 import OfficeTaskDecisionButtons from "@/components/dashboard/OfficeTaskDecisionButtons";
 import ApprovalDecisionButtons from "@/components/dashboard/ApprovalDecisionButtons";
+import BulkApprovalActions from "@/components/dashboard/BulkApprovalActions";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { buildHomebaseDashboardData } from "@/lib/office/homebase";
-import { listRuntimeApprovals } from "@/lib/runtime/approvals";
+import { listRuntimeApprovals, type RuntimeApprovalRecord } from "@/lib/runtime/approvals";
 
 export const metadata = { title: "Approvals" };
 
@@ -23,7 +24,9 @@ export default async function ApprovalsPage() {
     tasks: [],
   } as unknown as Awaited<ReturnType<typeof buildHomebaseDashboardData>>);
   const decisions = office.tasks.filter((task) => task.status === "waiting_approval");
-  const runtimeApprovals = await listRuntimeApprovals({ userId, status: "pending" }).catch(() => []);
+  const runtimeApprovals: RuntimeApprovalRecord[] = await listRuntimeApprovals({ userId, status: "pending" }).catch(
+    () => [] as RuntimeApprovalRecord[],
+  );
   const waitingCount = decisions.length + runtimeApprovals.length;
 
   return (
@@ -51,6 +54,10 @@ export default async function ApprovalsPage() {
         </section>
       ) : (
         <section className="approval-queue dobly-stagger" aria-label="Items waiting for approval">
+          <BulkApprovalActions
+            runtimeIds={runtimeApprovals.filter((approval) => approval.risk_level === "low").map((approval) => approval.id)}
+            officeTaskIds={decisions.filter((task) => task.riskLevel === "low").map((task) => task.id)}
+          />
           {runtimeApprovals.map((approval) => {
             const metadata = (approval.metadata ?? {}) as Record<string, any>;
             const resume = (metadata.resume ?? {}) as Record<string, any>;

@@ -32,6 +32,16 @@ export default async function OnboardingPage() {
   const hasConnection = readyConnections.length > 0;
   const latestOperator = operators[0] ?? null;
   const hasWorkflow = Boolean(latestOperator);
+
+  // A fully set-up account has nothing left to configure here - send it
+  // back to its actual work instead of re-showing setup steps every time
+  // this URL is opened. (This was a real risk flagged during design
+  // review: onboarding must never re-appear for a returning, complete
+  // account.) Someone mid-setup still resumes at their in-progress step,
+  // handled by OnboardingWizard itself.
+  if (hasBusinessContext && hasConnection && hasWorkflow) {
+    redirect(`/dashboard/coworkers?operatorId=${latestOperator!.id}`);
+  }
   const firstName =
     profile?.full_name?.trim().split(/\s+/)[0] || user.user_metadata?.full_name?.trim().split(/\s+/)[0] || "there";
 

@@ -47,7 +47,14 @@ export async function POST(
       operatorId: id,
       prompt: parsed.data.prompt,
       workspaceId: parsed.data.workspaceId ?? null,
-      approved: parsed.data.approved ?? false,
+      // Deliberately NOT `?? false` — that forced every normal chat message
+      // into "unapproved" regardless of what the risk brain actually
+      // decided (false ?? X is always false, not X), so a coworker in
+      // approve_risky mode still needed a manual approval for routine,
+      // non-risky replies. Passing the real optional value through lets
+      // sendOperatorChatMessage's own `input.approved ?? brain-decision`
+      // fallback do its job.
+      approved: parsed.data.approved,
     });
     return NextResponse.json({ queued: true, ...result }, { status: 202 });
   } catch (error) {

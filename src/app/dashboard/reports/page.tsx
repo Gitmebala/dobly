@@ -135,14 +135,14 @@ export default async function ReportsPage() {
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="card">
           <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">Boardroom members</div>
-          <h2 className="mt-2 font-display text-2xl text-[var(--dobly-text)]">How each executive sees the business</h2>
+          <h2 className="mt-2 font-display text-2xl text-[var(--dobly-text)]">The business from each angle</h2>
           <div className="mt-4 space-y-3">
             {executive.boardroom.members.map((member) => (
               <div key={member.role} className="rounded-[1.1rem] border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm font-medium text-[var(--dobly-text)]">{member.role}</div>
-                    <div className="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">{member.agentName}</div>
+                    <div className="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">{member.mandate}</div>
                   </div>
                   <span className="badge-muted text-xs">{member.confidence}</span>
                 </div>

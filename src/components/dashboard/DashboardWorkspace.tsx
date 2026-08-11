@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import DoblySidebar from "@/components/dashboard/DoblySidebar";
-import DashboardTopBar from "@/components/dashboard/DashboardTopBar";
 
 const WorkspaceSearchPalette = dynamic(
   () => import("@/components/dashboard/WorkspaceSearchPalette").then((module) => module.WorkspaceSearchPalette),
@@ -30,6 +29,9 @@ export default function DashboardWorkspace({
   workspaces: WorkspaceChoice[];
   activeWorkspaceId: string | null;
 }) {
+  // Expanded by default with labels visible - matches the reference
+  // design (Canvas/Table/Assistants/Knowledge/Activity shown as a
+  // labeled rail, not a collapsed icon-only strip). Still collapsible.
   const [collapsed, setCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
@@ -69,9 +71,13 @@ export default function DashboardWorkspace({
           isAdmin={isAdmin}
           collapsed={collapsed}
           onToggle={toggleSidebar}
+          onOpenSearch={() => setSearchOpen(true)}
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspaceId}
+          switchingWorkspace={switchingWorkspace}
+          onSwitchWorkspace={switchWorkspace}
         />
-        <div className="main-stage">
-          <DashboardTopBar collapsed={collapsed} onToggleSidebar={toggleSidebar} onOpenSearch={() => setSearchOpen(true)} workspaces={workspaces} activeWorkspaceId={activeWorkspaceId} switchingWorkspace={switchingWorkspace} onSwitchWorkspace={switchWorkspace} />
+        <div className="main-stage main-stage-no-topbar">
           <main className="main-stage-body">
             <div className="dashboard-page-shell">{children}</div>
           </main>

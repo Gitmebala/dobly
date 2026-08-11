@@ -1,25 +1,28 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import BusinessProfileEditor from "@/components/dashboard/BusinessProfileEditor";
-import { BusinessSetupFlow } from "@/components/dashboard/BusinessSetupFlow";
+import { BusinessContextConversation } from "@/components/dashboard/BusinessContextConversation";
 import type { BusinessProfile } from "@/types";
 
 export function BusinessSetupClient({ initialProfile }: { initialProfile: BusinessProfile | null }) {
-  const [setupChoice, setSetupChoice] = useState<"website" | "manual" | null>(
-    initialProfile?.business_name ? "manual" : null
-  );
+  const router = useRouter();
+  // A first-time account (no business_name yet) gets the real
+  // conversation the spec asks for — one question at a time, not a
+  // 13-field form. Someone who already has a profile goes straight to
+  // the full editor, which is the right surface for reviewing/adjusting
+  // everything at once, not for a first answer.
+  const [wantsFullEditor, setWantsFullEditor] = useState(Boolean(initialProfile?.business_name));
 
-  // If they already have a profile, skip the choice screen
-  if (initialProfile?.business_name) {
-    return <BusinessProfileEditor initialProfile={initialProfile} />;
+  if (!wantsFullEditor) {
+    return (
+      <BusinessContextConversation
+        onDone={() => router.refresh()}
+        onEditManually={() => setWantsFullEditor(true)}
+      />
+    );
   }
 
-  // Show the choice screen first
-  if (!setupChoice) {
-    return <BusinessSetupFlow onChoice={setSetupChoice} initialProfile={initialProfile} />;
-  }
-
-  // Show the editor after they've made a choice
   return <BusinessProfileEditor initialProfile={initialProfile} />;
 }

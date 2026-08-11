@@ -2,6 +2,6 @@
 
 import OperatorHandleBar from "@/components/dashboard/OperatorHandleBar";
 
-export default function OperatorCreator() {
-  return <OperatorHandleBar compact />;
+export default function OperatorCreator({ initialPrompt }: { initialPrompt?: string }) {
+  return <OperatorHandleBar compact initialPrompt={initialPrompt} />;
 }

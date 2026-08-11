@@ -6,7 +6,8 @@ export type GenericOAuthProvider =
   | "hubspot"
   | "airtable"
   | "stripe"
-  | "meta";
+  | "meta"
+  | "linkedin";
 
 type ProviderConfig = {
   authorizeUrl: string;
@@ -144,6 +145,31 @@ function getConfig(provider: GenericOAuthProvider): ProviderConfig {
             label: String(data.name ?? "Meta business"),
             accountIdentifier: data.id ? String(data.id) : null,
             metadata: { id: data.id ?? null, name: data.name ?? null },
+          };
+        },
+      };
+    case "linkedin":
+      // "Sign In with LinkedIn using OpenID Connect" - w_member_social is
+      // what lets a publishing coworker actually post as this member later;
+      // without it the connection would complete but every publish would
+      // fail at execution time, the same silent-success shape documented
+      // elsewhere in this app (see dobly-silent-success-bugs memory).
+      return {
+        authorizeUrl: "https://www.linkedin.com/oauth/v2/authorization",
+        tokenUrl: "https://www.linkedin.com/oauth/v2/accessToken",
+        clientIdEnv: "LINKEDIN_CLIENT_ID",
+        clientSecretEnv: "LINKEDIN_CLIENT_SECRET",
+        scopes: ["openid", "profile", "email", "w_member_social"],
+        profile: async (accessToken) => {
+          const response = await fetch("https://api.linkedin.com/v2/userinfo", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (!response.ok) throw new Error("Failed to load LinkedIn profile.");
+          const data = (await response.json()) as Record<string, any>;
+          return {
+            label: String(data.name ?? "LinkedIn account"),
+            accountIdentifier: data.sub ? String(data.sub) : null,
+            metadata: { personUrn: data.sub ? `urn:li:person:${data.sub}` : null, email: data.email ?? null },
           };
         },
       };

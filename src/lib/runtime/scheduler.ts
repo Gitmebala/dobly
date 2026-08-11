@@ -7,6 +7,7 @@ import { ensureOperatorConversation, recordOperatorChatEvent } from "@/lib/opera
 import { enqueueWorkflowRun, processQueue } from "@/lib/queue";
 import { validateWorkflowBlueprintForActivation } from "@/lib/workflow-definition";
 import { runBillingMaintenance } from "@/lib/billing/maintenance";
+import { expireStaleRuntimeApprovals } from "@/lib/runtime/approvals";
 import { generateBriefing } from "@/lib/briefings/service";
 import type { Workflow } from "@/types";
 
@@ -351,6 +352,8 @@ export async function runFullSchedulerPass(options?: { generateBriefings?: boole
     }
   }
 
+  const expiredApprovals = await expireStaleRuntimeApprovals().catch(() => 0);
+
   return {
     scannedWorkflows: workflows?.length ?? 0,
     dueWorkflows: dueWorkflows.length,
@@ -360,5 +363,6 @@ export async function runFullSchedulerPass(options?: { generateBriefings?: boole
     watchers: watcherResults,
     billing: billingMaintenance,
     briefings: briefingResults,
+    expiredApprovals,
   };
 }

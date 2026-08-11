@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Brain, Loader2, PencilLine, Plus, Search, Sparkles } from "lucide-react";
+import { BrainCircuit, Loader2, PencilLine, Plus, Search, Sparkles } from "lucide-react";
 import type {
   BusinessMemoryItem,
   BusinessMemoryKind,
@@ -56,6 +56,7 @@ export default function BusinessMemoryClient() {
 
   useEffect(() => {
     loadMemory("board-directive");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function resetComposer() {
@@ -118,7 +119,7 @@ export default function BusinessMemoryClient() {
         return [result.item, ...current];
       });
       resetComposer();
-      setMessage(payload.id ? "Memory updated. Dobly will use the new rule immediately." : "Memory saved. Department workers can use this context.");
+      setMessage(payload.id ? "Memory updated. Coworkers will use the new rule immediately." : "Memory saved. Coworkers can use this context now.");
     });
   }
 
@@ -142,124 +143,85 @@ export default function BusinessMemoryClient() {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-      <section className="card h-fit">
-        <div className="badge-muted text-xs">
-          <Brain className="h-3.5 w-3.5" />
-          Business brain
-        </div>
-        <h2 className="mt-4 font-display text-2xl tracking-[-0.04em] text-[var(--dobly-text)]">
-          Teach Dobly how the business works.
-        </h2>
-        <p className="mt-3 text-sm leading-7 text-[var(--dobly-text-secondary)]">
-          This memory powers voice agents, chatbots, automations, approvals, content workers, the General Manager,
-          and the Boardroom.
-        </p>
+    <div className="ref-page-grid memory-grid">
+      <section className="ref-card memory-composer">
+        <div className="ref-pill"><BrainCircuit size={12} /> Add memory</div>
+        <h2>Teach Dobly how the business works.</h2>
+        <p className="ref-muted">Every coworker whose department matches the scope below can use this.</p>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <label className="space-y-2">
-            <span className="text-xs text-[var(--dobly-text-dim)]">Kind</span>
-            <select
-              value={kind}
-              onChange={(event) => setKind(event.target.value as BusinessMemoryKind)}
-              className="min-h-[46px] w-full rounded-xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.035)] px-3 text-sm text-[var(--dobly-text)] outline-none"
-            >
+        <div className="memory-composer-row">
+          <label>
+            <span>Kind</span>
+            <select className="ref-input" value={kind} onChange={(event) => setKind(event.target.value as BusinessMemoryKind)}>
               {BUSINESS_MEMORY_KINDS.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
+                <option key={item.id} value={item.id}>{item.label}</option>
               ))}
             </select>
           </label>
-
-          <label className="space-y-2">
-            <span className="text-xs text-[var(--dobly-text-dim)]">Scope</span>
-            <select
-              value={scope}
-              onChange={(event) => setScope(event.target.value as BusinessMemoryScope)}
-              className="min-h-[46px] w-full rounded-xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.035)] px-3 text-sm text-[var(--dobly-text)] outline-none"
-            >
+          <label>
+            <span>Scope</span>
+            <select className="ref-input" value={scope} onChange={(event) => setScope(event.target.value as BusinessMemoryScope)}>
               {BUSINESS_MEMORY_SCOPES.map((item) => (
-                <option key={item} value={item}>
-                  {item.replaceAll("_", " ")}
-                </option>
+                <option key={item} value={item}>{item.replaceAll("_", " ")}</option>
               ))}
             </select>
           </label>
         </div>
 
-        <input
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Title, for example: Refund policy"
-          className="mt-4 min-h-[48px] w-full rounded-xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.035)] px-4 text-sm text-[var(--dobly-text)] outline-none placeholder:text-[var(--dobly-text-dim)]"
-        />
-        <textarea
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-          placeholder="Write the rule, FAQ answer, service detail, customer note, brand voice example, or decision Dobly should remember."
-          className="mt-3 min-h-[150px] w-full resize-none rounded-xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.035)] px-4 py-3 text-sm leading-6 text-[var(--dobly-text)] outline-none placeholder:text-[var(--dobly-text-dim)]"
-        />
-        <input
-          value={tags}
-          onChange={(event) => setTags(event.target.value)}
-          placeholder="Tags separated by commas"
-          className="mt-3 min-h-[48px] w-full rounded-xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.035)] px-4 text-sm text-[var(--dobly-text)] outline-none placeholder:text-[var(--dobly-text-dim)]"
-        />
+        <label className="memory-field">
+          <span>Title</span>
+          <input className="ref-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="For example: Refund policy" />
+        </label>
+        <label className="memory-field">
+          <span>Details</span>
+          <textarea
+            className="ref-input memory-textarea"
+            rows={6}
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            placeholder="Write the rule, FAQ answer, service detail, customer note, brand-voice example, or decision Dobly should remember."
+          />
+        </label>
+        <label className="memory-field">
+          <span>Tags</span>
+          <input className="ref-input" value={tags} onChange={(event) => setTags(event.target.value)} placeholder="Tags separated by commas" />
+        </label>
 
         <button
           type="button"
           onClick={() => saveMemory()}
           disabled={isPending || title.trim().length < 2 || body.trim().length < 2}
-          className="btn-primary mt-4 w-full justify-center"
+          className="ref-button primary memory-save-button"
         >
-          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Save memory
+          {isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+          {editingId ? "Save changes" : "Save memory"}
         </button>
 
-        <div className="mt-5 rounded-2xl border border-[rgba(196,80,26,0.18)] bg-[rgba(196,80,26,0.08)] p-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-[var(--dobly-text)]">
-            <Sparkles className="h-4 w-4 text-[var(--dobly-accent)]" />
-            Starter memory
-          </div>
-          <div className="mt-3 space-y-2">
-            {STARTER_MEMORY.map((item) => (
-              <button
-                key={item.title}
-                type="button"
-                onClick={() => saveMemory({ ...item })}
-                className="block w-full rounded-xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.025)] px-3 py-2 text-left text-xs text-[var(--dobly-text-secondary)] transition hover:border-[rgba(196,80,26,0.3)]"
-              >
-                Add: {item.title}
-              </button>
-            ))}
-          </div>
-          {editingId ? (
-            <button type="button" onClick={resetComposer} className="btn-secondary mt-3 w-full justify-center">
-              Cancel edit
+        <div className="memory-starters">
+          <div className="ref-greeting"><Sparkles size={14} /> Starter memory</div>
+          {STARTER_MEMORY.map((item) => (
+            <button key={item.title} type="button" onClick={() => saveMemory({ ...item })} className="memory-starter-row">
+              Add: {item.title}
             </button>
+          ))}
+          {editingId ? (
+            <button type="button" onClick={resetComposer} className="ref-button memory-cancel-edit">Cancel edit</button>
           ) : null}
         </div>
       </section>
 
-      <section className="space-y-5">
-        <div className="card">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="flex min-h-[48px] flex-1 items-center gap-3 rounded-xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.035)] px-4">
-              <Search className="h-4 w-4 text-[var(--dobly-text-dim)]" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search memory..."
-                className="flex-1 bg-transparent text-sm text-[var(--dobly-text)] outline-none placeholder:text-[var(--dobly-text-dim)]"
-              />
+      <section className="memory-results">
+        <div className="ref-card">
+          <div className="memory-search-row">
+            <div className="ref-command memory-search">
+              <Search size={16} />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search memory…" />
             </div>
-            <button type="button" onClick={() => loadMemory()} disabled={isPending} className="btn-primary justify-center">
-              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Load memory
+            <button type="button" onClick={() => loadMemory()} disabled={isPending} className="ref-button primary">
+              {isPending ? <Loader2 size={16} className="animate-spin" /> : null} Load
             </button>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="ref-chip-row memory-scope-chips">
             {[
               ["board-directive", "Board directives"],
               ["policy", "Policies"],
@@ -270,55 +232,45 @@ export default function BusinessMemoryClient() {
               <button
                 key={value}
                 type="button"
+                className={query === value ? "active" : ""}
                 onClick={() => {
                   setQuery(value);
                   loadMemory(value);
                 }}
-                className="rounded-full border border-[rgba(242,232,220,0.08)] px-3 py-1.5 text-xs text-[var(--dobly-text-muted)] transition hover:border-[rgba(196,80,26,0.3)] hover:text-[var(--dobly-text)]"
               >
                 {label}
               </button>
             ))}
           </div>
-          {message ? <p className="mt-3 text-sm text-[var(--dobly-text-muted)]">{message}</p> : null}
+          {message ? <p className="ref-muted memory-message">{message}</p> : null}
         </div>
 
-        <div className="space-y-3">
-          {items.length === 0 ? (
-            <div className="card text-center">
-              <h2 className="font-display text-xl text-[var(--dobly-text)]">No memory loaded yet</h2>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--dobly-text-muted)]">
-                Add a few rules, FAQs, services, or tone examples, then load memory to see the business brain.
-              </p>
-            </div>
-          ) : (
-            items.map((item) => (
-              <article key={item.id} className="card-hover">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="badge-muted text-xs">{item.kind.replaceAll("_", " ")}</span>
-                  <span className="badge-muted text-xs">{item.scope.replaceAll("_", " ")}</span>
-                  {item.tags.map((tag) => (
-                    <span key={tag} className="badge-muted text-xs">
-                      {tag}
-                    </span>
-                  ))}
+        {items.length === 0 ? (
+          <div className="ref-empty-state">
+            <Sparkles />
+            <h2>No memory loaded yet</h2>
+            <p>Add a few rules, FAQs, services, or tone examples, then load memory to see the business brain.</p>
+          </div>
+        ) : (
+          <div className="memory-item-list">
+            {items.map((item) => (
+              <article key={item.id} className="ref-card memory-item">
+                <div className="ref-chip-row">
+                  <span className="ref-pill">{item.kind.replaceAll("_", " ")}</span>
+                  <span className="ref-pill">{item.scope.replaceAll("_", " ")}</span>
+                  {item.tags.map((tag) => <span key={tag} className="ref-pill">{tag}</span>)}
                 </div>
-                <h3 className="mt-3 font-display text-xl text-[var(--dobly-text)]">{item.title}</h3>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[var(--dobly-text-secondary)]">{item.body}</p>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => beginEdit(item)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(242,232,220,0.08)] px-3 py-1.5 text-xs text-[var(--dobly-text-muted)] transition hover:border-[rgba(196,80,26,0.3)] hover:text-[var(--dobly-text)]"
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    Edit
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+                <div className="memory-item-footer">
+                  <button type="button" onClick={() => beginEdit(item)} className="ref-button">
+                    <PencilLine size={13} /> Edit
                   </button>
                 </div>
               </article>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

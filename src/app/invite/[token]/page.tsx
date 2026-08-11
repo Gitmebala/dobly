@@ -28,7 +28,7 @@ export default function InvitationPage() {
       setState("error");
       return;
     }
-    router.replace("/dashboard/team");
+    router.replace("/dashboard/coworkers");
     router.refresh();
   }
 

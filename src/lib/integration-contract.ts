@@ -193,6 +193,11 @@ const OAUTH_PLATFORM_CREDENTIAL_ENV_VARS: Record<string, [string, string]> = {
   slack: ["SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"],
   hubspot: ["HUBSPOT_CLIENT_ID", "HUBSPOT_CLIENT_SECRET"],
   canva: ["CANVA_CLIENT_ID", "CANVA_CLIENT_SECRET"],
+  // Was missing entirely, which meant isProviderVerifiedLive() only kept
+  // linkedin hidden in production via the unrelated NODE_ENV fallback below -
+  // now that a real route exists (src/lib/oauth/generic.ts), gate it the
+  // same explicit way as every other platform-credential provider.
+  linkedin: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"],
 };
 
 // Providers whose "Connect" flow collects the customer's own credentials

@@ -56,8 +56,8 @@ export const OPTIONAL_LAUNCH_PROVIDER_IDS = [
   "hubspot",
   "canva",
   "webhook",
-  "linkedin",
   "meta",
+  "linkedin",
 ] as const;
 
 const KENYA_BUDGET_LAUNCH_PROVIDER_SET = new Set<string>(KENYA_BUDGET_LAUNCH_PROVIDER_IDS);

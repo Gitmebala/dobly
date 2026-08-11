@@ -1,0 +1,43 @@
+name: Scheduler heartbeat
+
+# vercel.json only defines one daily cron job (Vercel Hobby's limit), which
+# only ever checks operator loops/watchers once a day - so a loop configured
+# as "hourly" or "always_on" (see the cadence options in
+# src/app/dashboard/workflows/page.tsx) can never actually run at that
+# cadence no matter how correct the due-loop math in
+# src/lib/runtime/scheduler.ts is. This workflow is a free, external
+# heartbeat that hits the same endpoint every 15 minutes so those cadences
+# are honest, without needing a paid Vercel plan.
+#
+# One-time setup required (cannot be done from code): add a repo secret
+# named DOBLY_CRON_SECRET in GitHub → Settings → Secrets and variables →
+# Actions, with the same value as CRON_SECRET in the Vercel deployment's
+# environment variables. Until that secret exists, this workflow's requests
+# will get a 401 from /api/cron/process-queue and do nothing harmful - the
+# route itself never trusts a missing/wrong secret.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Trigger the scheduler pass
+        run: |
+          if [ -z "${{ secrets.DOBLY_CRON_SECRET }}" ]; then
+            echo "DOBLY_CRON_SECRET is not set - add it as a repo secret to activate this heartbeat. Skipping."
+            exit 0
+          fi
+          status=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.DOBLY_CRON_SECRET }}" \
+            "${{ vars.DOBLY_APP_URL || 'https://dobly-dev.vercel.app' }}/api/cron/process-queue")
+          echo "Response status: $status"
+          cat /tmp/response.json
+          if [ "$status" -ge 400 ]; then
+            echo "Scheduler pass request failed."
+            exit 1
+          fi

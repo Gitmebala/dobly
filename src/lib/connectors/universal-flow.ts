@@ -52,6 +52,40 @@ function hostedConnectorTokenEnvKey(provider: string) {
   return `DOBLY_HOSTED_${provider.toUpperCase().replace(/[^A-Z0-9]/g, "_")}_MCP_TOKEN`;
 }
 
+// Several catalog entries mark themselves `requiredUserInputs: [{type: "oauth"}]`
+// but the "Connect" button never actually sent anyone to a real OAuth consent
+// screen - it silently wrote a `status: "pending"` placeholder row instead
+// (honest in the database, but the frontend then displayed "X connected."
+// regardless, which is the actual bug - see CustomToolAccessClient.tsx).
+// For providers that already have a real, working OAuth implementation
+// elsewhere in Dobly (confirmed this session - see connection-catalog.ts /
+// the generic [provider]/start+callback route), route through that real
+// flow instead of creating another placeholder. Catalog `provider` ids
+// don't always match the real OAuth provider id 1:1 (e.g. "google_workspace"
+// vs "google"), hence the explicit map rather than a direct string match.
+const CATALOG_PROVIDER_TO_REAL_OAUTH: Record<string, string> = {
+  google_workspace: "google",
+  google_calendar: "google",
+  gmail: "google",
+  microsoft_365: "microsoft",
+  slack: "slack",
+  notion: "notion",
+  hubspot: "hubspot",
+  airtable: "airtable",
+  stripe: "stripe",
+  shopify: "shopify",
+  linkedin: "linkedin",
+  facebook: "meta",
+  instagram: "meta",
+};
+
+function realOAuthRedirectFor(definition: UniversalConnectorDefinition): string | null {
+  const hasOAuthInput = definition.requiredUserInputs.some((input) => input.type === "oauth");
+  if (!hasOAuthInput) return null;
+  const realProvider = CATALOG_PROVIDER_TO_REAL_OAUTH[definition.provider];
+  return realProvider ? `/api/oauth/${realProvider}/start` : null;
+}
+
 function getHostedConnectorEndpoint(definition: UniversalConnectorDefinition) {
   const providerUrl = process.env[hostedConnectorEnvKey(definition.provider)];
   const baseUrl = process.env.DOBLY_HOSTED_CONNECTOR_BASE_URL;
@@ -218,6 +252,19 @@ export async function connectUniversalConnector(input: {
 }) {
   const definition = getUniversalConnectorDefinition(input.connectorId);
   if (!definition) throw new Error("Unknown connector.");
+
+  const realOAuthRedirect = realOAuthRedirectFor(definition);
+  if (realOAuthRedirect) {
+    await logRuntimeAuditEvent({
+      userId: input.userId,
+      workspaceId: input.workspaceId ?? null,
+      eventType: "connector.marketplace.real_oauth_redirect",
+      riskLevel: definition.defaultRisk,
+      summary: `${definition.label} routed to its real OAuth flow instead of a placeholder.`,
+      metadata: { connectorId: definition.id, redirectTo: realOAuthRedirect },
+    }).catch(() => undefined);
+    return { definition, connection: null, redirectTo: realOAuthRedirect };
+  }
 
   let connection: JsonRecord;
   if (definition.kind === "custom_api") {

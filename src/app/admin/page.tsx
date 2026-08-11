@@ -163,7 +163,7 @@ export default async function AdminPage() {
           <div className="card">
             <h2 className="font-display text-2xl">Diagnostics and tooling</h2>
             <div className="mt-4 space-y-3">
-              <AdminLink href="/dashboard/ops" label="Internal ops board" />
+              <AdminLink href="/dashboard/approvals" label="Approvals queue" />
               <AdminLink href="/dashboard/analytics" label="Live analytics surface" />
               <AdminLink href="/dashboard/reports" label="Executive reports" />
               <AdminLink href={process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com"} label="Open PostHog" />

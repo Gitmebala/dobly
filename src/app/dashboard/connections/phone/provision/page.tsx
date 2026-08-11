@@ -90,7 +90,7 @@ export default function PhoneProvisionPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to activate number.");
-      router.push("/dashboard/connections/phone");
+      router.push("/dashboard/connections?success=phone_number_activated");
     } catch (error) {
       console.error("Failed to activate number:", error);
       setStatus(error instanceof Error ? error.message : "Failed to activate number.");

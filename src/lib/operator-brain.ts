@@ -126,6 +126,32 @@ function toolPreference(path?: BrainExecutionPath): OperatorBrainStep["toolPrefe
   return "fallback";
 }
 
+// "fallback" paths route through the ANTHROPIC_MCP_* capability
+// marketplace (Document Production, Operate Software, etc.), which has
+// never been wired to a real server in production - every one of those
+// env vars holds the same placeholder value. A plan used to pick
+// whichever matching path came first in the array via .find(), which
+// meant a real, working "native" or "internal" path for the same
+// capability could sit right there unused while the run executed the
+// broken fallback one instead (observed directly: a "create document"
+// step had both paths available and ran the fake one). Always prefer a
+// real path over fallback when both exist for the same capability.
+const PATH_KIND_PRIORITY: Record<BrainExecutionPath["kind"], number> = {
+  native: 0,
+  internal: 1,
+  mcp: 2,
+  custom_api: 2,
+  fallback: 9,
+};
+
+function bestPathForCapability(paths: BrainExecutionPath[], capability: DoblyCapability) {
+  const candidates = paths.filter((candidate) => candidate.capability === capability);
+  if (!candidates.length) return undefined;
+  return candidates.reduce((best, candidate) =>
+    PATH_KIND_PRIORITY[candidate.kind] < PATH_KIND_PRIORITY[best.kind] ? candidate : best
+  );
+}
+
 function buildPlan(prompt: string, operator: OperatorWithLoops, paths: BrainExecutionPath[]): OperatorBrainStep[] {
   const capabilities = Array.from(new Set([
     ...operator.capability_tags,
@@ -135,7 +161,7 @@ function buildPlan(prompt: string, operator: OperatorWithLoops, paths: BrainExec
 
   const steps = capabilities.slice(0, 6).map((capability, index) => {
     const definition = getCapabilityDefinition(capability);
-    const path = paths.find((candidate) => candidate.capability === capability);
+    const path = bestPathForCapability(paths, capability);
     const riskLevel = maxRisk([definition?.riskLevel ?? "medium", path?.riskLevel ?? "low"]);
     return {
       id: `brain_step_${index + 1}_${capability}`,
@@ -226,10 +252,23 @@ function findMissingInfo(prompt: string, operator: OperatorWithLoops, paths: Bra
 function assessRisk(prompt: string, plan: OperatorBrainStep[], paths: BrainExecutionPath[]) {
   const lower = prompt.toLowerCase();
   const triggers = [
-    ...(["send", "email", "whatsapp", "sms"].some((word) => lower.includes(word)) ? ["external_message"] : []),
+    // Was a bare "send"/"email"/"whatsapp"/"sms" match, which meant every
+    // routine message a support/reception coworker sends set
+    // needsHumanApproval regardless of leash setting - the exact same
+    // over-triggering already fixed for send_message's own capability risk
+    // tag (capabilities.ts) and decideAutonomy's moneyOrExternal list just
+    // below, except via this separate, independently-evaluated trigger list,
+    // so those two fixes were silently being overridden back to "always
+    // approve" for any message-sending run. A message is only genuinely
+    // risky here if it's mass-sent or explicitly sensitive - both still
+    // caught, content-specific, by the coworker's own guardrail rules
+    // (enforceGuardrails, checked first and always in decideAutonomy).
+    ...(["mass send", "bulk send", "blast", "everyone on the list", "all customers"].some((phrase) => lower.includes(phrase))
+      ? ["external_message"]
+      : []),
     ...(["publish", "post", "upload"].some((word) => lower.includes(word)) ? ["public_publishing"] : []),
     ...(["pay", "charge", "invoice", "refund", "buy", "sell"].some((word) => lower.includes(word)) ? ["money_or_finance"] : []),
-    ...(["delete", "commit", "merge", "book"].some((word) => lower.includes(word)) ? ["irreversible_or_binding_action"] : []),
+    ...(["delete", "commit", "merge"].some((word) => lower.includes(word)) ? ["irreversible_or_binding_action"] : []),
     ...(paths.some((path) => path.kind === "fallback" && path.riskLevel === "high") ? ["missing_safe_tool_path"] : []),
   ];
   const level = maxRisk([...plan.map((step) => step.riskLevel), triggers.length ? "high" : "low"]);
@@ -251,7 +290,15 @@ function decideAutonomy(input: {
 }) {
   const lower = input.prompt.toLowerCase();
   const highRisk = input.plan.some((step) => step.riskLevel === "high" || step.requiresApproval);
-  const moneyOrExternal = ["pay", "charge", "invoice", "publish", "post", "send", "email", "delete", "book", "buy", "sell"].some((word) => lower.includes(word));
+  // Was also matching bare "send"/"email"/"post"/"book" — meaning any
+  // prompt that so much as mentioned sending a message or booking
+  // something got funneled into the same gate as an actual payment or
+  // publish action, on top of send_message's own (now-corrected)
+  // capability risk tag. Kept to genuinely high-stakes financial/
+  // destructive/publishing words; content-specific risk (a refund, a
+  // legal complaint) is still caught by the coworker's own guardrail
+  // rules just above this, which always outrank the leash regardless.
+  const moneyOrExternal = ["pay", "charge", "invoice", "refund", "publish", "delete", "buy", "sell"].some((word) => lower.includes(word));
   const missingClarity = input.prompt.trim().length < 20 || ["it", "that thing", "stuff"].some((phrase) => lower.includes(phrase));
 
   // Guardrails outrank every leash setting, including trusted. A tripped

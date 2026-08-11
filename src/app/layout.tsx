@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Instrument_Sans, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { Caveat, Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
 import AppChrome from "@/components/shared/AppChrome";
 import PostHogRouteTracker from "@/components/analytics/PostHogRouteTracker";
 import PostHogSnippet from "@/components/analytics/PostHogSnippet";
@@ -8,13 +8,14 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import WebVitalsReporter from "@/components/analytics/WebVitalsReporter";
 
-const instrumentSerif = Instrument_Serif({
+const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-display",
-  weight: ["400"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
 });
 
-const instrumentSans = Instrument_Sans({
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-body",
   weight: ["400", "500", "600", "700"],
@@ -24,6 +25,12 @@ const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   weight: ["400", "500", "600"],
+});
+
+const caveat = Caveat({
+  subsets: ["latin"],
+  variable: "--font-hand",
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -70,7 +77,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn(instrumentSerif.variable, instrumentSans.variable, jetBrainsMono.variable)}
+      className={cn(playfairDisplay.variable, inter.variable, jetBrainsMono.variable, caveat.variable)}
     >
       <head>
         <script
