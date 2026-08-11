@@ -9770,6 +9770,33 @@ html[data-theme="dark"] .dashboard-shell {
   font-size: 11.5px;
 }
 
+/* ── Fix: the composer wasn't overlapping the panel (that was a real,
+   separate bug, already fixed above) - on a shorter browser window it
+   was getting pushed below the visible area entirely. .operator-
+   conversation's whole column scrolls (see its own comment above) so
+   the composer was technically reachable, but a static screenshot of a
+   short window shows it cut off mid-row with no visual cue there's
+   more below - reads as broken even though it's "just" unscrolled.
+   Pin it to the bottom of the column instead so it's always visible
+   regardless of window height; only the message thread scrolls behind
+   it. Needs a real opaque background - it was intentionally
+   transparent before, which is fine when it's not layered over
+   scrolling content, but see-through content sliding underneath a
+   sticky element looks broken. */
+.operator-chat-composer {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  background: var(--app-paper);
+}
+
+/* Reclaim vertical room on short windows: the stat row and shift-tape
+   toggle don't need as much padding as a first-glance design gave them,
+   and every pixel here is a pixel the message thread doesn't get. */
+.console-headline-row { margin: 10px 0 2px; }
+.console-stat-row strong { font-size: 17px; }
+.operator-thread-controls { padding: 10px 0; }
+
 /* ── Coworker chat: make the "About this coworker" panel persistent ──
    It was built as a slide-in drawer (position: fixed, hidden off-screen
    until "Details" is clicked) and a later rule forced the chat's own
