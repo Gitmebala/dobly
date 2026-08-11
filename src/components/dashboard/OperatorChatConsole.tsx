@@ -646,6 +646,32 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
             </div>
           </div>
 
+          <div className="console-headline-row">
+            <div className="console-stat-row" aria-label="Coworker stats at a glance">
+              <div>
+                <strong>{props.operator.loops.filter((loop) => loop.status === "active").length}</strong>
+                <span>Active loops</span>
+              </div>
+              <div>
+                <strong>{props.recentRuns.filter((run) => typeof run.created_at === "string" && dayKey(run.created_at) === dayKey(new Date().toISOString())).length}</strong>
+                <span>Handled today</span>
+              </div>
+              <div data-tone={pendingApprovals.length ? "warning" : undefined}>
+                <strong>{pendingApprovals.length}</strong>
+                <span>Waiting on you</span>
+              </div>
+              <div>
+                <strong>{formatTime(props.operator.last_run_at)}</strong>
+                <span>Last active</span>
+              </div>
+            </div>
+            <div className="console-headline-actions">
+              <Link href={`/dashboard/tasks?assignee=${props.operator.id}`} className="btn-secondary">
+                Start new task
+              </Link>
+            </div>
+          </div>
+
           <div className="operator-thread-controls" data-open={shiftTapeOpen}>
             <button
               type="button"
@@ -856,16 +882,63 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
           <div className="operator-inspector-scroll">
             {inspectorTab === "overview" ? (
               <>
-                <div className="console-stats" aria-label="Today at a glance">
-                  <div><code>handled</code><b>{props.recentRuns.length}</b></div>
-                  <div><code>outputs</code><b>{artifacts.length}</b></div>
-                  <div data-tone={pendingApprovals.length ? "warning" : undefined}><code>waiting on you</code><b>{pendingApprovals.length}</b></div>
-                  <div><code>loops</code><b>{props.operator.loops.filter((loop) => loop.status === "active").length}</b></div>
+                <CurrentWorkCard runs={props.recentRuns} operatorName={operatorName} onOpenControl={() => setInspectorTab("control")} />
+
+                <div className="console-panel-section">
+                  <div className="console-panel-section-head">
+                    <strong>Active loops</strong>
+                    <button type="button" onClick={() => setInspectorTab("control")}>View all</button>
+                  </div>
+                  {props.operator.loops.filter((loop) => loop.status === "active").slice(0, 5).map((loop) => (
+                    <div key={loop.id} className="console-loop-card">
+                      <div className="min-w-0">
+                        <div className="console-loop-card-title line-clamp-1">{loop.name}</div>
+                        <div className="console-loop-card-meta line-clamp-1">{loop.trigger || loop.cadence.replace(/_/g, " ")}</div>
+                      </div>
+                      <span className="console-status-chip" data-status={loop.status}>{loop.status}</span>
+                    </div>
+                  ))}
+                  {!props.operator.loops.filter((loop) => loop.status === "active").length ? (
+                    <p className="console-current-work-empty">No active loops yet — loops are the recurring jobs {operatorName} runs on its own.</p>
+                  ) : null}
                 </div>
-                <ControlCard icon={Clock3} title="Recent runs" value={`${props.recentRuns.length}`}>
-                  {props.recentRuns.slice(0, 8).map((run) => <RunItem key={run.id} run={run} />)}
-                  {!props.recentRuns.length ? <p>No runs yet.</p> : null}
-                </ControlCard>
+
+                <div className="console-panel-section">
+                  <div className="console-panel-section-head">
+                    <strong>Needs your attention{pendingApprovals.length ? ` (${pendingApprovals.length})` : ""}</strong>
+                  </div>
+                  {pendingApprovals.slice(0, 4).map((approval) => (
+                    <div key={approval.id} className="console-attention-card">
+                      <div className="console-attention-card-head">
+                        <AlertTriangle aria-hidden="true" />
+                        <span className="console-attention-card-title">{String(approval.title || approval.message)}</span>
+                        <span className="console-attention-card-time">{heldFor(String(approval.requested_at ?? ""))}</span>
+                      </div>
+                      <button type="button" className="console-attention-card-cta" onClick={() => setInspectorTab("review")}>
+                        Review
+                      </button>
+                    </div>
+                  ))}
+                  {!pendingApprovals.length ? <p className="console-current-work-empty">Nothing waiting on you right now.</p> : null}
+                </div>
+
+                <div className="console-panel-section">
+                  <div className="console-panel-section-head">
+                    <strong>Recent activity</strong>
+                    <button type="button" onClick={() => setInspectorTab("activity")}>View all</button>
+                  </div>
+                  {props.events.slice(0, 4).map((event) => (
+                    <div key={String(event.id)} className="console-activity-card">
+                      <div className="min-w-0">
+                        <div className="console-activity-card-title line-clamp-1">{String(event.title ?? "Activity")}</div>
+                        {event.summary ? <div className="console-activity-card-meta line-clamp-1">{String(event.summary)}</div> : null}
+                      </div>
+                      <span className="console-activity-card-meta">{formatClock(String(event.created_at ?? ""))}</span>
+                    </div>
+                  ))}
+                  {!props.events.length ? <p className="console-current-work-empty">Nothing has happened yet.</p> : null}
+                </div>
+
                 <ControlCard icon={Link2} title="Channels" value={props.channels.length ? `${props.channels.filter((c) => c.status === "live").length}/${props.channels.length} live` : "None"}>
                   {props.channels.slice(0, 6).map((channel) => <ChannelRow key={String(channel.id)} channel={channel} />)}
                   {!props.channels.length ? (
@@ -880,11 +953,6 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                   ))}
                   <Link href="/dashboard/memory" className="operator-inspector-link">View all knowledge →</Link>
                   {!props.knowledge.length ? <p>Nothing on file yet — add business knowledge and {operatorName} can draw on it.</p> : null}
-                </ControlCard>
-                <ControlCard icon={Sparkles} title="Memory and voice" value={`${props.memoryProposals.length + props.voiceRecords.length}`}>
-                  {props.memoryProposals.slice(0, 4).map((memory) => <SideMini key={memory.id} title={memory.title} meta={`memory ${memory.status}`} />)}
-                  {props.voiceRecords.slice(0, 3).map((voice) => <SideMini key={voice.id} title="Voice transcript" meta={voice.status} />)}
-                  {!props.memoryProposals.length && !props.voiceRecords.length ? <p>No signals yet.</p> : null}
                 </ControlCard>
                 <ControlCard icon={ArrowRight} title="Quick actions" value="">
                   <Link href={`/dashboard/tasks?assignee=${props.operator.id}`} className="operator-control-prompt">
@@ -1271,6 +1339,36 @@ function MessageArtifactPreview({ message }: { message: ChatMessage }) {
   );
 }
 
+
+// "Current work" reads the most recent run that hasn't reached a terminal
+// status (completed/failed/rejected) as what the coworker is doing right
+// now. Deliberately does NOT show a fabricated progress percentage the way
+// the reference mock does - there's no real progress-through-a-job number
+// anywhere in this data, and making one up is exactly the kind of fake
+// indicator this whole rebuild is about removing, not adding more of.
+function CurrentWorkCard({ runs, operatorName, onOpenControl }: { runs: JsonRecord[]; operatorName: string; onOpenControl: () => void }) {
+  const current = runs.find((run) => !["completed", "failed", "rejected", "cancelled"].includes(String(run.status ?? "")));
+  return (
+    <div className="console-current-work">
+      <div className="console-current-work-head">
+        <div>
+          <BrainCircuit aria-hidden="true" />
+          <div>
+            {current ? (
+              <>
+                <p className="console-current-work-title">{String(current.task ?? "Current work")}</p>
+                <p className="console-current-work-meta">Started {formatTime(String(current.created_at ?? ""))}</p>
+              </>
+            ) : (
+              <p className="console-current-work-empty">{operatorName} isn't running anything right now — send a message to start something.</p>
+            )}
+          </div>
+        </div>
+        {current ? <button type="button" className="console-current-work-edit" onClick={onOpenControl}>Details</button> : null}
+      </div>
+    </div>
+  );
+}
 
 function ControlCard({ icon: Icon, title, value, children }: { icon: React.ComponentType<{ className?: string }>; title: string; value: string; children: React.ReactNode }) {
   return (
