@@ -10490,3 +10490,35 @@ html[data-theme="dark"] .dashboard-shell {
   overflow: visible;
   min-height: 44px;
 }
+
+/* ── Insetting the sidebar (top:16px, bottom:16px above) shrank its
+   available height by 32px without shrinking what has to fit inside
+   it - five 44px-min rows plus the divider, "More", search, and
+   account rows now need more room than the sidebar has, so
+   .dobly-nav-scroll's own overflow-y:auto (a real, intentional
+   feature for long nav lists) was kicking in as an unwanted internal
+   scrollbar on an ordinary 5-item list. Reclaim room instead of
+   relying on scroll: 18px gaps between five icon+label rows is more
+   air than a short compact rail needs. */
+.dashboard-shell .dobly-nav-scroll {
+  gap: 6px;
+  padding: 2px 0 8px;
+}
+.dashboard-shell .dobly-brand {
+  padding-bottom: 14px;
+}
+
+/* ── The collapse toggle ("the button at the top cant be seen"): it
+   sits half outside the sidebar's own right edge, in the gap opened
+   up by the inset fix - a semi-transparent paper background there
+   reads as almost invisible against the page's own similar warm
+   tone, especially without a hard border line to anchor it to
+   anymore. Give it real, opaque contrast instead of relying on
+   position alone to make it findable. */
+.dashboard-shell .dobly-sidebar-collapse-toggle {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--app-line-strong);
+  background: var(--app-paper);
+  box-shadow: 0 2px 8px rgba(53, 37, 26, .18);
+}
