@@ -10451,3 +10451,42 @@ html[data-theme="dark"] .dashboard-shell {
   padding: 8px max(28px, calc((100% - 820px) / 2));
   border-bottom: 1px solid var(--app-line);
 }
+
+/* ── Sidebar: the reference shows a compact, rounded panel with a real
+   gap above, below, and to the left of it - it reads as something
+   set down near the edge of the page, not fused to it. The live
+   sidebar is `position: fixed; top:0; bottom:0; left:0` with a hard
+   1px border-right - a traditional edge-to-edge rail, just a narrow
+   one. Founder, directly: "look at the size..and how it is
+   attached and desnt reach the top...like its not a trditinonal
+   sidebar." Insetting it and rounding the corners is the actual
+   shape change being asked for, not a width tweak (152px was
+   already only ~11% of a 1366px window, nowhere near "a quarter" -
+   the flush/hard-edged styling was what made it read as heavier
+   than its actual footprint). */
+.dashboard-shell .dobly-sidebar {
+  top: 16px;
+  bottom: 16px;
+  left: 16px;
+  border-right: 0;
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(53, 37, 26, .05), 0 8px 24px rgba(53, 37, 26, .08);
+}
+.dashboard-shell .main-stage {
+  margin-left: calc(152px + 16px + 16px);
+}
+.dashboard-shell[data-sidebar-collapsed="true"] .main-stage {
+  margin-left: calc(72px + 16px + 16px);
+}
+
+/* ── Nav row labels ("Canvas", "Table", ...) were present in the DOM
+   with opacity: 1 and display: block, confirmed live via
+   getComputedStyle - but invisible anyway, because .dobly-nav-row
+   itself computes to overflow: hidden at a 28px height, clipping
+   everything below the icon. The label was never actually hidden by
+   the collapsed-state rules (those were working correctly) - it was
+   being cut off by its own row container regardless of state. */
+.dashboard-shell .dobly-nav-row {
+  overflow: visible;
+  min-height: 44px;
+}
