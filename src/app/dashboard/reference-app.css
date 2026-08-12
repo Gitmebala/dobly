@@ -10504,6 +10504,12 @@ html[data-theme="dark"] .dashboard-shell {
   gap: 6px;
   padding: 2px 0 8px;
 }
+/* Still 21px short after the gap trim above, confirmed live via
+   scrollHeight vs clientHeight - the divider's own margins were the
+   remaining slack. */
+.dashboard-shell .dobly-nav-divider {
+  margin: 2px 8px 3px;
+}
 .dashboard-shell .dobly-brand {
   padding-bottom: 14px;
 }
