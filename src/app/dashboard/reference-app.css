@@ -10231,10 +10231,28 @@ html[data-theme="dark"] .dashboard-shell {
    WhatsApp Web) actually works. No more sticky positioning needed on
    the header or composer - they were never fighting for room in the
    first place, so removed. */
+/* The row fix above was real but incomplete, caught by measuring live:
+   .console-presence has `flex: none` (never shrinks) further up this
+   file. Turning it into a row made it visually wide - status pill +
+   last-active timestamp + autonomy badge + Details button, all
+   inline - and since it refuses to shrink, 100% of the resulting
+   squeeze landed on .console-identity, crushing the coworker's own
+   name column to 141px wide and wrapping "Persistence Test Coworker"
+   across five lines. That's worse than the original vertical stack.
+   Identity (the name - the actually essential thing here) needs to
+   claim space first; presence wraps onto a second line if its own
+   contents don't fit the remainder, rather than starving the name. */
+.console-identity {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
 .console-presence {
   flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
 }
 
 .console-head {
