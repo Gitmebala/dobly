@@ -2596,8 +2596,15 @@ html.theme-transitioning * {
 .coworker-roster {
   min-width: 0;
   min-height: 0;
-  display: grid;
-  grid-template-rows: 46px minmax(0, 1fr) auto;
+  /* Was `display: grid; grid-template-rows: 46px minmax(0, 1fr) auto;` -
+     a fixed 3-row template that silently mis-assigned rows the moment
+     the roster's own internal structure changed (filters/search added
+     inside one wrapping panel component) - the same class of bug
+     documented on .operator-conversation below. Flex column with only
+     the list itself scrolling avoids needing to keep a row count in
+     sync with the JSX. */
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   /* The one legitimate division in this view - everything else here is
      whitespace, not a box. Two nested bordered/shadowed containers
@@ -2606,6 +2613,136 @@ html.theme-transitioning * {
   border-right: 1px solid var(--app-line);
   background: transparent;
 }
+
+.coworker-roster-panel {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+.coworker-roster-panel > * { flex-shrink: 0; }
+.coworker-roster-panel > .coworker-roster-list { flex: 1 1 auto; min-height: 0; }
+
+.coworker-roster-panel-head {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 0 13px;
+  border-bottom: 1px solid var(--app-line);
+}
+.coworker-roster-panel-head span {
+  display: block;
+  color: var(--app-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.coworker-roster-panel-head strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--app-text);
+  font-size: 12.5px;
+  font-weight: 560;
+}
+
+.coworker-roster-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 10px 10px 0;
+}
+.coworker-roster-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--app-line);
+  color: var(--app-muted);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 600;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+.coworker-roster-filters button:hover { border-color: var(--app-line-strong); color: var(--app-text); }
+.coworker-roster-filters button[data-active="true"] {
+  border-color: transparent;
+  color: #fff;
+  background: var(--app-rust);
+}
+.coworker-roster-filters button em {
+  font-style: normal;
+  font-size: 10px;
+  opacity: .8;
+}
+
+.coworker-roster-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 8px 10px 0;
+  padding: 7px 10px;
+  border: 1px solid var(--app-line);
+  border-radius: 9px;
+  background: var(--app-paper);
+}
+.coworker-roster-search svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--app-muted); }
+.coworker-roster-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--app-text);
+  font-size: 12.5px;
+  outline: none;
+}
+.coworker-roster-search input::placeholder { color: var(--app-muted); }
+
+.coworker-roster-badge {
+  align-self: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.coworker-roster-badge[data-status="active"] { color: var(--app-green); background: color-mix(in srgb, var(--app-green) 14%, transparent); }
+.coworker-roster-badge[data-status="draft"] { color: var(--app-gold); background: color-mix(in srgb, var(--app-gold) 16%, transparent); }
+.coworker-roster-badge[data-status="paused"] { color: var(--app-muted); background: color-mix(in srgb, var(--app-muted) 14%, transparent); }
+.coworker-roster-badge[data-status="archived"] { color: var(--app-muted); background: color-mix(in srgb, var(--app-muted) 10%, transparent); }
+
+.coworker-roster-avatar { position: relative; }
+.coworker-roster-avatar > i {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--app-bg);
+  background: var(--app-muted);
+}
+.coworker-roster-avatar[data-status="active"] > i { background: var(--app-green); }
+.coworker-roster-avatar[data-status="draft"] > i { background: var(--app-gold); }
+
+.coworker-roster-hire {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 10px 10px;
+  padding: 11px;
+  border: 1px dashed var(--app-line-strong);
+  border-radius: 10px;
+  color: var(--app-muted);
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.coworker-roster-hire:hover { border-color: var(--app-rust); background: color-mix(in srgb, var(--app-rust) 4%, transparent); }
+.coworker-roster-hire svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--app-rust); }
+.coworker-roster-hire strong { display: block; font-size: 12px; color: var(--app-text); }
+.coworker-roster-hire small { display: block; margin-top: 1px; font-size: 11px; }
 
 .coworker-roster-heading {
   display: flex;
@@ -9968,4 +10105,52 @@ html[data-theme="dark"] .dashboard-shell {
   position: relative;
   margin: 4px 0 16px;
   overflow: visible;
+}
+
+/* ── Coworkers page rebuild: roster panel gains status filter pills,
+   a search box and per-item status badges (CoworkerRosterPanel.tsx).
+   .coworker-roster-item's grid-template-columns earlier in this file
+   was `36px minmax(0,1fr) 8px` - sized for a plain 8px status dot,
+   not the text badge ("Active"/"Building"/...) that replaced it. An
+   8px column silently clips a real badge to nothing; widen it and
+   re-align so the badge sits centered against the row instead of
+   pinned to the old dot's top-aligned position. */
+.coworker-roster-item {
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+}
+.coworker-roster-copy {
+  min-width: 0;
+}
+
+/* Empty state used to only show for the "no coworkers at all" case;
+   it's now reused for "no coworkers match the search/filter" too, so
+   give it a plain single-line layout instead of forcing the icon +
+   heading stack meant for the full empty state. */
+.coworker-roster-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--app-muted);
+}
+.coworker-roster-empty svg { width: 22px; height: 22px; color: var(--app-rust); }
+
+/* ── Coworker chat: the composer above (line ~9923) got pinned to the
+   bottom of .operator-conversation with position: sticky because that
+   column is allowed to scroll as a whole on short windows. The header
+   had the same exposure and nobody fixed it: on a short window the
+   whole column scrolls down, the header (coworker name, mission line,
+   status) scrolls up out of view first, and there's no way back to it
+   short of scrolling up past the thread - this is the exact "header
+   just disappears" bug reported against the live page. Pin it the
+   same way, same opaque background rule for the same reason (content
+   sliding underneath a see-through sticky element looks broken). */
+.operator-conversation-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--app-paper);
 }

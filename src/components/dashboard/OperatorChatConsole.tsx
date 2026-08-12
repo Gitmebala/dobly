@@ -646,32 +646,6 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
             </div>
           </div>
 
-          <div className="console-headline-row">
-            <div className="console-stat-row" aria-label="Coworker stats at a glance">
-              <div>
-                <strong>{props.operator.loops.filter((loop) => loop.status === "active").length}</strong>
-                <span>Active loops</span>
-              </div>
-              <div>
-                <strong>{props.recentRuns.filter((run) => typeof run.created_at === "string" && dayKey(run.created_at) === dayKey(new Date().toISOString())).length}</strong>
-                <span>Handled today</span>
-              </div>
-              <div data-tone={pendingApprovals.length ? "warning" : undefined}>
-                <strong>{pendingApprovals.length}</strong>
-                <span>Waiting on you</span>
-              </div>
-              <div>
-                <strong>{formatTime(props.operator.last_run_at)}</strong>
-                <span>Last active</span>
-              </div>
-            </div>
-            <div className="console-headline-actions">
-              <Link href={`/dashboard/tasks?assignee=${props.operator.id}`} className="btn-secondary">
-                Start new task
-              </Link>
-            </div>
-          </div>
-
           <div className="operator-thread-controls" data-open={shiftTapeOpen}>
             <button
               type="button"

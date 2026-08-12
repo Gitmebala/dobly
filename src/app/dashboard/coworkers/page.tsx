@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Bot, Boxes, Building2, Plus, Users } from "lucide-react";
+import { ArrowLeft, Bot, Boxes, Plus, Users } from "lucide-react";
+import CoworkerRosterPanel from "@/components/dashboard/CoworkerRosterPanel";
 import OperatorCreator from "@/components/dashboard/OperatorCreator";
 import OperatorChatConsole from "@/components/dashboard/OperatorChatConsole";
 import { listDoblyOperators, type OperatorWithLoops } from "@/lib/dobly-operators";
@@ -41,34 +42,16 @@ export default async function CoworkersPage({
       <header className="coworker-console-header">
         <div>
           <h1>Coworkers</h1>
-          <p>{activeOperators.length} active / {operators.length} total</p>
+          <p>Your AI teammates that get work done.</p>
         </div>
         <div className="coworker-console-header-actions">
-          <Link href="/dashboard/workflows"><Building2 /> Loops</Link>
           <Link href="/dashboard/coworkers?create=true" className="primary"><Plus /> New coworker</Link>
         </div>
       </header>
 
       <div className="coworker-console-layout">
         <aside className="coworker-roster">
-          <div className="coworker-roster-heading">
-            <span>Team</span>
-            <strong>{operators.length}</strong>
-          </div>
-
-          <nav className="coworker-roster-list" aria-label="Coworkers">
-            {operators.map((operator) => (
-              <CoworkerRosterItem key={operator.id} operator={operator} active={!creating && primaryOperator?.id === operator.id} />
-            ))}
-            {!operators.length ? (
-              <div className="coworker-roster-empty">
-                <Bot />
-                <strong>No coworkers yet</strong>
-                <span>Describe a job (inbound leads, bookkeeping, market watch) and Dobly proposes who to hire.</span>
-              </div>
-            ) : null}
-          </nav>
-
+          <CoworkerRosterPanel operators={operators} activeOperatorId={!creating ? (primaryOperator?.id ?? null) : null} />
           <footer className="coworker-roster-footer">
             <Link href="/dashboard/workflows"><Boxes /> Loops</Link>
             <Link href="/dashboard/approvals"><Users /> Approvals</Link>
@@ -117,24 +100,5 @@ export default async function CoworkersPage({
         </main>
       </div>
     </div>
-  );
-}
-
-function CoworkerRosterItem({ operator, active }: { operator: OperatorWithLoops; active: boolean }) {
-  const loops = operator.loops ?? [];
-  return (
-    <Link
-      href={`/dashboard/coworkers?operatorId=${encodeURIComponent(operator.id)}`}
-      className="coworker-roster-item"
-      data-active={active}
-    >
-      <span className="coworker-roster-avatar" data-initial aria-hidden="true">{operator.name.slice(0, 1).toUpperCase()}</span>
-      <span className="coworker-roster-copy">
-        <strong>{operator.name}</strong>
-        <small>{operator.mission}</small>
-        <em>{loops.length} loop{loops.length === 1 ? "" : "s"}</em>
-      </span>
-      <i data-status={operator.status} aria-label={operator.status} />
-    </Link>
   );
 }
