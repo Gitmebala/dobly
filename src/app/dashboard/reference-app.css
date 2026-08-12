@@ -10869,3 +10869,265 @@ html, body {
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--app-paper) 45%, transparent), transparent);
   animation-duration: 2.2s;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   BUSINESS MEMORY - real rebuild per the founder's own brief: "Memory
+   shouldn't feel like a database where I manually enter records. It
+   should feel like the business's brain." The old page led with a
+   permanent, always-open composer form beside a search box that said
+   "No memory loaded yet" on every visit (it only auto-loaded one
+   narrow scope on mount). Now: everything loads on arrival, browsing
+   by real kind-groups is the primary view, and teaching Dobly
+   something is a focused overlay you open, not a form that's always
+   sitting there whether you're adding anything or not. ═══════════ */
+
+.memory-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.memory-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.memory-search {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  background: var(--app-paper);
+}
+.memory-search svg { width: 16px; height: 16px; color: var(--app-muted); flex-shrink: 0; }
+.memory-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--app-text);
+  font-size: 14px;
+  outline: none;
+}
+.memory-teach-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-height: 46px;
+  padding: 0 20px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--app-rust);
+  font-size: 13.5px;
+  font-weight: 640;
+}
+.memory-teach-button:hover { background: var(--app-rust-dark); }
+.memory-teach-button svg { width: 15px; height: 15px; }
+
+.memory-group-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.memory-group-chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--app-line);
+  color: var(--app-muted);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.memory-group-chips button:hover { border-color: var(--app-line-strong); color: var(--app-text); }
+.memory-group-chips button[data-active="true"] {
+  border-color: transparent;
+  color: #fff;
+  background: var(--app-rust);
+}
+.memory-group-chips button em { font-style: normal; font-size: 11px; opacity: .85; }
+
+.memory-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 280px);
+  gap: 28px;
+  align-items: start;
+}
+
+.memory-group-section { margin-bottom: 28px; }
+.memory-group-section:last-child { margin-bottom: 0; }
+.memory-group-section h2 {
+  margin: 0 0 10px;
+  color: var(--app-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.memory-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--app-line);
+}
+.memory-row:last-child { border-bottom: 0; }
+.memory-row-main {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: block;
+  text-align: left;
+}
+.memory-row-main strong {
+  display: block;
+  color: var(--app-text);
+  font-size: 14.5px;
+  font-weight: 620;
+}
+.memory-row-main span {
+  display: -webkit-box;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.memory-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+.memory-row-meta time { color: var(--app-muted); font-size: 11px; white-space: nowrap; }
+.memory-row-meta > button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: var(--app-muted);
+}
+.memory-row-meta > button:hover { color: var(--app-text); background: var(--app-paper-2); }
+
+.memory-side { display: flex; flex-direction: column; gap: 14px; }
+.memory-side-card { padding: 16px; }
+.memory-side-label {
+  display: block;
+  color: var(--app-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.memory-side-total {
+  display: block;
+  margin-top: 6px;
+  color: var(--app-text);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+}
+.memory-side-card > p { margin: 3px 0 0; }
+.memory-side-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 14px;
+}
+.memory-side-breakdown > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+}
+.memory-side-breakdown span { color: var(--app-muted); }
+.memory-side-breakdown strong { color: var(--app-text); font-weight: 620; }
+
+.memory-side-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+}
+.memory-side-recent button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+  text-align: left;
+}
+.memory-side-recent strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 12.5px;
+  font-weight: 560;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.memory-side-recent small { flex-shrink: 0; color: var(--app-muted); font-size: 11px; }
+.memory-side-recent button:hover strong { color: var(--app-rust-dark); }
+
+.memory-starters-card .memory-starters { display: flex; flex-direction: column; gap: 2px; }
+
+.memory-composer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6vh 20px;
+  overflow-y: auto;
+}
+.memory-composer-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(35, 28, 22, .32);
+  backdrop-filter: blur(2px);
+}
+.memory-composer-overlay .memory-composer {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 24px;
+}
+.memory-composer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.memory-composer-head button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--app-muted);
+}
+.memory-composer-head button:hover { color: var(--app-text); background: var(--app-paper-2); }
+.memory-composer-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.memory-composer-actions .memory-save-button { margin-top: 0; flex: 1; }
+
+@media (max-width: 900px) {
+  .memory-layout { grid-template-columns: minmax(0, 1fr); }
+}
