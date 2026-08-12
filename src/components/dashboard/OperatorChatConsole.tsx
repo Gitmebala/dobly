@@ -1105,14 +1105,21 @@ function MessageBubble({
 
   return (
     <article className={`ledger-entry ${isUser ? "ledger-entry-user" : "ledger-entry-coworker"}`} data-role={message.role}>
-      <header className="ledger-entry-meta">
-        <strong>{author}</strong>
-        {showIntent ? <span>{message.intent.replace(/_/g, " ")}</span> : null}
-        <time dateTime={message.created_at}>{formatClock(message.created_at)}</time>
-      </header>
-      <div className="ledger-entry-body">{message.body}</div>
-      <OperatorThinking message={message} />
-      <MessageArtifactPreview message={message} />
+      {!isUser ? (
+        <span className="ledger-entry-avatar" aria-hidden="true">
+          {coworkerName.slice(0, 1).toUpperCase()}
+        </span>
+      ) : null}
+      <div className="ledger-entry-column">
+        <header className="ledger-entry-meta">
+          <strong>{author}</strong>
+          {showIntent ? <span>{message.intent.replace(/_/g, " ")}</span> : null}
+          <time dateTime={message.created_at}>{formatClock(message.created_at)}</time>
+        </header>
+        <div className="ledger-entry-body">{message.body}</div>
+        <OperatorThinking message={message} />
+        <MessageArtifactPreview message={message} />
+      </div>
     </article>
   );
 }

@@ -10522,3 +10522,66 @@ html[data-theme="dark"] .dashboard-shell {
   background: var(--app-paper);
   box-shadow: 0 2px 8px rgba(53, 37, 26, .18);
 }
+
+/* ── Coworker chat bubbles - real visual language change, not a
+   patch. The coworker's own reference shows two-sided chat bubbles
+   with an avatar circle on the coworker's side. What's actually
+   coded is a deliberate "ledger" metaphor from an earlier design
+   pass - the coworker "writes on the paper" as bare text with a
+   small dot marker, no bubble, no avatar; only the user's side got
+   a real bubble (a dark charcoal block). That asymmetric, editorial
+   look is exactly what's reading as "not a real chat" against a
+   reference that expects a bubble + avatar on both sides. Giving the
+   coworker side a real bubble and a small initial avatar (same
+   letter-tile pattern already used in the header - no fabricated
+   photo, this is an AI coworker, not a photographed person). */
+.ledger-entry {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.ledger-entry-column {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.ledger-entry-user {
+  flex-direction: column;
+  align-items: flex-end;
+}
+.ledger-entry-user .ledger-entry-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.ledger-entry-avatar {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  margin-top: 2px;
+  border-radius: 50%;
+  color: var(--app-rust-dark);
+  background: color-mix(in srgb, var(--app-rust) 16%, var(--app-paper));
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ledger-entry-coworker::before { display: none; }
+
+.ledger-entry-coworker .ledger-entry-body {
+  max-width: min(84%, 640px);
+  padding: 11px 15px 12px;
+  border-radius: 4px 14px 14px 14px;
+  background: var(--app-paper-2);
+  border: 1px solid var(--app-line);
+  font-size: 14.5px;
+  box-shadow: none;
+}
+.ledger-entry-coworker[data-role="system"] .ledger-entry-body,
+.ledger-entry-coworker[data-role="run"] .ledger-entry-body {
+  background: transparent;
+  border-style: dashed;
+}
