@@ -10818,3 +10818,23 @@ html[data-theme="dark"] .dashboard-shell {
   height: calc(100dvh - 24px);
   gap: 10px;
 }
+
+/* ── Narrower windows: "it shouldn't be scrollable, everything
+   should fit inside the page itself." The home page's hero grid
+   (.canvas-hero, main content + a fixed 300px assist card) already
+   collapses to one column below 980px, and the quick-start chip row
+   already wraps - both real, existing rules. This is a hard backstop
+   on top of them: no page in the app should ever be able to force a
+   horizontal scrollbar, whatever the cause. Content still reflows
+   normally within the viewport width; this only removes the escape
+   hatch that lets something exceed it sideways instead of wrapping
+   or shrinking. */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+.dashboard-shell .main-stage,
+.dashboard-shell .main-stage-body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
