@@ -10303,7 +10303,12 @@ html[data-theme="dark"] .dashboard-shell {
 
 /* rows={1} now (was 3) - the textarea grows with content instead of
    always reserving three lines nobody's using yet; this min-height is
-   sized for that one idle line, not the old three-line default. */
-.ledger-composer-input {
+   sized for that one idle line, not the old three-line default.
+   Selector note: a plain `.ledger-composer-input` here had zero
+   effect, confirmed live (still rendered at 76px) - an earlier
+   round's `.dashboard-shell .ledger-composer-input { min-height:
+   76px }` is a two-class selector and outranks a single-class one
+   regardless of source order. Matched it. */
+.dashboard-shell .ledger-composer-input {
   min-height: 40px;
 }
