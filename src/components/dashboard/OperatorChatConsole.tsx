@@ -649,36 +649,36 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                 {label}
               </button>
             ))}
+            {inspectorTab === "chat" ? (
+              <button
+                type="button"
+                className="console-tabbar-date"
+                onClick={() => setShiftTapeOpen((open) => !open)}
+                aria-expanded={shiftTapeOpen}
+                title="Jump to a specific day"
+              >
+                <CalendarDays aria-hidden="true" />
+                <code>{dateFilter ? formatDayLabel(`${dateFilter}T12:00:00`, new Date().toISOString().slice(0, 10)).toLowerCase() : "full history"}</code>
+              </button>
+            ) : null}
           </nav>
 
           {inspectorTab === "chat" ? (
           <>
-          <div className="operator-thread-controls" data-open={shiftTapeOpen}>
-            <button
-              type="button"
-              className="operator-thread-controls-label"
-              onClick={() => setShiftTapeOpen((open) => !open)}
-              aria-expanded={shiftTapeOpen}
-            >
-              <CalendarDays aria-hidden="true" />
-              Shift tape
-              <code>{dateFilter ? formatDayLabel(`${dateFilter}T12:00:00`, new Date().toISOString().slice(0, 10)).toLowerCase() : "full history"}</code>
-            </button>
-            {shiftTapeOpen ? (
-              <div className="operator-thread-controls-actions">
-                <input
-                  type="date"
-                  value={dateFilter}
-                  max={dayKey(new Date().toISOString())}
-                  onChange={(event) => setDateFilter(event.target.value)}
-                  aria-label="View what this coworker did on a specific day"
-                />
-                {dateFilter ? (
-                  <button type="button" onClick={() => setDateFilter("")}>Show everything</button>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+          {shiftTapeOpen ? (
+            <div className="operator-thread-controls-actions" data-standalone="true">
+              <input
+                type="date"
+                value={dateFilter}
+                max={dayKey(new Date().toISOString())}
+                onChange={(event) => setDateFilter(event.target.value)}
+                aria-label="View what this coworker did on a specific day"
+              />
+              {dateFilter ? (
+                <button type="button" onClick={() => setDateFilter("")}>Show everything</button>
+              ) : null}
+            </div>
+          ) : null}
 
           <div ref={listRef} className="operator-chat-thread">
             {timeline.map((group) => (

@@ -10406,12 +10406,6 @@ html[data-theme="dark"] .dashboard-shell {
   list-style: none;
 }
 .operator-composer-more > summary::-webkit-details-marker { display: none; }
-.operator-composer-more > summary::before {
-  content: "Quick directions, voice, feedback";
-}
-.operator-composer-more[open] > summary::before {
-  content: "Hide extra actions";
-}
 .operator-composer-more-body {
   display: flex;
   flex-direction: column;
@@ -10427,4 +10421,33 @@ html[data-theme="dark"] .dashboard-shell {
   cursor: default;
   color: var(--app-muted);
   font-size: 12px;
+}
+
+/* ── The "Shift tape" date-jump used to be its own permanent 39px row
+   directly under the tab bar - real functionality, but redundant
+   floor space now that a real tab bar exists right above it (this
+   was the single largest remaining contributor to the thread reading
+   as empty even after the header and composer fixes). Its trigger
+   now lives inline in the tab bar itself (adds ~0 height, it's just
+   another item in that row); the date-input row only appears at all
+   when someone actually opens it. */
+.console-tabbar {
+  align-items: center;
+}
+.console-tabbar-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 0 8px;
+  color: var(--app-muted);
+  font-size: 11px;
+}
+.console-tabbar-date svg { width: 13px; height: 13px; }
+.console-tabbar-date[aria-expanded="true"] { color: var(--app-rust-dark); }
+
+.operator-thread-controls-actions[data-standalone="true"] {
+  flex-shrink: 0;
+  padding: 8px max(28px, calc((100% - 820px) / 2));
+  border-bottom: 1px solid var(--app-line);
 }
