@@ -740,20 +740,6 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
           </div>
 
           <div className="operator-chat-composer">
-            <div className="operator-quick-directions">
-              {quickDirections.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => sendPrompt(item.prompt)}
-                  disabled={isPending}
-                  title={item.prompt}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
             <form onSubmit={onSubmit} className="grid gap-3">
               <textarea
                 value={prompt}
@@ -800,37 +786,62 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                 </button>
               </div>
             </form>
-            <div className="operator-composer-tools">
-              <details>
-                <summary>Voice transcript</summary>
-                <div>
-                  <textarea value={voiceTranscript} onChange={(event) => setVoiceTranscript(event.target.value)} rows={2} placeholder="Add spoken direction or a call transcript." />
-                  <button type="button" onClick={submitVoiceTranscript} disabled={voicePending || voiceTranscript.trim().length < 2}>
-                    {voicePending ? "Sending..." : "Send transcript"}
-                  </button>
+
+            {/* The reference composer is just input + attach + send - quick
+                directions, voice transcript, and feedback are real, kept
+                functionality, but they're occasional-use, not something that
+                needs to permanently cost vertical space on every single
+                message. One disclosure instead of three separate always-
+                rendered blocks. */}
+            <details className="operator-composer-more">
+              <summary>More actions</summary>
+              <div className="operator-composer-more-body">
+                <div className="operator-quick-directions">
+                  {quickDirections.map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => sendPrompt(item.prompt)}
+                      disabled={isPending}
+                      title={item.prompt}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
                 </div>
-              </details>
-            </div>
-            <details className="operator-feedback-menu">
-              <summary>Give feedback</summary>
-              <div className="operator-feedback-row">
-                {[
-                  ["good", "Good"],
-                  ["bad", "Not right"],
-                  ["correction", "Correct it"],
-                  ["preference", "Remember this"],
-                  ["bug", "Report a problem"],
-                  ["handoff", "Take over"],
-                ].map(([type, label]) => (
-                  <button
-                    key={type}
-                    type="button"
-                    disabled={Boolean(feedbackPending)}
-                    onClick={() => sendFeedback(type as any, label)}
-                  >
-                    {feedbackPending === type ? "Saving..." : label}
-                  </button>
-                ))}
+                <div className="operator-composer-tools">
+                  <details>
+                    <summary>Voice transcript</summary>
+                    <div>
+                      <textarea value={voiceTranscript} onChange={(event) => setVoiceTranscript(event.target.value)} rows={2} placeholder="Add spoken direction or a call transcript." />
+                      <button type="button" onClick={submitVoiceTranscript} disabled={voicePending || voiceTranscript.trim().length < 2}>
+                        {voicePending ? "Sending..." : "Send transcript"}
+                      </button>
+                    </div>
+                  </details>
+                </div>
+                <div className="operator-feedback-menu">
+                  <span>Give feedback</span>
+                  <div className="operator-feedback-row">
+                    {[
+                      ["good", "Good"],
+                      ["bad", "Not right"],
+                      ["correction", "Correct it"],
+                      ["preference", "Remember this"],
+                      ["bug", "Report a problem"],
+                      ["handoff", "Take over"],
+                    ].map(([type, label]) => (
+                      <button
+                        key={type}
+                        type="button"
+                        disabled={Boolean(feedbackPending)}
+                        onClick={() => sendFeedback(type as any, label)}
+                      >
+                        {feedbackPending === type ? "Saving..." : label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </details>
             {error ? <p className="ledger-composer-error" role="alert">{error}</p> : null}
