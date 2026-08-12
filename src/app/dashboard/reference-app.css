@@ -10147,8 +10147,16 @@ html[data-theme="dark"] .dashboard-shell {
    short of scrolling up past the thread - this is the exact "header
    just disappears" bug reported against the live page. Pin it the
    same way, same opaque background rule for the same reason (content
-   sliding underneath a see-through sticky element looks broken). */
-.operator-conversation-header {
+   sliding underneath a see-through sticky element looks broken).
+
+   NOTE: this rule originally targeted .operator-conversation-header,
+   a class that only exists in an older, superseded pre-"v2" block
+   earlier in this file (see the "COWORKERS WORKSPACE - v2, authoritative
+   rewrite" banner) - it matched nothing in the live component and had
+   zero effect, confirmed by checking computed styles on the deployed
+   page. The real, currently-rendered header wrapper in
+   OperatorChatConsole.tsx is .console-head. */
+.console-head {
   position: sticky;
   top: 0;
   z-index: 3;
