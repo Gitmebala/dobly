@@ -10201,3 +10201,74 @@ html[data-theme="dark"] .dashboard-shell {
 .operator-chat-composer {
   max-height: min(252px, 32vh);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   COWORKER CHAT - real redesign, not another patch on the fight for
+   space above. Founder feedback, verbatim: "why have you crammped up
+   everything into a small space, then using a scroller, that shows
+   tiny tiny regions." Everything above this block was tuning numbers
+   inside a broken model (the whole conversation column scrolls as a
+   unit, header/composer pinned to its edges with position: sticky to
+   compensate). Per Apple's HIG layout guidance - "avoid placing
+   controls or critical information at the bottom of a window" and
+   "give essential content sufficient space, don't crowd it with
+   nonessential details" - sticky-pinning chrome to fight over a
+   height budget is the wrong shape of fix. The actual root cause of
+   the cramped feeling, found by measuring the real header on the
+   live page: .console-presence (status · last active · autonomy ·
+   Details) renders as a 4-item VERTICAL stack by default and only
+   becomes a horizontal row below an 860px media query - backwards
+   from what desktop space allows, so the header was ~137px tall for
+   what should be one line. That one inversion, not the thread's
+   flex-basis, was the real space thief.
+
+   New model: presence is a row by default (this is desktop; a
+   860px-and-below query still stacks it for narrow windows, that
+   rule already exists and is untouched). With the header back to its
+   natural ~60px, .operator-conversation no longer needs to scroll as
+   a whole - overflow: hidden here, and only .operator-chat-thread
+   scrolls internally, the same way every chat app (Messages, Slack,
+   WhatsApp Web) actually works. No more sticky positioning needed on
+   the header or composer - they were never fighting for room in the
+   first place, so removed. */
+.console-presence {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.console-head {
+  position: static;
+  padding: 14px max(28px, calc((100% - 820px) / 2)) 12px;
+}
+
+.operator-conversation {
+  overflow-y: hidden;
+}
+
+.operator-conversation > .operator-chat-thread {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.operator-chat-composer {
+  position: static;
+  padding: 12px max(28px, calc((100% - 820px) / 2)) 14px;
+}
+
+.operator-quick-directions {
+  gap: 6px;
+}
+
+.operator-quick-directions button {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* rows={1} now (was 3) - the textarea grows with content instead of
+   always reserving three lines nobody's using yet; this min-height is
+   sized for that one idle line, not the old three-line default. */
+.ledger-composer-input {
+  min-height: 40px;
+}

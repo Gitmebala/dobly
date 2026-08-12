@@ -751,7 +751,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
               <textarea
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
-                rows={3}
+                rows={1}
                 placeholder={`Tell ${operatorName} what changed…`}
                 className="ledger-composer-input"
                 onKeyDown={(event) => {
