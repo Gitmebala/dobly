@@ -11131,3 +11131,103 @@ html, body {
 @media (max-width: 900px) {
   .memory-layout { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ── Delete coworker: real, permanent, cascades to loops/chat/
+   artifacts (ON DELETE CASCADE, confirmed against every migration
+   before wiring this up). Danger-styled trigger in the "..." menu,
+   type-the-name confirmation dialog - same friction pattern as
+   GitHub/Vercel's own irreversible-delete flows. */
+.console-more-danger {
+  color: #b0402c !important;
+}
+.console-more-danger:hover {
+  background: color-mix(in srgb, #b0402c 10%, transparent) !important;
+}
+.console-more-danger svg { color: #b0402c !important; }
+
+.delete-coworker-dialog {
+  width: min(420px, 100%);
+  padding: 26px;
+  border-radius: 18px;
+  background: var(--app-paper);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+}
+.delete-coworker-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  color: #b0402c;
+  background: color-mix(in srgb, #b0402c 12%, transparent);
+}
+.delete-coworker-dialog-icon svg { width: 20px; height: 20px; }
+.delete-coworker-dialog h2 {
+  margin: 0;
+  color: var(--app-text);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+}
+.delete-coworker-dialog > p {
+  margin: 8px 0 0;
+  color: var(--app-muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.delete-coworker-dialog label {
+  display: block;
+  margin-top: 18px;
+}
+.delete-coworker-dialog label > span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--app-muted);
+  font-size: 12px;
+}
+.delete-coworker-dialog label strong { color: var(--app-text); }
+.delete-coworker-dialog input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: 9px;
+  color: var(--app-text);
+  background: var(--app-paper-2);
+  font-size: 14px;
+  outline: none;
+}
+.delete-coworker-dialog input:focus { border-color: #b0402c; }
+.delete-coworker-dialog-error {
+  margin: 10px 0 0;
+  color: #b0402c;
+  font-size: 12.5px;
+}
+.delete-coworker-dialog-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.delete-coworker-dialog-actions button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.delete-coworker-dialog-actions button:first-child {
+  border: 1px solid var(--app-line);
+  color: var(--app-text);
+}
+.delete-coworker-dialog-actions button:first-child:hover { background: var(--app-paper-2); }
+.delete-coworker-dialog-actions button[data-danger] {
+  color: #fff;
+  background: #b0402c;
+}
+.delete-coworker-dialog-actions button[data-danger]:hover:not(:disabled) { background: #8f321f; }
+.delete-coworker-dialog-actions button[data-danger]:disabled { opacity: .45; cursor: default; }

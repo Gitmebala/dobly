@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   Share2,
   Sparkles,
+  Trash2,
   User,
   Video,
   X,
@@ -234,6 +235,10 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
   const [nameDraft, setNameDraft] = useState(props.operator.name);
   const [renameSaving, setRenameSaving] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [shiftTapeOpen, setShiftTapeOpen] = useState(false);
   const [leash, setLeash] = useState(() => {
     const index = leashModes.findIndex((mode) => mode.value === props.operator.approval_mode);
@@ -321,6 +326,31 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
       setRenameError("Could not rename this coworker.");
     } finally {
       setRenameSaving(false);
+    }
+  }
+
+  async function deleteCoworker() {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const response = await fetch(`/api/operators/${props.operator.id}`, {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ confirmName: deleteConfirmName }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setDeleteError(data.error ?? "Could not delete this coworker.");
+        return;
+      }
+      // Full navigation, not router.push - the coworkers list needs to
+      // re-fetch from the server with this operator actually gone, not
+      // just re-render client state around a now-dead id.
+      window.location.href = "/dashboard/coworkers";
+    } catch {
+      setDeleteError("Could not delete this coworker.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -663,6 +693,21 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                     <button type="button" onClick={() => setShiftTapeOpen((open) => !open)}>
                       <CalendarDays aria-hidden="true" />
                       {dateFilter ? formatDayLabel(`${dateFilter}T12:00:00`, new Date().toISOString().slice(0, 10)) : "Jump to a day"}
+                    </button>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Separator className="console-more-separator" />
+                  <DropdownMenu.Item asChild>
+                    <button
+                      type="button"
+                      className="console-more-danger"
+                      onClick={() => {
+                        setDeleteConfirmName("");
+                        setDeleteError(null);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 aria-hidden="true" />
+                      Delete coworker
                     </button>
                   </DropdownMenu.Item>
                 </DropdownMenu.Content>
@@ -1058,6 +1103,17 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
       </div>
 
       {activeArtifact ? <ArtifactPreviewModal artifact={activeArtifact} onClose={() => setActiveArtifact(null)} /> : null}
+      {deleteDialogOpen ? (
+        <DeleteCoworkerDialog
+          operatorName={operatorName}
+          confirmValue={deleteConfirmName}
+          onConfirmChange={setDeleteConfirmName}
+          deleting={deleting}
+          error={deleteError}
+          onCancel={() => setDeleteDialogOpen(false)}
+          onConfirm={deleteCoworker}
+        />
+      ) : null}
     </section>
   );
 }
@@ -1521,6 +1577,66 @@ function readableArtifactText(content: unknown): string | null {
 
   if (parts.length) return Array.from(new Set(parts)).join("\n\n");
   return null;
+}
+
+// Deleting a coworker is permanent - it takes its loops, chat
+// history, and artifacts with it (real ON DELETE CASCADE on every
+// table that references it, not a soft-hide). Typing the exact name
+// is the same friction pattern GitHub/Vercel use for irreversible
+// deletes - deliberately slower than a single confirm click.
+function DeleteCoworkerDialog({
+  operatorName,
+  confirmValue,
+  onConfirmChange,
+  deleting,
+  error,
+  onCancel,
+  onConfirm,
+}: {
+  operatorName: string;
+  confirmValue: string;
+  onConfirmChange: (value: string) => void;
+  deleting: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const matches = confirmValue.trim() === operatorName.trim();
+  return (
+    <div className="fixed inset-0 z-[80] grid place-items-center bg-black/70 p-4 backdrop-blur-sm">
+      <div className="delete-coworker-dialog">
+        <div className="delete-coworker-dialog-icon">
+          <Trash2 aria-hidden="true" />
+        </div>
+        <h2>Delete {operatorName}?</h2>
+        <p>
+          This permanently removes {operatorName}, its loops, its entire chat history, and every artifact it produced. Coworkers cannot be recovered once deleted.
+        </p>
+        <label>
+          <span>Type <strong>{operatorName}</strong> to confirm</span>
+          <input
+            autoFocus
+            value={confirmValue}
+            onChange={(event) => onConfirmChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && matches && !deleting) onConfirm();
+              if (event.key === "Escape") onCancel();
+            }}
+            placeholder={operatorName}
+            aria-label={`Type ${operatorName} to confirm deletion`}
+          />
+        </label>
+        {error ? <p className="delete-coworker-dialog-error" role="alert">{error}</p> : null}
+        <div className="delete-coworker-dialog-actions">
+          <button type="button" onClick={onCancel} disabled={deleting}>Cancel</button>
+          <button type="button" data-danger onClick={onConfirm} disabled={!matches || deleting}>
+            {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+            Delete permanently
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ArtifactPreviewModal({ artifact, onClose }: { artifact: JsonRecord; onClose: () => void }) {
