@@ -10253,6 +10253,14 @@ html[data-theme="dark"] .dashboard-shell {
   justify-content: flex-end;
   align-items: center;
   gap: 8px 10px;
+  /* flex-shrink: 0 further up this file means presence sizes itself to
+     fit ALL four items (status, last active, autonomy, Details) on one
+     line before flex-wrap ever gets a chance to act - measured live at
+     302px wide, leaving identity only 115px despite its flex-basis.
+     flex-wrap only wraps children once the box itself is constrained;
+     give it that constraint so the four items actually stack onto two
+     lines instead of pushing the name column down to almost nothing. */
+  max-width: 45%;
 }
 
 .console-head {
