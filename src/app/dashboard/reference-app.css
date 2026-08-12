@@ -10242,25 +10242,34 @@ html[data-theme="dark"] .dashboard-shell {
    Identity (the name - the actually essential thing here) needs to
    claim space first; presence wraps onto a second line if its own
    contents don't fit the remainder, rather than starving the name. */
-.console-identity {
-  flex: 1 1 200px;
-  min-width: 0;
+/* Three rounds of side-by-side flex tuning (flex-basis, then
+   max-width) kept failing the same way, measured live each time: the
+   chat column here is genuinely narrow (~489px, since it's the
+   middle of a 3-column layout), and "status + last active + autonomy
+   + Details" next to the coworker's own name is more content than a
+   single row at this width can hold no matter how the flex math is
+   tuned - "Persistence Test Coworker" needs ~200px+ on its own at
+   this font size, every arrangement that put presence beside it left
+   less than that. The file's own mobile breakpoint (860px) already
+   had the right answer for this exact problem - stack identity above
+   presence - it was just gated to mobile widths only. Using it
+   unconditionally here isn't a mobile layout leaking onto desktop,
+   it's recognizing this specific column is narrow at any window
+   size, so the name gets the full row width on its own line instead
+   of forever negotiating for a fraction of it. */
+.console-head {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
 }
 
 .console-presence {
   flex-direction: row;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
-  gap: 8px 10px;
-  /* flex-shrink: 0 further up this file means presence sizes itself to
-     fit ALL four items (status, last active, autonomy, Details) on one
-     line before flex-wrap ever gets a chance to act - measured live at
-     302px wide, leaving identity only 115px despite its flex-basis.
-     flex-wrap only wraps children once the box itself is constrained;
-     give it that constraint so the four items actually stack onto two
-     lines instead of pushing the name column down to almost nothing. */
-  max-width: 45%;
+  gap: 6px 10px;
+  max-width: none;
 }
 
 .console-head {
