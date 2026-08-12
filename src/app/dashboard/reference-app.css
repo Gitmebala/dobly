@@ -10179,8 +10179,16 @@ html[data-theme="dark"] .dashboard-shell {
    this is very likely the literal mechanism behind that complaint.
    Give the thread a firm floor so it can never lose the argument for
    space; .operator-conversation's existing overflow-y: auto (with
-   header/composer now sticky) absorbs whatever doesn't fit instead. */
-.operator-chat-thread {
+   header/composer now sticky) absorbs whatever doesn't fit instead.
+
+   Selector note: a plain `.operator-chat-thread { min-height: 220px }`
+   here had ZERO effect when checked live - `.operator-conversation >
+   .operator-chat-thread { min-height: 0; ... }` earlier in this file
+   (the pre-"v2" block) is a two-class combinator selector, higher
+   specificity than a single class, so it wins regardless of which
+   rule comes later in the file. Matching that selector exactly (same
+   specificity, later source order) is what actually overrides it. */
+.operator-conversation > .operator-chat-thread {
   min-height: 220px;
 }
 
