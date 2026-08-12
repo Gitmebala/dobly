@@ -3,8 +3,10 @@
 import { FormEvent, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowRight,
   Bot,
   BrainCircuit,
@@ -19,6 +21,7 @@ import {
   Image as ImageIcon,
   Link2,
   Loader2,
+  MoreHorizontal,
   NotebookText,
   Paperclip,
   PauseCircle,
@@ -565,8 +568,19 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
     <section className="operator-chat-console">
       <div className="operator-chat-layout">
         <div className="operator-conversation">
+          {/* Two lines, full stop - matches the founder's own spec:
+              "← [avatar] Name  ● Status ... ✎ •••" then a subtitle
+              line. Status/last-active/autonomy used to also get their
+              own third row (.console-presence); that's now folded
+              into the ••• menu below instead of costing a permanent
+              line on every single visit. */}
           <div className="console-head">
             <div className="console-identity">
+              {inspectorTab !== "chat" ? (
+                <button type="button" className="console-back-to-chat" onClick={() => setInspectorTab("chat")} title="Back to chat" aria-label="Back to chat">
+                  <ArrowLeft aria-hidden="true" />
+                </button>
+              ) : null}
               <Avatar className="console-tile" aria-hidden="true">
                 <AvatarFallback>{operatorName.slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>
@@ -619,49 +633,42 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                 <p>{props.operator.kind ?? "Coworker"} · {props.operator.mission}</p>
               </div>
             </div>
-            <div className="console-presence">
-              <span className="console-presence-state" data-status={props.operator.status}>
-                <i aria-hidden="true" />
-                {props.operator.status === "active" ? "On shift" : props.operator.status}
-              </span>
-              <code>last active {formatTime(props.operator.last_run_at).toLowerCase()}</code>
-              <button
-                type="button"
-                className="operator-leash-badge"
-                onClick={() => setInspectorTab("control")}
-                title="Autonomy level - open Control to change"
-              >
-                {leashModes[leash].label.split(",")[0]}
-              </button>
-            </div>
-          </div>
 
-          <nav className="console-tabbar" aria-label="Coworker views">
-            {([
-              ["chat", "Chat"],
-              ["overview", "About"],
-              ["review", `Tasks ${pendingApprovals.length || ""}`],
-              ["outputs", `Outputs ${artifacts.length || ""}`],
-              ["activity", "Activity"],
-              ["control", "Control"],
-            ] as Array<[InspectorTab, string]>).map(([id, label]) => (
-              <button key={id} type="button" data-active={inspectorTab === id} onClick={() => setInspectorTab(id)}>
-                {label}
-              </button>
-            ))}
-            {inspectorTab === "chat" ? (
-              <button
-                type="button"
-                className="console-tabbar-date"
-                onClick={() => setShiftTapeOpen((open) => !open)}
-                aria-expanded={shiftTapeOpen}
-                title="Jump to a specific day"
-              >
-                <CalendarDays aria-hidden="true" />
-                <code>{dateFilter ? formatDayLabel(`${dateFilter}T12:00:00`, new Date().toISOString().slice(0, 10)).toLowerCase() : "full history"}</code>
-              </button>
-            ) : null}
-          </nav>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button type="button" className="console-more-trigger" aria-label="More views and info">
+                  <MoreHorizontal aria-hidden="true" />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content className="console-more-menu" side="bottom" align="end" sideOffset={8}>
+                  <div className="console-more-status">
+                    <span>{props.operator.status === "active" ? "On shift" : props.operator.status} · last active {formatTime(props.operator.last_run_at).toLowerCase()}</span>
+                    <button type="button" onClick={() => setInspectorTab("control")}>{leashModes[leash].label.split(",")[0]}</button>
+                  </div>
+                  <DropdownMenu.Separator className="console-more-separator" />
+                  {([
+                    ["overview", "About"],
+                    ["review", `Tasks ${pendingApprovals.length || ""}`],
+                    ["outputs", `Outputs ${artifacts.length || ""}`],
+                    ["activity", "Activity"],
+                    ["control", "Control"],
+                  ] as Array<[InspectorTab, string]>).map(([id, label]) => (
+                    <DropdownMenu.Item key={id} asChild>
+                      <button type="button" data-active={inspectorTab === id} onClick={() => setInspectorTab(id)}>{label}</button>
+                    </DropdownMenu.Item>
+                  ))}
+                  <DropdownMenu.Separator className="console-more-separator" />
+                  <DropdownMenu.Item asChild>
+                    <button type="button" onClick={() => setShiftTapeOpen((open) => !open)}>
+                      <CalendarDays aria-hidden="true" />
+                      {dateFilter ? formatDayLabel(`${dateFilter}T12:00:00`, new Date().toISOString().slice(0, 10)) : "Jump to a day"}
+                    </button>
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
+          </div>
 
           {inspectorTab === "chat" ? (
           <>

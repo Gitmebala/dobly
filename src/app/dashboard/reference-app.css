@@ -10704,3 +10704,117 @@ html[data-theme="dark"] .dashboard-shell {
   min-height: 0;
   max-height: min(480px, 70vh);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   COWORKER HEADER - down to two lines, no more. Founder, verbatim:
+   "is it that hard to remove the big header and chat/about/tasks and
+   all those and have a bigger fuller chat section." Status, last-
+   active, and autonomy used to be their own permanent third row
+   (.console-presence) below the name; the six-item tab bar
+   (.console-tabbar) was a fourth row above the thread. Both are gone
+   as persistent chrome - status stays as the one pill next to the
+   name (it was already redundant with "On shift" spelled out again
+   below it), last-active/autonomy moved into the ••• menu, and
+   About/Tasks/Outputs/Activity/Control moved into that same menu
+   instead of a full-width row that was visible whether anyone needed
+   it or not. The thread is now the first thing after two lines of
+   text, not five rows of chrome. */
+.console-head {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px max(28px, calc((100% - 820px) / 2)) 14px;
+}
+.console-identity {
+  align-items: center;
+}
+.console-back-to-chat {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  margin-right: 2px;
+  border-radius: 50%;
+  color: var(--app-muted);
+}
+.console-back-to-chat:hover { color: var(--app-text); background: var(--app-paper-2); }
+.console-back-to-chat svg { width: 17px; height: 17px; }
+
+.console-more-trigger {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--app-muted);
+}
+.console-more-trigger:hover { color: var(--app-text); background: var(--app-paper-2); }
+.console-more-trigger svg { width: 18px; height: 18px; }
+
+.console-more-menu {
+  width: 240px;
+  padding: 6px;
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  background: var(--app-paper);
+  box-shadow: 0 12px 32px rgba(53, 37, 26, .16);
+  z-index: 50;
+}
+.console-more-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 10px;
+}
+.console-more-status > span {
+  color: var(--app-muted);
+  font-size: 12px;
+}
+.console-more-status > button {
+  align-self: flex-start;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--app-line);
+  color: var(--app-text);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.console-more-separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--app-line);
+}
+.console-more-menu [role="menuitem"] button,
+.console-more-menu button[data-active] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--app-text);
+  font-size: 13px;
+  text-align: left;
+}
+.console-more-menu button svg { width: 15px; height: 15px; color: var(--app-muted); }
+.console-more-menu [role="menuitem"] button:hover,
+.console-more-menu button[data-active="true"] {
+  background: color-mix(in srgb, var(--app-rust) 9%, transparent);
+}
+.console-more-menu button[data-active="true"] { color: var(--app-rust-dark); font-weight: 650; }
+
+/* The whole coworker page used to sit inside a generously-padded
+   card (28px top, up to 40px sides, 32px bottom) plus its own
+   internal header/tab chrome - founder: "whats all this space
+   around for." With the tab bar and old presence row gone, this
+   padding is now pure unused margin around a card that has nowhere
+   near that much chrome left inside it. */
+.dashboard-shell .dashboard-page-shell:has(.coworker-console-page) {
+  padding: 12px 16px;
+}
+.coworker-console-page {
+  height: calc(100dvh - 24px);
+  gap: 10px;
+}
