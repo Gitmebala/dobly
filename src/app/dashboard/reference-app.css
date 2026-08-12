@@ -10162,3 +10162,34 @@ html[data-theme="dark"] .dashboard-shell {
   z-index: 3;
   background: var(--app-paper);
 }
+
+/* ── Coworker chat: pinning the header and composer (above) fixed the
+   "header disappears when scrolling" bug, but exposed the actual root
+   complaint underneath it - measured live on a 577px-tall real window:
+   .operator-chat-thread rendered at 68px tall against a real
+   scrollHeight of 2136px. The composer's own max-height (252px, set
+   above at line ~9923's sibling rule) is sized for someone actively
+   composing a multi-line message, but by default - nothing typed yet
+   - most of that height is empty padding around a short single-line
+   input, and .operator-chat-thread (flex: 1 1 auto; min-height: 0)
+   has nothing stopping it from being squeezed to whatever's left
+   after every flex-shrink:0 sibling takes its natural size. A 68px
+   peephole onto the actual conversation is "the chat can't be seen"
+   even though the header and composer are both technically fine -
+   this is very likely the literal mechanism behind that complaint.
+   Give the thread a firm floor so it can never lose the argument for
+   space; .operator-conversation's existing overflow-y: auto (with
+   header/composer now sticky) absorbs whatever doesn't fit instead. */
+.operator-chat-thread {
+  min-height: 220px;
+}
+
+/* The composer growing to its full 252px by default (nothing typed,
+   just the placeholder) is most of what was squeezing the thread in
+   the first place. Cap it relative to viewport height too, so a short
+   window gets a proportionally smaller idle composer instead of a
+   fixed 252px regardless of how little room there is - it can still
+   grow back on focus/typing since this is a max, not a fixed height. */
+.operator-chat-composer {
+  max-height: min(252px, 32vh);
+}
