@@ -10838,3 +10838,34 @@ html, body {
   overflow-x: hidden;
   max-width: 100vw;
 }
+
+/* ── Restore the actual logo mark. An earlier round hid it
+   (.dobly-mark { display: none }) on the mistaken read that a
+   reference image showed wordmark-only - founder, directly: "you
+   chaged our logo, thhere isnt even a logo anymorre its just the
+   word Dobly." It should never have been removed; bring it back. */
+.dashboard-shell .dobly-mark {
+  display: grid;
+}
+
+/* ── Loading skeleton: one generic shape (a 3-tile summary row + a
+   list beside a fixed 300px rail) used for every single page under
+   /dashboard, regardless of what that page actually looks like -
+   founder: "that loading animation is just pasted there for
+   everything...its too much... have each page its own, less
+   intensity." Building a bespoke skeleton per route is a much larger
+   job than this pass has room for; the honest interim fix is to stop
+   asserting a specific shape (the 300px rail in particular no longer
+   matches several real pages after this session's redesigns) and
+   calm the animation down so it reads as a quiet placeholder instead
+   of a loud, busy pattern covering the whole page. */
+.workspace-loading-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+.workspace-loading-rail {
+  display: none;
+}
+.workspace-loading :is(.workspace-loading-kicker, .workspace-loading-title, .workspace-loading-copy, .workspace-loading-summary i, .workspace-loading-list i, .workspace-loading-rail i)::after {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--app-paper) 45%, transparent), transparent);
+  animation-duration: 2.2s;
+}
