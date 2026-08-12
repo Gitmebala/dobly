@@ -10591,3 +10591,116 @@ html[data-theme="dark"] .dashboard-shell {
   background: transparent;
   border-style: dashed;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   COWORKER WORKSPACE - real structural rebuild, founder's own
+   architecture note in full: a coworker's chat should feel like
+   entering that coworker's workspace, not a dashboard section with a
+   permanent directory bolted to its side. The ~240px roster column
+   that used to sit beside every conversation, always, whether anyone
+   needed to switch coworkers or not, is gone - replaced by a
+   compact switcher pill that opens the same roster (same filters,
+   search, hire CTA - unchanged) as a popover instead of a permanent
+   column. The chat itself is now the only thing in this page's main
+   column, full width. ═══════════════════════════════════════════ */
+
+.coworker-active-workspace-full {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.coworker-switcher-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 12px;
+  padding: 0 0 14px;
+}
+
+.coworker-switcher-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  background: var(--app-paper);
+  color: var(--app-text);
+  transition: border-color .16s ease, background .16s ease;
+}
+.coworker-switcher-trigger:hover {
+  border-color: var(--app-line-strong);
+  background: var(--app-paper-2);
+}
+.coworker-switcher-avatar {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--app-rust-dark);
+  background: color-mix(in srgb, var(--app-rust) 16%, var(--app-paper));
+  font-size: 11px;
+  font-weight: 700;
+}
+.coworker-switcher-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.coworker-switcher-chevron {
+  width: 13px;
+  height: 13px;
+  color: var(--app-muted);
+}
+
+.coworker-switcher-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.coworker-switcher-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  color: var(--app-muted);
+  font-size: 12.5px;
+  font-weight: 560;
+}
+.coworker-switcher-links a:hover { color: var(--app-text); background: var(--app-paper-2); }
+.coworker-switcher-links a svg { width: 14px; height: 14px; }
+.coworker-switcher-links a.primary {
+  color: #fff;
+  background: var(--app-rust);
+}
+.coworker-switcher-links a.primary:hover { background: var(--app-rust-dark); }
+
+/* The popover reuses .coworker-roster-panel (same component, same
+   filters/search/list/hire-CTA) but it's no longer filling a fixed-
+   height page column - it's a floating menu with its own max-height
+   and scroll. */
+.coworker-switcher-menu {
+  width: 300px;
+  max-height: min(480px, 70vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  background: var(--app-paper);
+  box-shadow: 0 12px 32px rgba(53, 37, 26, .16);
+  z-index: 50;
+}
+.coworker-switcher-menu .coworker-roster-panel {
+  min-height: 0;
+  max-height: min(480px, 70vh);
+}

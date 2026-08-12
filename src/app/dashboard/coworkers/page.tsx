@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Bot, Boxes, Plus, Users } from "lucide-react";
-import CoworkerRosterPanel from "@/components/dashboard/CoworkerRosterPanel";
+import CoworkerSwitcher from "@/components/dashboard/CoworkerSwitcher";
 import OperatorCreator from "@/components/dashboard/OperatorCreator";
 import OperatorChatConsole from "@/components/dashboard/OperatorChatConsole";
 import { listDoblyOperators, type OperatorWithLoops } from "@/lib/dobly-operators";
@@ -37,29 +37,26 @@ export default async function CoworkersPage({
     ? await listOperatorChat({ userId: user.id, operatorId: primaryOperator.id, operator: primaryOperator }).catch(() => null)
     : null;
 
+  // The old layout kept a permanent ~240px roster column beside every
+  // coworker's chat, always, whether anyone needed to switch coworkers
+  // or not - a second sidebar next to the app's own global nav, before
+  // the actual conversation even started. A coworker's chat is meant
+  // to read as a workspace you enter, not a dashboard section with a
+  // directory bolted to its side. When a coworker is open, this page
+  // now renders almost nothing of its own - just a compact switcher
+  // bar - and lets OperatorChatConsole's own thread be the dominant
+  // surface, full width.
   return (
     <div className="coworker-console-page">
-      <header className="coworker-console-header">
-        <div>
-          <h1>Coworkers</h1>
-          <p>Your AI teammates that get work done.</p>
-        </div>
-        <div className="coworker-console-header-actions">
-          <Link href="/dashboard/coworkers?create=true" className="primary"><Plus /> New coworker</Link>
-        </div>
-      </header>
-
-      <div className="coworker-console-layout">
-        <aside className="coworker-roster">
-          <CoworkerRosterPanel operators={operators} activeOperatorId={!creating ? (primaryOperator?.id ?? null) : null} />
-          <footer className="coworker-roster-footer">
-            <Link href="/dashboard/workflows"><Boxes /> Loops</Link>
-            <Link href="/dashboard/approvals"><Users /> Approvals</Link>
-          </footer>
-        </aside>
-
-        <main className="coworker-active-workspace">
-          {creating ? (
+      {creating ? (
+        <>
+          <header className="coworker-console-header">
+            <div>
+              <h1>Coworkers</h1>
+              <p>Your AI teammates that get work done.</p>
+            </div>
+          </header>
+          <main className="coworker-active-workspace">
             <section className="coworker-create-workspace">
               <header>
                 <div>
@@ -75,7 +72,19 @@ export default async function CoworkersPage({
                   this app does need an explicit decode. */}
               <div className="coworker-create-scroll"><OperatorCreator initialPrompt={prompt} /></div>
             </section>
-          ) : primaryChat ? (
+          </main>
+        </>
+      ) : (
+        <main className="coworker-active-workspace coworker-active-workspace-full">
+          <div className="coworker-switcher-bar">
+            <CoworkerSwitcher operators={operators} activeOperator={primaryOperator} />
+            <div className="coworker-switcher-links">
+              <Link href="/dashboard/workflows"><Boxes aria-hidden="true" /> Loops</Link>
+              <Link href="/dashboard/approvals"><Users aria-hidden="true" /> Approvals</Link>
+              <Link href="/dashboard/coworkers?create=true" className="primary"><Plus aria-hidden="true" /> New coworker</Link>
+            </div>
+          </div>
+          {primaryChat ? (
             <OperatorChatConsole
               operator={primaryChat.operator}
               conversation={primaryChat.conversation}
@@ -98,7 +107,7 @@ export default async function CoworkersPage({
             </section>
           )}
         </main>
-      </div>
+      )}
     </div>
   );
 }

@@ -18,9 +18,11 @@ type StatusFilter = (typeof STATUS_FILTERS)[number]["id"];
 export default function CoworkerRosterPanel({
   operators,
   activeOperatorId,
+  onNavigate,
 }: {
   operators: OperatorWithLoops[];
   activeOperatorId: string | null;
+  onNavigate?: () => void;
 }) {
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
@@ -84,7 +86,7 @@ export default function CoworkerRosterPanel({
 
       <nav className="coworker-roster-list" aria-label="Coworkers">
         {visible.map((operator) => (
-          <CoworkerRosterItem key={operator.id} operator={operator} active={activeOperatorId === operator.id} />
+          <CoworkerRosterItem key={operator.id} operator={operator} active={activeOperatorId === operator.id} onNavigate={onNavigate} />
         ))}
         {operators.length && !visible.length ? (
           <div className="coworker-roster-empty">
@@ -100,7 +102,7 @@ export default function CoworkerRosterPanel({
         ) : null}
       </nav>
 
-      <Link href="/dashboard/coworkers?create=true" className="coworker-roster-hire">
+      <Link href="/dashboard/coworkers?create=true" className="coworker-roster-hire" onClick={onNavigate}>
         <Plus aria-hidden="true" />
         <span>
           <strong>Hire new coworker</strong>
@@ -118,13 +120,14 @@ const STATUS_BADGE_LABEL: Record<string, string> = {
   archived: "Archived",
 };
 
-function CoworkerRosterItem({ operator, active }: { operator: OperatorWithLoops; active: boolean }) {
+function CoworkerRosterItem({ operator, active, onNavigate }: { operator: OperatorWithLoops; active: boolean; onNavigate?: () => void }) {
   const loops = operator.loops ?? [];
   return (
     <Link
       href={`/dashboard/coworkers?operatorId=${encodeURIComponent(operator.id)}`}
       className="coworker-roster-item"
       data-active={active}
+      onClick={onNavigate}
     >
       <span className="coworker-roster-avatar" data-status={operator.status} aria-hidden="true">
         {operator.name.slice(0, 1).toUpperCase()}
