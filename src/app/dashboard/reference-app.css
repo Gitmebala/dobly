@@ -10312,3 +10312,79 @@ html[data-theme="dark"] .dashboard-shell {
 .dashboard-shell .ledger-composer-input {
   min-height: 40px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   COWORKER CHAT - actual layout change, not another size patch.
+   Founder, after four rounds of pixel-tuning inside the existing
+   skeleton: "its not just about szes of stuff...cant you find a
+   better LAYOUT." Compared two of the founder's own reference images
+   (both generated the same day) and the one consistent structural
+   signal in both: there is no permanently-open third column fighting
+   the thread for width. What used to live in "Coworker details" (a
+   340px-wide always-visible drawer, restored across several earlier
+   rounds this session) is now a set of tabs living in the SAME column
+   as the thread - Chat / About / Tasks / Outputs / Activity / Control
+   - so the thread gets the full width of the chat column, and the
+   other views borrow that same space only when someone actually asks
+   for them instead of permanently reserving a third of the screen.
+   The tab content itself (Overview/Review/Outputs/Activity/Control
+   panels) is untouched - same components, same real data, just no
+   longer boxed into a narrow drawer. */
+
+.operator-chat-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.console-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 0 max(28px, calc((100% - 820px) / 2));
+  border-bottom: 1px solid var(--app-line);
+}
+
+.console-tabbar button {
+  min-height: 40px;
+  padding: 0 10px;
+  border-bottom: 2px solid transparent;
+  color: var(--app-muted);
+  font-size: 13px;
+  font-weight: 620;
+}
+
+.console-tabbar button[data-active="true"] {
+  border-color: var(--app-rust);
+  color: var(--app-text);
+}
+
+.console-tabbar button:hover:not([data-active="true"]) {
+  color: var(--app-text);
+}
+
+/* The old drawer's own content wrapper (.operator-inspector-scroll),
+   reused as-is here but it now needs to behave like the thread does -
+   the one flexible, internally-scrolling region between the tab bar
+   and the edge of the column, not a fixed-width side panel. */
+.operator-conversation > .operator-inspector-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 18px max(28px, calc((100% - 820px) / 2)) 24px;
+}
+
+/* The drawer, its scrim, and the fixed-340px 2-column grid it needed
+   no longer apply - there is no second child of .operator-chat-layout
+   any more, the tab content renders inline instead. These selectors
+   target JSX that no longer exists; harmless, left in place rather
+   than hunted down individually across the file, but explicitly
+   superseded by the single-column rule above winning by source order
+   for the property that actually mattered (.operator-chat-layout's
+   own display/columns). */
+
+/* This hairline used to separate .operator-conversation from the
+   drawer beside it. With no drawer any more it's a stray vertical
+   line at the right edge of the whole page for no reason. */
+.operator-conversation {
+  border-right: 0;
+}

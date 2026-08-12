@@ -21,7 +21,6 @@ import {
   Loader2,
   NotebookText,
   Paperclip,
-  PanelRightOpen,
   PauseCircle,
   Pencil,
   ShieldCheck,
@@ -89,7 +88,7 @@ const quickDirections = [
   { label: "Show work", prompt: "Show every artifact, draft, approval, tool call, and open question connected to this work." },
 ];
 
-type InspectorTab = "overview" | "review" | "outputs" | "activity" | "control";
+type InspectorTab = "chat" | "overview" | "review" | "outputs" | "activity" | "control";
 
 // The Leash: how much run the coworker has, in plain language.
 const leashModes = [
@@ -215,7 +214,6 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [messages, setMessages] = useState(props.messages);
   const [approvals, setApprovals] = useState(props.approvals);
-  const [inspectorOpen, setInspectorOpen] = useState(false);
   const [artifacts, setArtifacts] = useState(props.artifacts);
   const [prompt, setPrompt] = useState("");
   const [attachmentNote, setAttachmentNote] = useState("");
@@ -226,7 +224,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
   const [voicePending, setVoicePending] = useState(false);
   const [feedbackPending, setFeedbackPending] = useState<string | null>(null);
   const [decisionLoading, setDecisionLoading] = useState<string | null>(null);
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("overview");
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("chat");
   const [dateFilter, setDateFilter] = useState("");
   const [operatorName, setOperatorName] = useState(props.operator.name);
   const [renamingOperator, setRenamingOperator] = useState(false);
@@ -630,22 +628,31 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
               <button
                 type="button"
                 className="operator-leash-badge"
-                onClick={() => {
-                  setInspectorTab("control");
-                  setInspectorOpen(true);
-                }}
-                title="Autonomy level - open Details to change"
+                onClick={() => setInspectorTab("control")}
+                title="Autonomy level - open Control to change"
               >
                 {leashModes[leash].label.split(",")[0]}
-              </button>
-              <button type="button" className="operator-details-button" onClick={() => setInspectorOpen(true)}>
-                <PanelRightOpen aria-hidden="true" />
-                Details
-                {pendingApprovals.length ? <strong>{pendingApprovals.length}</strong> : null}
               </button>
             </div>
           </div>
 
+          <nav className="console-tabbar" aria-label="Coworker views">
+            {([
+              ["chat", "Chat"],
+              ["overview", "About"],
+              ["review", `Tasks ${pendingApprovals.length || ""}`],
+              ["outputs", `Outputs ${artifacts.length || ""}`],
+              ["activity", "Activity"],
+              ["control", "Control"],
+            ] as Array<[InspectorTab, string]>).map(([id, label]) => (
+              <button key={id} type="button" data-active={inspectorTab === id} onClick={() => setInspectorTab(id)}>
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          {inspectorTab === "chat" ? (
+          <>
           <div className="operator-thread-controls" data-open={shiftTapeOpen}>
             <button
               type="button"
@@ -716,7 +723,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                         <button type="button" onClick={() => decideApproval(approval.id, "rejected")} disabled={Boolean(decisionLoading)}>
                           {decisionLoading === `${approval.id}:rejected` ? "…" : "Not this"}
                         </button>
-                        <button type="button" onClick={() => setInspectorOpen(true)}>Read it ↗</button>
+                        <button type="button" onClick={() => setInspectorTab("review")}>Read it ↗</button>
                         <code>{heldFor(approval.requested_at)}</code>
                       </div>
                     </div>
@@ -828,32 +835,9 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
             </details>
             {error ? <p className="ledger-composer-error" role="alert">{error}</p> : null}
           </div>
-        </div>
-
-        {inspectorOpen ? <button type="button" className="operator-inspector-scrim" onClick={() => setInspectorOpen(false)} aria-label="Close coworker details" /> : null}
-        <aside className="operator-chat-inspector operator-inspector-drawer" data-open={inspectorOpen} aria-hidden={!inspectorOpen}>
-          <header className="operator-inspector-drawer-header">
-            <div>
-              <strong>Coworker details</strong>
-              <span>{props.operator.approval_mode.replace("_", " ")} approval mode</span>
-            </div>
-            <button type="button" onClick={() => setInspectorOpen(false)} aria-label="Close coworker details" title="Close">
-              <X aria-hidden="true" />
-            </button>
-          </header>
-          <nav aria-label="Coworker details">
-            {([
-              ["overview", "Overview"],
-              ["review", `Tasks ${pendingApprovals.length || ""}`],
-              ["outputs", `Outputs ${artifacts.length || ""}`],
-              ["activity", "Activity"],
-              ["control", "Control"],
-            ] as Array<[InspectorTab, string]>).map(([id, label]) => (
-              <button key={id} type="button" data-active={inspectorTab === id} onClick={() => setInspectorTab(id)}>{label}</button>
-            ))}
-          </nav>
-
-          <div className="operator-inspector-scroll">
+          </>
+          ) : (
+          <div className="operator-inspector-scroll operator-inspector-panel">
             {inspectorTab === "overview" ? (
               <>
                 <CurrentWorkCard runs={props.recentRuns} operatorName={operatorName} onOpenControl={() => setInspectorTab("control")} />
@@ -1051,7 +1035,8 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
               </>
             ) : null}
           </div>
-        </aside>
+          )}
+        </div>
       </div>
 
       {activeArtifact ? <ArtifactPreviewModal artifact={activeArtifact} onClose={() => setActiveArtifact(null)} /> : null}
