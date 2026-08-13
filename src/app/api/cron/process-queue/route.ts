@@ -26,7 +26,25 @@ export async function GET(req: NextRequest) {
   // founder re-set both values to what looked like the same string.
   const presentedSecret = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
   if (!expectedSecret || !presentedSecret || presentedSecret !== expectedSecret) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Diagnostic-only, no secret values ever included: this endpoint kept
+    // 401ing even after the founder confirmed both dashboards held the
+    // "same" value and redeployed - lengths/prefix-shape are enough to
+    // tell whether CRON_SECRET is even set on this deployment vs the two
+    // values genuinely differing, without exposing either secret. Remove
+    // once the real cause is found; not meant to be permanent.
+    return NextResponse.json(
+      {
+        error: "Unauthorized",
+        diagnostic: {
+          vercelSecretConfigured: Boolean(expectedSecret),
+          vercelSecretLength: expectedSecret?.length ?? 0,
+          headerPresented: Boolean(authHeader),
+          headerLooksBearerShaped: Boolean(authHeader?.startsWith("Bearer ")),
+          presentedSecretLength: presentedSecret?.length ?? 0,
+        },
+      },
+      { status: 401 },
+    );
   }
 
   const summary = await runFullSchedulerPass({ generateBriefings: true });
