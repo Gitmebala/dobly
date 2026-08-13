@@ -34,9 +34,6 @@ jobs:
             echo "DOBLY_CRON_SECRET is not set - add it as a repo secret to activate this heartbeat. Skipping."
             exit 0
           fi
-          # Temporary, safe (length only, never the value) diagnostic while
-          # tracking down a persistent 401 - remove once resolved.
-          echo "DOBLY_CRON_SECRET length: ${#DOBLY_CRON_SECRET}"
           status=$(curl -s -o /tmp/response.json -w "%{http_code}" \
             -H "Authorization: Bearer $DOBLY_CRON_SECRET" \
             "${{ vars.DOBLY_APP_URL || 'https://dobly-dev.vercel.app' }}/api/cron/process-queue")

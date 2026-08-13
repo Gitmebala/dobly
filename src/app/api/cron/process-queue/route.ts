@@ -1,12 +1,5 @@
-import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { runFullSchedulerPass } from "@/lib/runtime/scheduler";
-
-// Safe (non-reversible, first 12 hex chars only) fingerprint - lets us
-// confirm two secrets are the same value without ever exposing either one.
-function fingerprint(value: string) {
-  return createHash("sha256").update(value).digest("hex").slice(0, 12);
-}
 
 /**
  * The one daily heartbeat this deployment has (Vercel Hobby allows a single
@@ -20,40 +13,26 @@ function fingerprint(value: string) {
  * scheduler route (this one, or /api/internal/scheduler) on a schedule.
  *
  * Vercel Cron sends `Authorization: Bearer $CRON_SECRET` automatically for
- * jobs defined in vercel.json.
+ * jobs defined in vercel.json. The GitHub Actions heartbeat
+ * (.github/workflows/scheduler-heartbeat.yml) sends the same header shape
+ * with DOBLY_CRON_SECRET, which must equal this deployment's CRON_SECRET.
+ *
+ * Real root cause of every 401 this route ever returned to that heartbeat:
+ * NOT a secret mismatch (confirmed matching via fingerprint comparison) -
+ * this route was never listed in middleware.ts's publicApiPrefixes, so the
+ * global middleware tried to validate the CRON_SECRET bearer token as a
+ * Supabase session JWT (which it will never be) and 401'd every request
+ * before it ever reached this handler. Fixed by adding "/api/cron" to that
+ * list - this route's own secret check below is the real auth for it.
  */
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   const expectedSecret = process.env.CRON_SECRET?.trim();
-  // Trimmed on both sides deliberately: a trailing newline is the single
-  // most common way a copy-pasted secret silently differs between two
-  // dashboards (e.g. `openssl rand -hex 32 > file` leaves one, then the
-  // GitHub Actions secret embeds it literally into the Authorization
-  // header via string interpolation) - confirmed live 401s even after the
-  // founder re-set both values to what looked like the same string.
+  // Trimmed on both sides: a trailing newline is the single most common way
+  // a copy-pasted secret silently differs between two dashboards.
   const presentedSecret = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
   if (!expectedSecret || !presentedSecret || presentedSecret !== expectedSecret) {
-    // Diagnostic-only, no secret values ever included: this endpoint kept
-    // 401ing even after the founder confirmed both dashboards held the
-    // "same" value and redeployed - lengths/prefix-shape are enough to
-    // tell whether CRON_SECRET is even set on this deployment vs the two
-    // values genuinely differing, without exposing either secret. Remove
-    // once the real cause is found; not meant to be permanent.
-    return NextResponse.json(
-      {
-        error: "Unauthorized",
-        diagnostic: {
-          vercelSecretConfigured: Boolean(expectedSecret),
-          vercelSecretLength: expectedSecret?.length ?? 0,
-          vercelSecretFingerprint: expectedSecret ? fingerprint(expectedSecret) : null,
-          headerPresented: Boolean(authHeader),
-          headerLooksBearerShaped: Boolean(authHeader?.startsWith("Bearer ")),
-          presentedSecretLength: presentedSecret?.length ?? 0,
-          presentedSecretFingerprint: presentedSecret ? fingerprint(presentedSecret) : null,
-        },
-      },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const summary = await runFullSchedulerPass({ generateBriefings: true });
