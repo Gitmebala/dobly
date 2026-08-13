@@ -128,12 +128,19 @@ export default async function HealthPage() {
           </div>
         ) : (
           healthRows.map((row) => (
-            <Link
-              key={row.operator.id}
-              href={`/dashboard/coworkers?operatorId=${row.operator.id}`}
-              className="card-hover block"
-            >
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            // "Reconnect: X" used to be inert text inside the row's own link -
+            // you had to already know to go find the connection yourself.
+            // Nesting a real link inside another isn't valid HTML, so the
+            // row's link is a stretched overlay (position:absolute, sits
+            // behind everything) instead of literally wrapping the content -
+            // the reconnect badge sits above it and gets its own click.
+            <div key={row.operator.id} className="card-hover relative block">
+              <Link
+                href={`/dashboard/coworkers?operatorId=${row.operator.id}`}
+                className="stretched-link"
+                aria-label={`Open ${row.operator.name}`}
+              />
+              <div className="relative flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="font-display text-base font-semibold text-text">{row.operator.name}</div>
                   <p className="mt-1 text-xs leading-4 text-text-muted">{row.operator.mission}</p>
@@ -144,16 +151,21 @@ export default async function HealthPage() {
                       <span className="badge-muted text-xs">{row.pendingApprovals} pending</span>
                     ) : null}
                     {row.atRiskProviders.length > 0 ? (
-                      <span className="badge-muted text-xs">Reconnect: {row.atRiskProviders.map(humanizeToolId).join(", ")}</span>
+                      <Link
+                        href="/dashboard/connections"
+                        className="badge-muted text-xs relative z-10 hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                      >
+                        Reconnect: {row.atRiskProviders.map(humanizeToolId).join(", ")}
+                      </Link>
                     ) : null}
                   </div>
                 </div>
-                <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${row.tone}`}>
+                <div className={`relative z-10 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${row.tone}`}>
                   <row.Icon className="h-3 w-3" />
                   {row.label}
                 </div>
               </div>
-            </Link>
+            </div>
           ))
         )}
       </section>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import {
   CheckCircle2,
@@ -185,11 +186,19 @@ export default function BusinessChannelsClient({
                   ))}
                 </select>
                 <p className="mt-2 text-xs text-[var(--dobly-text-muted)]">
-                  {operatorId
-                    ? "Messages here will show up in this coworker's chat."
-                    : operators.length === 0
-                      ? "Hire a coworker first if you want this channel to reach one by name."
-                      : "Without a coworker, this lands in the general office inbox instead of a specific coworker's chat."}
+                  {operatorId ? (
+                    "Messages here will show up in this coworker's chat."
+                  ) : operators.length === 0 ? (
+                    <>
+                      No coworkers yet —{" "}
+                      <Link href="/dashboard/coworkers?create=true" className="text-[var(--dobly-accent)] underline underline-offset-2">
+                        hire one
+                      </Link>{" "}
+                      if you want this channel to reach one by name.
+                    </>
+                  ) : (
+                    "Without a coworker, this lands in the general office inbox instead of a specific coworker's chat."
+                  )}
                 </p>
               </div>
             ) : null}

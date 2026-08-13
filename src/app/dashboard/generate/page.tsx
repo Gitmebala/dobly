@@ -331,12 +331,25 @@ export default function GeneratePage() {
                     <span className="text-text">Best fit:</span>{" "}
                     {detectedVertical?.title ?? "Still broad until the brief is clearer."}
                   </p>
-                  <p>
+                  <div>
                     <span className="text-text">Likely needs:</span>{" "}
-                    {analysis.suggestedProviderIds.length > 0
-                      ? analysis.suggestedProviderIds.map((id) => getConnectionProvider(id)?.label ?? id).join(", ")
-                      : "Nothing yet"}
-                  </p>
+                    {analysis.suggestedProviderIds.length > 0 ? (
+                      <span className="mt-1 inline-flex flex-wrap gap-1.5 align-middle">
+                        {analysis.suggestedProviderIds.map((id) => (
+                          <Link
+                            key={id}
+                            href={`/dashboard/connect/${id}`}
+                            className="inline-flex items-center gap-1 rounded-full border border-[var(--dobly-accent)]/30 bg-[var(--dobly-accent)]/10 px-2.5 py-0.5 text-xs text-[var(--dobly-accent)] transition hover:border-[var(--dobly-accent)]/60"
+                          >
+                            {getConnectionProvider(id)?.label ?? id}
+                            <Link2 className="h-3 w-3" />
+                          </Link>
+                        ))}
+                      </span>
+                    ) : (
+                      "Nothing yet"
+                    )}
+                  </div>
                   <p>
                     <span className="text-text">First guardrail:</span>{" "}
                     {capabilityContract?.mandatoryEscalations[0] ?? "Ask on ambiguity or missing access."}

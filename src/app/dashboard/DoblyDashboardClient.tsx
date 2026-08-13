@@ -83,7 +83,7 @@ type Snapshot = {
   };
   recommendations: { title: string }[];
   businessMemory: string[];
-  whatNeedsAttention: string[];
+  whatNeedsAttention: { text: string; href: string }[];
 };
 
 const MATERIALS = ["paper", "clay", "stone", "slate"] as const;
@@ -190,7 +190,8 @@ export default function DoblyDashboardClient({
       return { text: snapshot.recommendations[0].title, href: "/dashboard/coworkers", cta: "View plan" };
     }
     if (snapshot.whatNeedsAttention.length) {
-      return { text: snapshot.whatNeedsAttention[0], href: "/dashboard/tasks", cta: "Take a look" };
+      const top = snapshot.whatNeedsAttention[0];
+      return { text: top.text, href: top.href, cta: "Take a look" };
     }
     return null;
   }, [setupComplete, latestApprovals, snapshot]);
@@ -341,7 +342,11 @@ export default function DoblyDashboardClient({
           <h4>Today's focus</h4>
           {focusItems.length ? (
             <ul>
-              {focusItems.map((item) => <li key={item}>{item}</li>)}
+              {focusItems.map((item) => (
+                <li key={item.text}>
+                  <Link href={item.href}>{item.text}</Link>
+                </li>
+              ))}
             </ul>
           ) : (
             <ul><li>Nothing urgent — pick something above.</li></ul>

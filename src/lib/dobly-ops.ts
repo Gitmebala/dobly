@@ -22,6 +22,16 @@ export interface DoblyWorkspaceRecommendation {
   cta: string;
 }
 
+// Each "needs attention" item used to be a bare string - "1 connection
+// need reconnecting" rendered as dead text with nowhere to click, so
+// fixing it meant already knowing to go find /dashboard/connections
+// yourself. A real href per item so the exact thing flagged is one
+// click from being fixed, not just named.
+export interface DoblyAttentionItem {
+  text: string;
+  href: string;
+}
+
 export interface DoblyWorkspaceSnapshot {
   workspaceLabel: string;
   corePromise: string;
@@ -39,7 +49,7 @@ export interface DoblyWorkspaceSnapshot {
     changedRecently: number;
     timeSavedHours: number;
   };
-  whatNeedsAttention: string[];
+  whatNeedsAttention: DoblyAttentionItem[];
   recommendations: DoblyWorkspaceRecommendation[];
 }
 
@@ -245,18 +255,27 @@ export function buildDoblyWorkspaceSnapshot(params: {
   });
   const policySummary = buildPolicies(businessProfile, profile?.notification_preference, approvals);
 
-  const whatNeedsAttention: string[] = [];
+  const whatNeedsAttention: DoblyAttentionItem[] = [];
   if (waitingApprovals > 0) {
-    whatNeedsAttention.push(`${waitingApprovals} workflow decision${waitingApprovals === 1 ? "" : "s"} waiting on approval.`);
+    whatNeedsAttention.push({
+      text: `${waitingApprovals} workflow decision${waitingApprovals === 1 ? "" : "s"} waiting on approval.`,
+      href: "/dashboard/approvals",
+    });
   }
   if (failedToday > 0) {
-    whatNeedsAttention.push(`${failedToday} run${failedToday === 1 ? "" : "s"} failed today and need review.`);
+    whatNeedsAttention.push({
+      text: `${failedToday} run${failedToday === 1 ? "" : "s"} failed today and need review.`,
+      href: "/dashboard/health",
+    });
   }
   if (reconnectNeeded > 0) {
-    whatNeedsAttention.push(`${reconnectNeeded} connection${reconnectNeeded === 1 ? "" : "s"} need reconnecting.`);
+    whatNeedsAttention.push({
+      text: `${reconnectNeeded} connection${reconnectNeeded === 1 ? "" : "s"} need reconnecting.`,
+      href: "/dashboard/connections",
+    });
   }
   if (whatNeedsAttention.length === 0) {
-    whatNeedsAttention.push("No urgent operator intervention is needed right now.");
+    whatNeedsAttention.push({ text: "Nothing urgent right now.", href: "/dashboard/health" });
   }
 
   const recommendations: DoblyWorkspaceRecommendation[] = [];

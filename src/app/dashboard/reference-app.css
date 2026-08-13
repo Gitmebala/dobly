@@ -11536,3 +11536,37 @@ html, body {
 .channel-flow-row[data-who="dobly"] p {
   color: var(--app-muted);
 }
+
+/* ── Stretched-link card. Founder's real ask: any "needs X connection"
+   text should be clickable straight to that fix, not dead text you
+   have to already know where to act on - and the surrounding pattern
+   (a whole card as one link) meant a real fix link couldn't just be
+   nested inside it - two <a> tags can't nest in valid HTML. This is
+   the reusable fix: the card itself stays a plain element with
+   position:relative, a full-bleed invisible link sits behind
+   everything as the default "open this" target, and any real escape-
+   hatch link/button (reconnect, fix this, etc) sits above it with its
+   own z-index and gets its own click. Use this pattern anywhere else
+   the same "card is one big link, but one line inside it needs a
+   different destination" shape shows up. */
+.card-hover {
+  position: relative;
+}
+.stretched-link {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* "Today's focus" items are now real links to the exact page that
+   fixes each one (connections, approvals, health) instead of dead
+   text - keep the sticky-note's handwritten look, just underline on
+   hover so it still reads as clickable. */
+.sticky-note li a {
+  color: inherit;
+  text-decoration: none;
+}
+.sticky-note li a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

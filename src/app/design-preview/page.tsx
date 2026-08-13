@@ -42,9 +42,9 @@ const mockSnapshot = {
   recommendations: [{ title: "Teach Maya your delivery pricing — she's asked twice this week." }],
   businessMemory: [],
   whatNeedsAttention: [
-    "Approve Maya's batch WhatsApp reply",
-    "Reconnect Gmail for Alex — token expiring soon",
-    "Review Nia's competitor report draft",
+    { text: "Approve Maya's batch WhatsApp reply", href: "/dashboard/approvals" },
+    { text: "Reconnect Gmail for Alex — token expiring soon", href: "/dashboard/connections" },
+    { text: "Review Nia's competitor report draft", href: "/dashboard/health" },
   ],
 };
 
