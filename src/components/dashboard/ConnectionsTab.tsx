@@ -152,7 +152,7 @@ export default function ConnectionsTab({
             return (
               <div
                 key={connection.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-[rgba(255,255,255,0.02)] px-3 py-2.5"
+                className="reports-tile reports-tile-sm flex items-center justify-between gap-3"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">

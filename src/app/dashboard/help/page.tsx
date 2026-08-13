@@ -142,7 +142,7 @@ export default async function HelpPage() {
               <Link
                 key={resource.href}
                 href={resource.href}
-                className="flex items-center justify-between rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-3 text-sm text-text-muted transition-all hover:border-border-bright hover:text-text"
+                className="flex items-center justify-between rounded-[1rem] border border-border bg-surface px-4 py-3 text-sm text-text-muted transition-all hover:border-border-bright hover:text-text"
               >
                 <span>{resource.label}</span>
                 <Sparkles className="h-4 w-4 text-accent" />

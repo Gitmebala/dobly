@@ -11361,3 +11361,47 @@ html, body {
   transform: translateY(-2px) !important;
   box-shadow: 0 16px 40px rgba(53, 37, 26, .14) !important;
 }
+
+/* ── Activity/Search text sizing. Founder: "writings too small,
+   design bad." Both pages built their secondary copy at 10-11px -
+   below comfortable reading size at this line length. Bumping every
+   undersized label/body value on these two surfaces; layout and
+   spacing are untouched, this is type scale only. */
+.activity-summary-item span { font-size: 12px; }
+.activity-summary-item small { font-size: 13px; }
+.activity-event-copy strong { font-size: 13.5px; }
+.activity-event-copy small,
+.activity-event time { font-size: 12.5px; }
+.activity-source-list strong { font-size: 12px; }
+.activity-source-list small { font-size: 12.5px; }
+.activity-guide p { font-size: 12.5px; line-height: 1.6; }
+.ref-search-result small { font-size: 12px; }
+.ref-plan-features span { font-size: 12.5px; }
+.ref-pill { font-size: 11px; }
+
+/* ── App-wide ghost-surface fix. Same bug already fixed one-by-one on
+   Reports/Analytics/Connections/Help, caught here for the rest in one
+   place instead of 40+ separate call sites: Generate, Setup wizard,
+   Business channels, Admin, Usage, Notifications, Custom-tool-access,
+   and Provider-connect all built tiles with a near-transparent white
+   or cream background (rgba(...,0.02-0.06)) and a near-transparent
+   cream border (rgba(242,232,220 / 245,237,228, 0.07-0.1)) - both
+   assume a dark background this app never actually has, so they read
+   as blank rectangles on the real light cream theme. `~=` matches the
+   exact static Tailwind class token only, so hover: variants of the
+   same value are untouched. */
+[class~="bg-[rgba(255,255,255,0.02)]"],
+[class~="bg-[rgba(255,255,255,0.025)]"],
+[class~="bg-[rgba(255,255,255,0.03)]"],
+[class~="bg-[rgba(255,255,255,0.035)]"],
+[class~="bg-[rgba(255,255,255,0.04)]"],
+[class~="bg-[rgba(255,255,255,0.06)]"],
+[class~="bg-[rgba(242,232,220,0.025)]"] {
+  background: var(--app-paper-2) !important;
+}
+[class~="border-[rgba(255,255,255,0.08)]"],
+[class~="border-[rgba(242,232,220,0.08)]"],
+[class~="border-[rgba(242,232,220,0.07)]"],
+[class~="border-[rgba(245,237,228,0.1)]"] {
+  border-color: var(--app-line) !important;
+}
