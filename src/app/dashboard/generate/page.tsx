@@ -235,7 +235,7 @@ export default function GeneratePage() {
             <div className="p-5 sm:p-8">
               <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(196,80,26,0.22)] bg-[rgba(196,80,26,0.08)] px-3 py-1 text-xs font-medium text-[var(--dobly-accent)]">
                 <Wand2 className="h-3.5 w-3.5" />
-                Company operating system planner
+                Plan a new system
               </div>
               <h1 className="mt-5 max-w-2xl font-display text-4xl font-semibold leading-tight text-text sm:text-5xl">
                 Describe the outcome like you would brief your company.
@@ -255,7 +255,7 @@ export default function GeneratePage() {
                     <ChatBubble
                       role="assistant"
                       title="Workspace memory in use"
-                      body={`${businessSummary}. I use this as context, not as permission to guess.`}
+                      body={`${businessSummary.trim().replace(/[.!?]+$/, "")}. I use this as context, not as permission to guess.`}
                     />
                   ) : null}
                   {prompt.trim() ? (
@@ -332,8 +332,10 @@ export default function GeneratePage() {
                     {detectedVertical?.title ?? "Still broad until the brief is clearer."}
                   </p>
                   <p>
-                    <span className="text-text">Systems likely needed:</span>{" "}
-                    {analysis.suggestedProviderIds.length > 0 ? analysis.suggestedProviderIds.join(", ") : "None yet"}
+                    <span className="text-text">Likely needs:</span>{" "}
+                    {analysis.suggestedProviderIds.length > 0
+                      ? analysis.suggestedProviderIds.map((id) => getConnectionProvider(id)?.label ?? id).join(", ")
+                      : "Nothing yet"}
                   </p>
                   <p>
                     <span className="text-text">First guardrail:</span>{" "}
