@@ -11473,3 +11473,66 @@ html, body {
   background: var(--app-line-strong);
   color: var(--app-muted);
 }
+
+/* ── Channels page: one connected flow instead of two spec-style
+   cards ("what the user does" / "what Dobly does" side by side read
+   like an internal responsibility matrix, founder: "talking to me
+   instead of the user...this is the real Dobly app"). A left rail
+   with a small colored tag per turn, no per-row card chrome - reads
+   as one continuous process, not a comparison table. */
+.channel-flow {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-left: 18px;
+}
+.channel-flow::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 5px;
+  width: 1px;
+  background: var(--app-line);
+}
+.channel-flow-row {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.channel-flow-row::before {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--app-rust);
+}
+.channel-flow-row[data-who="dobly"]::before {
+  background: color-mix(in srgb, #5eb8ff 70%, var(--app-paper));
+}
+.channel-flow-tag {
+  flex: 0 0 auto;
+  min-width: 42px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-rust-dark);
+}
+.channel-flow-row[data-who="dobly"] .channel-flow-tag {
+  color: color-mix(in srgb, #2b8ae0 82%, var(--app-text));
+}
+.channel-flow-row p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--app-text);
+}
+.channel-flow-row[data-who="dobly"] p {
+  color: var(--app-muted);
+}

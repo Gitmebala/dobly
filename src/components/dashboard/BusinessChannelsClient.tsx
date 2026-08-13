@@ -92,14 +92,13 @@ export default function BusinessChannelsClient({
       <section className="card h-fit">
         <div className="badge-muted text-xs">
           <Sparkles className="h-3.5 w-3.5" />
-          Business ecosystem
+          Channels
         </div>
         <h2 className="mt-4 font-display text-2xl tracking-[-0.04em] text-[var(--dobly-text)]">
-          Connect the channels Dobly will operate through.
+          Pick one to connect.
         </h2>
         <p className="mt-3 text-sm leading-7 text-[var(--dobly-text-secondary)]">
-          The user sees connect, verify, test, activate. Dobly handles routing, webhooks, permissions, compliance,
-          memory, and department worker setup underneath.
+          Connect, verify, send a test, then it's live. Everything else happens on its own.
         </p>
 
         <div className="mt-5 space-y-2">
@@ -224,39 +223,34 @@ export default function BusinessChannelsClient({
             </div>
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-2">
-            <ProcessCard title="What the user does" steps={activeChannel.userSteps} />
-            <ProcessCard title="What Dobly does" steps={activeChannel.doblySteps} dobly />
-          </div>
+          <ChannelFlow userSteps={activeChannel.userSteps} doblySteps={activeChannel.doblySteps} />
         </section>
       ) : null}
     </div>
   );
 }
 
-function ProcessCard({
-  title,
-  steps,
-  dobly = false,
-}: {
-  title: string;
-  steps: string[];
-  dobly?: boolean;
-}) {
+/* A single connected flow instead of two side-by-side "what the user
+   does / what Dobly does" spec cards - that split read like an internal
+   responsibility matrix, not something a real user needed to see broken
+   out. This interleaves the same two step lists into one back-and-forth
+   ("you do this, Dobly handles that") the way the setup actually
+   happens, tagged inline rather than duplicated into a parallel column. */
+function ChannelFlow({ userSteps, doblySteps }: { userSteps: string[]; doblySteps: string[] }) {
+  const rows: Array<{ who: "you" | "dobly"; text: string }> = [];
+  const max = Math.max(userSteps.length, doblySteps.length);
+  for (let index = 0; index < max; index += 1) {
+    if (userSteps[index]) rows.push({ who: "you", text: userSteps[index] });
+    if (doblySteps[index]) rows.push({ who: "dobly", text: doblySteps[index] });
+  }
   return (
     <div className="card">
-      <h2 className="font-display text-xl text-[var(--dobly-text)]">{title}</h2>
-      <div className="mt-4 space-y-3">
-        {steps.map((step, index) => (
-          <div key={step} className="flex gap-3 rounded-2xl border border-[rgba(242,232,220,0.07)] bg-[rgba(255,255,255,0.025)] p-3">
-            <span
-              className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold ${
-                dobly ? "bg-[rgba(94,184,255,0.12)] text-[rgb(94,184,255)]" : "bg-[rgba(196,80,26,0.13)] text-[var(--dobly-accent)]"
-              }`}
-            >
-              {index + 1}
-            </span>
-            <p className="text-sm leading-6 text-[var(--dobly-text-secondary)]">{step}</p>
+      <h2 className="font-display text-xl text-[var(--dobly-text)]">How this connects</h2>
+      <div className="mt-4 channel-flow">
+        {rows.map((row, index) => (
+          <div key={index} className="channel-flow-row" data-who={row.who}>
+            <span className="channel-flow-tag">{row.who === "you" ? "You" : "Dobly"}</span>
+            <p>{row.text}</p>
           </div>
         ))}
       </div>

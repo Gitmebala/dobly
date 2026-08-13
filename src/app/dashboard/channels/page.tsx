@@ -16,12 +16,11 @@ export default async function BusinessChannelsPage() {
       <section className="card">
         <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--dobly-text-dim)]">Business Channels</div>
         <h1 className="mt-2 font-display text-4xl tracking-[-0.06em] text-[var(--dobly-text)]">
-          Connect the real channels your departments will use.
+          Connect where your business already talks.
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--dobly-text-secondary)]">
-          Dobly is not asking users to understand APIs. They connect their business phone, texts, WhatsApp, email,
-          calendar, CRM, and content stack. Dobly turns those channels into department workers with memory,
-          approvals, and reporting.
+          Phone, texts, WhatsApp, email, calendar, CRM, content — connect the ones you use. No API keys to
+          understand, no setup docs to read.
         </p>
       </section>
 
