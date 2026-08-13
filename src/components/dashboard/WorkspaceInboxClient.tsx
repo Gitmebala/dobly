@@ -145,8 +145,8 @@ export default function WorkspaceInboxClient({ initialItems }: { initialItems: I
           </section>
           <section className="ref-card ref-panel inbox-philosophy">
             <Inbox />
-            <strong>Messy input is allowed</strong>
-            <p>The inbox should lower the cost of remembering something. Structure comes after capture, not before it.</p>
+            <strong>Drop it here, sort it later</strong>
+            <p>Half-formed notes are fine. Route each one when you're ready.</p>
           </section>
         </aside>
       </div>

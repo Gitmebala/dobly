@@ -73,8 +73,7 @@ export default async function HelpPage() {
               Clear paths when you need a human or a fix
             </h1>
             <p className="mt-3 max-w-2xl text-base leading-7 text-text-muted">
-              Dobly should stay simple when things are going well and stay understandable when they are not.
-              Use this page to get back to the right workflow, account, or support surface quickly.
+              Get back to the right workflow, account, or support surface quickly.
             </p>
           </div>
           <div className="badge-green">

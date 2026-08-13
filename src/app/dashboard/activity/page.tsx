@@ -149,8 +149,8 @@ export default async function ActivityPage() {
           </section>
           <section className="ref-card ref-panel activity-calm">
             <CheckCircle2 />
-            <strong>History stays inspectable</strong>
-            <p>Dobly should never make the business feel like a black box.</p>
+            <strong>Nothing happens invisibly</strong>
+            <p>Every change here is one you can trace back to its source.</p>
           </section>
         </aside>
       </div>

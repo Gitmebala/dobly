@@ -97,7 +97,7 @@ export default async function NotificationsPage() {
               Signals worth surfacing
             </h1>
             <p className="mt-3 max-w-2xl text-base leading-7 text-text-muted">
-              Dobly should stay quiet until the next action changes.
+              What actually needs your attention right now.
             </p>
           </div>
           <div className="badge-green capitalize">{preference} first</div>
