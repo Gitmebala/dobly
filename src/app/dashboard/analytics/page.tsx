@@ -52,11 +52,11 @@ export default async function AnalyticsPage() {
       <section className="card">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--dobly-text-dim)]">Analytics</div>
-            <h1 className="mt-2 font-display text-3xl tracking-[-0.04em] text-[var(--dobly-text)]">
+            <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--app-muted)]">Analytics</div>
+            <h1 className="mt-2 font-display text-3xl tracking-[-0.04em] text-[var(--app-text)]">
               Live business analytics
             </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--dobly-text-secondary)]">
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--app-muted)]">
               Real throughput, pressure, approvals, reliability, and signal volume across the operating system.
             </p>
           </div>
@@ -81,21 +81,21 @@ export default async function AnalyticsPage() {
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div className="card">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">Department pressure</div>
-          <h2 className="mt-2 font-display text-2xl text-[var(--dobly-text)]">Where the system is under load</h2>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--app-muted)]">Department pressure</div>
+          <h2 className="mt-2 font-display text-2xl text-[var(--app-text)]">Where the system is under load</h2>
           <div className="mt-4 space-y-3">
             {topRooms.map((room) => (
-              <div key={room.id} className="rounded-[1.1rem] border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
+              <div key={room.id} className="reports-tile">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="text-sm font-medium text-[var(--dobly-text)]">{room.name}</div>
+                  <div className="text-sm font-medium text-[var(--app-text)]">{room.name}</div>
                   <span className="badge-muted text-xs">{room.status.replace("_", " ")}</span>
                 </div>
-                <div className="mt-2 text-xs text-[var(--dobly-text-secondary)]">
+                <div className="mt-2 text-xs text-[var(--app-muted)]">
                   {room.activeWorkers} coworkers · {room.openTasks} open tasks · {room.approvalCount} waiting approvals · {room.operatingRecordCount} records
                 </div>
-                <div className="mt-3 h-2 rounded-full bg-[rgba(255,255,255,0.06)]">
+                <div className="mt-3 h-2 rounded-full bg-[var(--app-line)]">
                   <div
-                    className="h-2 rounded-full bg-[var(--dobly-accent)]"
+                    className="h-2 rounded-full bg-[var(--app-rust)]"
                     style={{ width: `${Math.min(100, room.openTasks * 8 + room.approvalCount * 12 + room.urgentRecordCount * 14)}%` }}
                   />
                 </div>
@@ -105,16 +105,16 @@ export default async function AnalyticsPage() {
         </div>
 
         <div className="card">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">Signal mix</div>
-          <h2 className="mt-2 font-display text-2xl text-[var(--dobly-text)]">What Dobly is noticing most</h2>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--app-muted)]">Signal mix</div>
+          <h2 className="mt-2 font-display text-2xl text-[var(--app-text)]">What Dobly is noticing most</h2>
           <div className="mt-4 space-y-3">
             {Object.entries(executive.signalSummary.byType).length > 0 ? (
               Object.entries(executive.signalSummary.byType)
                 .sort((left, right) => right[1] - left[1])
                 .map(([key, value]) => (
-                  <div key={key} className="rounded-[1.1rem] border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
+                  <div key={key} className="reports-tile">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="text-sm font-medium text-[var(--dobly-text)]">{key.replaceAll("_", " ")}</div>
+                      <div className="text-sm font-medium text-[var(--app-text)]">{key.replaceAll("_", " ")}</div>
                       <span className="badge-muted text-xs">{value}</span>
                     </div>
                   </div>
@@ -128,25 +128,25 @@ export default async function AnalyticsPage() {
 
       <section className="grid gap-6 xl:grid-cols-3">
         <div className="card">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">Approvals</div>
-          <h2 className="mt-2 font-display text-2xl text-[var(--dobly-text)]">Decision drag</h2>
-          <p className="mt-4 text-sm leading-7 text-[var(--dobly-text-secondary)]">
+          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--app-muted)]">Approvals</div>
+          <h2 className="mt-2 font-display text-2xl text-[var(--app-text)]">Decision drag</h2>
+          <p className="mt-4 text-sm leading-7 text-[var(--app-muted)]">
             Average approval age is {executive.approvalSummary.avgAgeHours.toFixed(1)} hours. Stale approvals are often the easiest bottleneck to remove.
           </p>
         </div>
 
         <div className="card">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">Usage load</div>
-          <h2 className="mt-2 font-display text-2xl text-[var(--dobly-text)]">Runtime pressure</h2>
-          <p className="mt-4 text-sm leading-7 text-[var(--dobly-text-secondary)]">
+          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--app-muted)]">Usage load</div>
+          <h2 className="mt-2 font-display text-2xl text-[var(--app-text)]">Runtime pressure</h2>
+          <p className="mt-4 text-sm leading-7 text-[var(--app-muted)]">
             {executive.costSummary.totalUsageEvents} usage events and {executive.costSummary.estimatedOpsLoad} combined run, task, and usage units were observed in the current analytics window.
           </p>
         </div>
 
         <div className="card">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">Boardroom thesis</div>
-          <h2 className="mt-2 font-display text-2xl text-[var(--dobly-text)]">Strategic reading</h2>
-          <p className="mt-4 text-sm leading-7 text-[var(--dobly-text-secondary)]">
+          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--app-muted)]">Boardroom thesis</div>
+          <h2 className="mt-2 font-display text-2xl text-[var(--app-text)]">Strategic reading</h2>
+          <p className="mt-4 text-sm leading-7 text-[var(--app-muted)]">
             {executive.boardroom.operatingThesis}
           </p>
         </div>
@@ -157,17 +157,17 @@ export default async function AnalyticsPage() {
 
 function Metric({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <div className="rounded-[1.2rem] border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
-      <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--dobly-text-dim)]">{label}</div>
-      <div className="mt-2 font-display text-3xl tracking-[-0.04em] text-[var(--dobly-text)]">{value}</div>
-      <p className="mt-2 text-xs leading-5 text-[var(--dobly-text-secondary)]">{hint}</p>
+    <div className="reports-tile">
+      <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--app-muted)]">{label}</div>
+      <div className="mt-2 font-display text-3xl tracking-[-0.04em] text-[var(--app-text)]">{value}</div>
+      <p className="mt-2 text-xs leading-5 text-[var(--app-muted)]">{hint}</p>
     </div>
   );
 }
 
 function Empty({ copy }: { copy: string }) {
   return (
-    <div className="rounded-[1.1rem] border border-dashed border-[rgba(242,232,220,0.12)] bg-[rgba(255,255,255,0.015)] p-4 text-sm text-[var(--dobly-text-muted)]">
+    <div className="reports-empty">
       {copy}
     </div>
   );

@@ -48,41 +48,51 @@
   --shadcn-popover-foreground: #35251a;
 }
 
+/* Dark mode, real redesign - not a mechanical darken pass. The
+   previous values (--app-bg #35251a, --app-paper #472a18, --app-paper-2
+   #5c3a24) were three near-identical dark browns - almost no lightness
+   separation between "background" and "card surface," which is why it
+   read as a flat, muddy wash with no layering. Founder: "are you
+   serious??" A real dark theme needs its base meaningfully darker than
+   its surfaces (here: near-black warm charcoal vs. a visibly lighter
+   card tone) so elevation actually reads, and the rust accent needs
+   enough brightness to pop against that darker base instead of
+   blending into similarly-saturated browns. */
 html.dark:root,
 html[data-theme="dark"]:root {
-  --app-bg: #35251a;
-  --app-paper: #472a18;
-  --app-paper-2: #5c3a24;
-  --app-text: #efdfcb;
-  --app-muted: #c7b8a0;
-  --app-line: rgba(239, 223, 203, .10);
-  --app-line-strong: rgba(239, 223, 203, .18);
-  --app-rust: #d9622f;
-  --app-rust-dark: #b74513;
+  --app-bg: #17110c;
+  --app-paper: #241a12;
+  --app-paper-2: #33251a;
+  --app-text: #f2e6d5;
+  --app-muted: #a99879;
+  --app-line: rgba(242, 230, 213, .12);
+  --app-line-strong: rgba(242, 230, 213, .22);
+  --app-rust: #e77a42;
+  --app-rust-dark: #c9551f;
   --app-green: #5fbf8a;
-  --app-shadow: 0 16px 44px rgba(0, 0, 0, .4);
-  --app-clay: #d9622f;
-  --app-clay-dark: #b74513;
-  --app-stone: #5c4d3a;
-  --app-stone-text: #efdfcb;
-  --app-slate: #17130f;
-  --app-slate-text: #efdfcb;
-  --app-wood: #241a12;
-  --app-wood-2: #170f0a;
-  --app-wood-text: #f1e6d6;
-  --app-gold: #e0a04a;
-  --app-kraft: #5c4a2f;
-  --app-kraft-text: #efdfcb;
-  --shadcn-primary: #d9622f;
-  --shadcn-primary-foreground: #35251a;
-  --shadcn-secondary: #5c3a24;
-  --shadcn-secondary-foreground: #efdfcb;
-  --shadcn-muted: #35251a;
-  --shadcn-muted-foreground: #c7b8a0;
+  --app-shadow: 0 16px 44px rgba(0, 0, 0, .5);
+  --app-clay: #e77a42;
+  --app-clay-dark: #c9551f;
+  --app-stone: #3a2e20;
+  --app-stone-text: #f2e6d5;
+  --app-slate: #0e0b08;
+  --app-slate-text: #f2e6d5;
+  --app-wood: #120d09;
+  --app-wood-2: #0a0704;
+  --app-wood-text: #f2e6d5;
+  --app-gold: #e5aa52;
+  --app-kraft: #3d2f1c;
+  --app-kraft-text: #f2e6d5;
+  --shadcn-primary: #e77a42;
+  --shadcn-primary-foreground: #17110c;
+  --shadcn-secondary: #33251a;
+  --shadcn-secondary-foreground: #f2e6d5;
+  --shadcn-muted: #17110c;
+  --shadcn-muted-foreground: #a99879;
   --shadcn-destructive: #e05c50;
-  --shadcn-ring: #d9622f;
-  --shadcn-popover: #472a18;
-  --shadcn-popover-foreground: #efdfcb;
+  --shadcn-ring: #e77a42;
+  --shadcn-popover: #241a12;
+  --shadcn-popover-foreground: #f2e6d5;
 }
 
 .dashboard-shell.app-shell {
@@ -466,39 +476,39 @@ html[data-theme="dark"]:root {
 }
 
 html[data-theme="dark"] .dashboard-shell.app-shell {
-  --app-bg: #35251a;
-  --app-paper: #472a18;
-  --app-paper-2: #5c3a24;
-  --app-text: #efdfcb;
-  --app-muted: #c7b8a0;
-  --app-line: rgba(239, 223, 203, .10);
-  --app-line-strong: rgba(239, 223, 203, .18);
-  --app-rust: #d9622f;
-  --app-rust-dark: #b74513;
+  --app-bg: #17110c;
+  --app-paper: #241a12;
+  --app-paper-2: #33251a;
+  --app-text: #f2e6d5;
+  --app-muted: #a99879;
+  --app-line: rgba(242, 230, 213, .12);
+  --app-line-strong: rgba(242, 230, 213, .22);
+  --app-rust: #e77a42;
+  --app-rust-dark: #c9551f;
   --app-green: #5fbf8a;
-  --app-shadow: 0 16px 44px rgba(0, 0, 0, .4);
-  --app-clay: #d9622f;
-  --app-clay-dark: #b74513;
-  --app-stone: #5c4d3a;
-  --app-stone-text: #efdfcb;
-  --app-slate: #17130f;
-  --app-slate-text: #efdfcb;
-  --app-wood: #241a12;
-  --app-wood-2: #170f0a;
-  --app-wood-text: #f1e6d6;
-  --app-gold: #e0a04a;
-  --app-kraft: #5c4a2f;
-  --app-kraft-text: #efdfcb;
-  --shadcn-primary: #d9622f;
-  --shadcn-primary-foreground: #35251a;
-  --shadcn-secondary: #5c3a24;
-  --shadcn-secondary-foreground: #efdfcb;
-  --shadcn-muted: #35251a;
-  --shadcn-muted-foreground: #c7b8a0;
+  --app-shadow: 0 16px 44px rgba(0, 0, 0, .5);
+  --app-clay: #e77a42;
+  --app-clay-dark: #c9551f;
+  --app-stone: #3a2e20;
+  --app-stone-text: #f2e6d5;
+  --app-slate: #0e0b08;
+  --app-slate-text: #f2e6d5;
+  --app-wood: #120d09;
+  --app-wood-2: #0a0704;
+  --app-wood-text: #f2e6d5;
+  --app-gold: #e5aa52;
+  --app-kraft: #3d2f1c;
+  --app-kraft-text: #f2e6d5;
+  --shadcn-primary: #e77a42;
+  --shadcn-primary-foreground: #17110c;
+  --shadcn-secondary: #33251a;
+  --shadcn-secondary-foreground: #f2e6d5;
+  --shadcn-muted: #17110c;
+  --shadcn-muted-foreground: #a99879;
   --shadcn-destructive: #e05c50;
-  --shadcn-ring: #d9622f;
-  --shadcn-popover: #472a18;
-  --shadcn-popover-foreground: #efdfcb;
+  --shadcn-ring: #e77a42;
+  --shadcn-popover: #241a12;
+  --shadcn-popover-foreground: #f2e6d5;
   background: var(--app-bg);
   color-scheme: dark;
 }
@@ -1774,6 +1784,14 @@ html[data-theme="dark"] .ref-onboarding-number { background: rgba(236,82,24,.12)
   --dobly-text: var(--app-text);
   --dobly-text-secondary: color-mix(in srgb, var(--app-text) 72%, var(--app-muted));
   --dobly-text-muted: var(--app-muted);
+  /* --dobly-text-dim was never bridged - every page still using the old
+     legacy --dobly-* system (Analytics/Boardroom reports in particular)
+     had its section labels ("PENDING APPROVALS", "CASH PRESSURE", ...)
+     resolve to an undefined variable, which browsers just drop back to
+     the element's inherited color - on a semi-transparent tile that
+     read as nearly invisible ghost text. Founder: "writings like these,
+     unseen." */
+  --dobly-text-dim: color-mix(in srgb, var(--app-muted) 82%, transparent);
   --dobly-accent: var(--app-rust);
 }
 .dashboard-shell :is(button, a, input, textarea, select):focus-visible {
@@ -3429,22 +3447,28 @@ html.theme-transitioning * {
   --ui-info: var(--app-blue);
 }
 
-/* Same correction for dark: warm charcoal, not green-black. */
+/* Same correction for dark: warm charcoal, not green-black.
+   This is the actual winning definition (true EOF among the three
+   places these tokens got redefined) - the two earlier attempts
+   higher up this file to fix dark mode's flat, muddy contrast were
+   real but didn't matter, because this later block still had the old
+   near-identical-browns values and always wins the cascade. Kept in
+   sync with the same new palette. */
 html[data-theme="dark"] .dashboard-shell.app-shell,
 html.dark .dashboard-shell.app-shell {
-  --app-bg: #35251a;
-  --app-paper: #472a18;
-  --app-paper-2: #5c3a24;
-  --app-text: #efdfcb;
-  --app-muted: #c7b8a0;
-  --app-line: rgba(239, 223, 203, .10);
-  --app-line-strong: rgba(239, 223, 203, .18);
-  --app-rust: #d9622f;
-  --app-rust-dark: #b74513;
+  --app-bg: #17110c;
+  --app-paper: #241a12;
+  --app-paper-2: #33251a;
+  --app-text: #f2e6d5;
+  --app-muted: #a99879;
+  --app-line: rgba(242, 230, 213, .12);
+  --app-line-strong: rgba(242, 230, 213, .22);
+  --app-rust: #e77a42;
+  --app-rust-dark: #c9551f;
   --app-green: #5fbf8a;
   --app-blue: #6f93e0;
-  --app-gold: #d19a4a;
-  --app-shadow: 0 16px 44px rgba(0, 0, 0, .4);
+  --app-gold: #e5aa52;
+  --app-shadow: 0 16px 44px rgba(0, 0, 0, .5);
 }
 
 .dashboard-shell *,
@@ -11231,3 +11255,45 @@ html, body {
 }
 .delete-coworker-dialog-actions button[data-danger]:hover:not(:disabled) { background: #8f321f; }
 .delete-coworker-dialog-actions button[data-danger]:disabled { opacity: .45; cursor: default; }
+
+/* ── Reports/Boardroom page: real fix, not a token patch. This whole
+   page was built with hardcoded rgba(255,255,255,0.02) "elevation"
+   overlays and rgba(242,232,220,0.08) light borders - both are a
+   pattern for subtle surfaces on a DARK background, which is what
+   this page's design assumed. The app's actual theme is the light
+   cream --app-* palette, so every one of these tiles rendered as
+   near-invisible ghost cards - ~2% white on a light cream page is
+   effectively nothing. Founder: "you see whats wrong here?" Real,
+   theme-aware surface classes instead. */
+.reports-tile {
+  padding: 16px;
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  background: var(--app-paper-2);
+}
+.reports-tile-sm { padding: 12px; border-radius: 12px; }
+.reports-code {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  background: var(--app-slate);
+  color: var(--app-slate-text);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+.reports-directive-tile {
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--app-gold) 32%, var(--app-line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--app-gold) 10%, var(--app-paper));
+}
+.reports-empty {
+  padding: 16px;
+  border: 1px dashed var(--app-line-strong);
+  border-radius: 14px;
+  color: var(--app-muted);
+  font-size: 13px;
+}
