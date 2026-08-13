@@ -11570,3 +11570,180 @@ html, body {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* ── Channels page real restructure: status-grouped rows (Connected /
+   In progress / Available) instead of every channel permanently
+   expanded as a card, and the setup form lives in an on-demand
+   slide-over instead of a permanent half-page block. Founder: "plant
+   them like cards on a screen...noooo...think of how to place
+   everything, modals, popovers, dropdowns." */
+.channels-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: 12px;
+  background: var(--app-paper);
+}
+.channels-search-input {
+  flex: 1 1 auto;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: var(--app-text);
+}
+.channels-search-input::placeholder {
+  color: var(--app-muted);
+}
+
+.channel-row-list {
+  display: flex;
+  flex-direction: column;
+}
+.channel-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 4px;
+  border: none;
+  border-top: 1px solid var(--app-line);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.channel-row:first-child {
+  border-top: none;
+}
+.channel-row:hover {
+  background: color-mix(in srgb, var(--app-paper-2) 45%, transparent);
+}
+.channel-row-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--app-rust) 12%, var(--app-paper));
+  color: var(--app-rust-dark);
+}
+.channel-row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.channel-row-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--app-text);
+}
+.channel-row-meta {
+  font-size: 11.5px;
+  color: var(--app-muted);
+}
+.channel-status-green { color: var(--app-green, #3a8f5c); border-color: color-mix(in srgb, #3a8f5c 30%, transparent); }
+.channel-status-amber { color: var(--app-gold, #a8791a); border-color: color-mix(in srgb, #a8791a 30%, transparent); }
+.channel-status-red { color: #b0402c; border-color: rgba(176, 64, 44, 0.3); }
+
+/* Slide-over panel: a scrim + a right-anchored panel, not a page
+   navigation or a permanently-open block - closing it returns you
+   exactly where you were in the status list. */
+.channel-panel-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(23, 17, 12, 0.42);
+  animation: channelScrimIn 0.18s ease;
+}
+@keyframes channelScrimIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.channel-panel {
+  width: min(440px, 100vw);
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  background: var(--app-paper);
+  border-left: 1px solid var(--app-line-strong);
+  box-shadow: -16px 0 40px rgba(23, 17, 12, 0.18);
+  animation: channelPanelIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes channelPanelIn {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.channel-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.channel-panel-close {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--app-line-strong);
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+.channel-panel-close:hover {
+  background: var(--app-paper-2);
+  color: var(--app-text);
+}
+.channel-mode-tile {
+  padding: 10px;
+  border: 1px solid var(--app-line);
+  border-radius: 12px;
+  background: var(--app-paper-2);
+}
+.channel-mode-tile.is-recommended {
+  border-color: color-mix(in srgb, var(--app-rust) 40%, transparent);
+  background: color-mix(in srgb, var(--app-rust) 8%, var(--app-paper-2));
+}
+.channel-panel-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-muted);
+}
+.channel-panel-input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: 10px;
+  background: var(--app-paper-2);
+  color: var(--app-text);
+  font-size: 13.5px;
+  outline: none;
+}
+.channel-panel-how {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--app-line);
+}
+.channel-panel-how summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--app-rust-dark);
+  list-style: none;
+}
+.channel-panel-how summary::-webkit-details-marker {
+  display: none;
+}
