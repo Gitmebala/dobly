@@ -114,7 +114,7 @@ export default async function AdminPage() {
                 <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--dobly-text-dim)]">Watch</div>
                 <div className="mt-2 grid gap-2 md:grid-cols-2">
                   {readiness.watches.map((item) => (
-                    <div key={item.id} className="rounded-2xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.025)] p-3 text-sm">
+                    <div key={item.id} className="rounded-2xl border border-[var(--dobly-border)] bg-[var(--dobly-surface)] p-3 text-sm">
                       <div className="font-medium">{item.label}</div>
                       <p className="mt-1 text-xs text-[var(--dobly-text-muted)]">{item.summary}</p>
                     </div>
@@ -143,7 +143,7 @@ export default async function AdminPage() {
             <h2 className="font-display text-2xl">Plans and margins</h2>
             <div className="mt-4 grid gap-3">
               {DOBLY_PLANS.map((plan) => (
-                <div key={plan.id} className="rounded-2xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+                <div key={plan.id} className="rounded-2xl border border-[var(--dobly-border)] bg-[var(--dobly-surface)] p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="font-display text-xl">{plan.name}</div>
@@ -181,7 +181,7 @@ export default async function AdminPage() {
           <h2 className="font-display text-2xl">Provider funding rails</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {(providerAccounts ?? []).map((provider: any) => (
-              <div key={`${provider.provider}:${provider.market}`} className="rounded-2xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+              <div key={`${provider.provider}:${provider.market}`} className="rounded-2xl border border-[var(--dobly-border)] bg-[var(--dobly-surface)] p-4">
                 <div className="flex items-center justify-between gap-3"><strong>{provider.provider}</strong><span className="badge-muted text-xs">{provider.status}</span></div>
                 <div className="mt-2 text-xs text-[var(--dobly-text-muted)]">{provider.market} · {provider.funding_mode.replaceAll("_", " ")}</div>
                 <div className="mt-3 text-sm">{provider.balance_minor == null ? "Balance reporting not connected" : `KSh ${(Number(provider.balance_minor) / 100).toLocaleString()}`}</div>
@@ -195,7 +195,7 @@ export default async function AdminPage() {
             <h2 className="font-display text-2xl">Recent tasks</h2>
             <div className="mt-4 space-y-3">
               {(recentTasks ?? []).map((task: any) => (
-                <div key={task.id} className="rounded-2xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+                <div key={task.id} className="rounded-2xl border border-[var(--dobly-border)] bg-[var(--dobly-surface)] p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="font-medium">{task.title}</div>
                     <div className="flex gap-2">
@@ -212,7 +212,7 @@ export default async function AdminPage() {
             <h2 className="font-display text-2xl">Recent coworker runs</h2>
             <div className="mt-4 space-y-3">
               {(recentRuns ?? []).map((run: any) => (
-                <div key={run.id} className="rounded-2xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+                <div key={run.id} className="rounded-2xl border border-[var(--dobly-border)] bg-[var(--dobly-surface)] p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-sm text-[var(--dobly-text)]">{run.task ?? "Run"}</div>
                     <span className="badge-muted text-xs">{run.status}</span>
@@ -243,7 +243,7 @@ function AdminLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="block rounded-2xl border border-[rgba(242,232,220,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-3 text-sm text-[var(--dobly-text-secondary)] transition hover:border-[rgba(196,80,26,0.3)]"
+      className="block rounded-2xl border border-[var(--dobly-border)] bg-[var(--dobly-surface)] px-4 py-3 text-sm text-[var(--dobly-text-secondary)] transition hover:border-[rgba(196,80,26,0.3)]"
     >
       {label}
     </Link>
