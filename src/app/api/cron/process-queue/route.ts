@@ -17,7 +17,15 @@ import { runFullSchedulerPass } from "@/lib/runtime/scheduler";
  */
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const expectedSecret = process.env.CRON_SECRET?.trim();
+  // Trimmed on both sides deliberately: a trailing newline is the single
+  // most common way a copy-pasted secret silently differs between two
+  // dashboards (e.g. `openssl rand -hex 32 > file` leaves one, then the
+  // GitHub Actions secret embeds it literally into the Authorization
+  // header via string interpolation) - confirmed live 401s even after the
+  // founder re-set both values to what looked like the same string.
+  const presentedSecret = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
+  if (!expectedSecret || !presentedSecret || presentedSecret !== expectedSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
