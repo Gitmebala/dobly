@@ -11337,3 +11337,27 @@ html, body {
   margin-top: 10px;
   gap: 6px;
 }
+
+/* ── Restoring real depth. An earlier round ("FLATTEN THE EDITION")
+   deliberately stripped shadows and hover elevation from every card
+   surface app-wide, on the theory that hierarchy should come from
+   type and hairlines alone. That's exactly what's now reading as
+   "just tiles placed unarranged" - founder, across many pages this
+   round: "too rough, sharp corners, like you used rectangles only,"
+   "again with your tiles design that fails us... THINK." Flat
+   wasn't wrong as an idea, but it left every surface at the same
+   visual weight with nothing to tell the eye what matters first.
+   Bringing back a soft, tinted shadow (already defined as
+   --app-shadow, just unused) and a real hover response - not a
+   reversal of the whole design, an actual second look at one
+   specific call that didn't hold up. */
+.dashboard-shell :is(.card, .premium-tile, .ref-card, .ref-panel, .card-hover, .surface-panel) {
+  box-shadow: var(--app-shadow) !important;
+}
+.dashboard-shell :is(.card-hover, .premium-tile) {
+  transition: transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s ease;
+}
+.dashboard-shell :is(.card-hover, .premium-tile):hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 16px 40px rgba(53, 37, 26, .14) !important;
+}
