@@ -23,9 +23,9 @@ import {
   Loader2,
   MoreHorizontal,
   NotebookText,
-  Paperclip,
   PauseCircle,
   Pencil,
+  Plus,
   ShieldCheck,
   Share2,
   Sparkles,
@@ -792,12 +792,36 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
           </div>
 
           <div className="operator-chat-composer">
-            <form onSubmit={onSubmit} className="grid gap-3">
+            {/* Single-line pill - icon-only attach, growing input, icon-only
+                send - matching the reference's "+ Message {name}..." shape
+                instead of a boxed textarea with two labeled buttons
+                underneath it. The attachment note (rare - most attachments
+                need no caption) moved into "More actions" below; the file
+                input and its trigger stay here since attaching a file is
+                common enough to earn a permanent icon. */}
+            <form onSubmit={onSubmit} className="operator-composer-row">
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(event) => uploadAttachment(event.target.files?.[0])}
+                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.json,.txt,.md,.zip,.stl,.obj,.step,.stp,.dwg,.dxf"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="operator-composer-icon-btn"
+                aria-label="Attach a file"
+                title="Attach a file"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              </button>
               <textarea
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 rows={1}
-                placeholder={`Tell ${operatorName} what changed…`}
+                placeholder={`Message ${operatorName}…`}
                 className="ledger-composer-input"
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
@@ -806,37 +830,15 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                   }
                 }}
               />
-              <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
-                <details className="operator-attachment-note">
-                  <summary>+ Note for an attachment</summary>
-                  <input
-                    value={attachmentNote}
-                    onChange={(event) => setAttachmentNote(event.target.value)}
-                    placeholder="Optional note for attached image, doc, video, CAD file, or reference..."
-                    className="ledger-composer-note"
-                  />
-                </details>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  onChange={(event) => uploadAttachment(event.target.files?.[0])}
-                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.json,.txt,.md,.zip,.stl,.obj,.step,.stp,.dwg,.dxf"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="btn-secondary justify-center disabled:opacity-50"
-                >
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                  Attach
-                </button>
-                <button type="submit" disabled={isPending || prompt.trim().length < 2} className="btn-primary justify-center disabled:cursor-not-allowed disabled:opacity-50">
-                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                  Send
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={isPending || prompt.trim().length < 2}
+                className="operator-composer-icon-btn operator-composer-send"
+                aria-label="Send"
+                title="Send"
+              >
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+              </button>
             </form>
 
             {/* The reference composer is just input + attach + send - quick
@@ -848,6 +850,15 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
             <details className="operator-composer-more">
               <summary>More actions</summary>
               <div className="operator-composer-more-body">
+                <details className="operator-attachment-note">
+                  <summary>+ Note for an attachment</summary>
+                  <input
+                    value={attachmentNote}
+                    onChange={(event) => setAttachmentNote(event.target.value)}
+                    placeholder="Optional note for attached image, doc, video, CAD file, or reference..."
+                    className="ledger-composer-note"
+                  />
+                </details>
                 <div className="operator-quick-directions">
                   {quickDirections.map((item) => (
                     <button

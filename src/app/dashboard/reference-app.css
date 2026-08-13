@@ -11405,3 +11405,71 @@ html, body {
 [class~="border-[rgba(245,237,228,0.1)]"] {
   border-color: var(--app-line) !important;
 }
+
+/* ── Composer, collapsed to a single pill. Watched the real x.ai/bot
+   product page live (not a screenshot) to get this shape right: one
+   row - a plain icon-only "+" for attach, a growing input, a filled
+   circular send button - not a boxed textarea with two labeled
+   buttons sitting under it. Selector chained to `.dashboard-shell
+   .operator-composer-row` to reliably outrank the older two-class
+   `.dashboard-shell .ledger-composer-input` min-height rule (~line
+   10336) - that one is 40px tall on its own and would otherwise
+   fight this pill's own sizing, same class of specificity trap
+   documented repeatedly elsewhere in this file. */
+.dashboard-shell .operator-composer-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 6px 6px 6px 8px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: 24px;
+  background: var(--app-paper);
+}
+.dashboard-shell .operator-composer-row .ledger-composer-input {
+  flex: 1 1 auto;
+  min-height: 24px;
+  max-height: 120px;
+  margin: 0;
+  padding: 7px 4px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.dashboard-shell .operator-composer-row .ledger-composer-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+.operator-composer-icon-btn {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.operator-composer-icon-btn:hover:not(:disabled) {
+  background: var(--app-paper-2);
+  color: var(--app-text);
+}
+.operator-composer-icon-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.operator-composer-send {
+  background: var(--app-rust);
+  color: #fff;
+}
+.operator-composer-send:hover:not(:disabled) {
+  background: var(--app-rust-dark);
+  color: #fff;
+}
+.operator-composer-send:disabled {
+  background: var(--app-line-strong);
+  color: var(--app-muted);
+}
