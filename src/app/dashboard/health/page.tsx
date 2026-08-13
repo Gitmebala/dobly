@@ -8,6 +8,24 @@ import { listDoblyOperators, type OperatorWithLoops } from "@/lib/dobly-operator
 import { listRuntimeApprovals, type RuntimeApprovalRecord } from "@/lib/runtime/approvals";
 import type { Connection } from "@/types";
 
+// atRiskProviders holds raw tool-capability ids (gmail_oauth,
+// google_calendar_oauth, notion_mcp, x_oauth, ...) - a different id
+// scheme than connection-catalog.ts's CONNECTION_PROVIDERS, so a
+// hardcoded id->label map risked silently missing half of them.
+// These raw ids were rendering verbatim as "Reconnect: gmail_oauth,
+// google_calendar_oauth, airtable_oauth, notion_mcp, x_oauth,
+// google_analytics_oauth" - founder: "code leaks." Strip the known
+// suffixes and title-case the rest instead - correct for any id in
+// this scheme, not just the ones I happen to enumerate by hand.
+function humanizeToolId(id: string) {
+  return id
+    .replace(/_(oauth|mcp|api)$/i, "")
+    .split("_")
+    .filter(Boolean)
+    .map((word) => (word.length <= 3 ? word.toUpperCase() : word[0].toUpperCase() + word.slice(1)))
+    .join(" ");
+}
+
 interface RuntimeRunRow {
   id: string;
   status: string;
@@ -126,7 +144,7 @@ export default async function HealthPage() {
                       <span className="badge-muted text-xs">{row.pendingApprovals} pending</span>
                     ) : null}
                     {row.atRiskProviders.length > 0 ? (
-                      <span className="badge-muted text-xs">Reconnect: {row.atRiskProviders.join(", ")}</span>
+                      <span className="badge-muted text-xs">Reconnect: {row.atRiskProviders.map(humanizeToolId).join(", ")}</span>
                     ) : null}
                   </div>
                 </div>
