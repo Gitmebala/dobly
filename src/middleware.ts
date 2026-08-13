@@ -69,6 +69,17 @@ export async function middleware(request: NextRequest) {
     "/api/internal",
     "/api/connections/verify-link",
     "/api/chat/widget",
+    // Never had a real user session to begin with - authenticated by its
+    // own CRON_SECRET bearer check in the route itself (see
+    // src/app/api/cron/process-queue/route.ts). Leaving it out of this
+    // list meant this middleware tried to validate that secret as a
+    // Supabase session JWT instead, which it will never be, so every
+    // cron/heartbeat request 401'd here before ever reaching the route's
+    // own (correct) auth check - the actual root cause of "coworkers
+    // don't run recurringly," confirmed live: the GitHub Actions
+    // heartbeat kept getting a bare {"error":"Unauthorized"} with none
+    // of the route's own diagnostic fields, proving it never ran.
+    "/api/cron",
   ];
   const isPublicApi = publicApiPrefixes.some((prefix) => pathname.startsWith(prefix));
   const isProtectedApi = pathname.startsWith("/api") && !isPublicApi;
