@@ -345,15 +345,15 @@ export default function ProviderConnectClient({
           </div>
         ) : null}
 
-        <div className="mt-4 rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-4 text-sm text-text-muted">
+        <div className="mt-4 rounded-[1rem] border border-border bg-surface px-4 py-4 text-sm text-text-muted">
           <div className="text-text">Not using {provider.label}?</div>
           <p className="mt-2">
-            That is okay. Dobly should adapt to the tools you already have. Go back and choose another option or keep building the setup first.
+            Go back and choose another option, or keep building the setup first.
           </p>
         </div>
 
         {provider.id === "kenya_local_comms" ? (
-          <div className="mt-4 rounded-[1rem] border border-border bg-[rgba(255,255,255,0.02)] px-4 py-4 text-sm text-text-muted">
+          <div className="mt-4 rounded-[1rem] border border-border bg-surface px-4 py-4 text-sm text-text-muted">
             <div className="text-text">Need a specific or international number?</div>
             <p className="mt-2">
               This quick setup requests a Kenya number automatically. To search and pick an exact number — including
@@ -397,7 +397,7 @@ export default function ProviderConnectClient({
         ) : null}
 
         {developmentHint ? (
-          <div className="rounded-[1rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-xs text-text-muted">
+          <div className="rounded-[1rem] border border-border bg-surface px-4 py-3 text-xs text-text-muted">
             Dev preview: {developmentHint}
           </div>
         ) : null}

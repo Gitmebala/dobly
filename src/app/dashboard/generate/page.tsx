@@ -226,7 +226,7 @@ export default function GeneratePage() {
                 Describe the outcome like you would brief your company.
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-text-muted sm:text-base">
-                Dobly should ask follow-up questions, map the work to the right operators, show what it needs to connect, and compile a launchable system with visible guardrails, memory, and outputs.
+                Dobly asks follow-up questions, maps the work to the right coworkers, shows what it needs to connect, and compiles a launchable system with visible guardrails, memory, and outputs.
               </p>
 
               <div className="mt-6 rounded-[1.5rem] border border-border bg-[rgba(8,12,24,0.72)] p-4 sm:p-5">
@@ -387,7 +387,7 @@ export default function GeneratePage() {
                 <p className="text-xs uppercase tracking-[0.2em] text-text-dim">Planning chat</p>
                 <h1 className="mt-2 text-3xl font-semibold text-text">Lock the operating rules before launch</h1>
                 <p className="mt-2 max-w-2xl text-sm leading-7 text-text-muted">
-                  Dobly should earn clarity before it earns autonomy. Answer in plain language and it will turn the rules into a visible contract.
+                  Answer in plain language. Dobly turns your answers into a visible contract before it acts on its own.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -524,7 +524,7 @@ export default function GeneratePage() {
                 ))}
               </div>
               <div className="mt-4 space-y-2 text-sm text-text-muted">
-                <p>Dobly should only request the smallest live-access path needed for the first version.</p>
+                <p>Only the smallest live-access path needed for this first version gets requested.</p>
                 <p>{answeredQuestions.length} of {clarifyQuestions.length} answers captured so far.</p>
               </div>
             </div>
@@ -719,7 +719,7 @@ export default function GeneratePage() {
                   {allRequiredConnectionsReady ? "All connections available" : "These connections are required"}
                 </h2>
                 <p className="mt-2 text-sm leading-7 text-text-muted">
-                  Dobly should only ask for the live access needed for this launch path. Connect what is missing, then refresh this checklist.
+                  Connect what's missing below, then refresh this checklist.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -784,8 +784,8 @@ export default function GeneratePage() {
           <div>
             <p className="text-xs uppercase tracking-[0.16em] text-text-dim">Access plan</p>
             <p className="mt-2 text-sm leading-7 text-text-muted">
-              Dobly should ask for access progressively. Start with what it can already handle, then only
-              unlock the smallest live path needed to make this work.
+              Access unlocks progressively — starting with what Dobly can already handle, then only
+              what this specific work needs.
             </p>
           </div>
           <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">

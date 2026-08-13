@@ -69,7 +69,7 @@ export default function SettingsPage() {
       <div>
         <h1 className="font-display text-3xl font-bold text-text">Settings</h1>
         <p className="mt-1 text-sm text-text-muted">
-          Manage your account, plan, connection recovery, and the routes Dobly should use when something needs your attention.
+          Manage your account, plan, connection recovery, and where Dobly should reach you when something needs your attention.
         </p>
       </div>
 
