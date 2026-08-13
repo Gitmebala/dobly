@@ -30,11 +30,26 @@ import type { Connection, GenerateWorkflowResponse } from "@/types";
 
 type Step = "input" | "clarify" | "generating" | "result";
 
+// operator_type is a real internal category ("automation" | "agent" |
+// "pipeline" | "hybrid" | "report") that was rendering verbatim in the
+// "Dobly defaults" panel - engineering vocabulary, not something a
+// user asked for. Plain description instead of the raw label.
+const OPERATOR_TYPE_LABELS: Record<string, string> = {
+  automation: "Runs on a schedule, no back-and-forth needed",
+  agent: "Makes judgment calls as it works",
+  pipeline: "Follows a fixed multi-step process",
+  hybrid: "Mix of scheduled and judgment-based work",
+  report: "Checks in and reports back, doesn't act on its own",
+};
+function describeOperatorType(value: string) {
+  return OPERATOR_TYPE_LABELS[value] ?? value.replaceAll("_", " ");
+}
+
 const launchRail = [
-  { icon: Wand2, title: "Map", body: "Describe the business outcome. Dobly chooses the right operator or specialist swarm." },
-  { icon: TestTube2, title: "Compile", body: "Turn the brief into a launch contract with memory, guardrails, and output steps." },
-  { icon: Rocket, title: "Connect", body: "Link the systems, channels, and tools needed for the real path." },
-  { icon: Activity, title: "Run", body: "Keep approvals, artifacts, failures, and learning visible after launch." },
+  { icon: Wand2, title: "Describe", body: "Say what needs to happen. Dobly figures out who should do it." },
+  { icon: TestTube2, title: "Set it up", body: "Dobly turns the brief into a plan, with memory, guardrails, and clear outputs." },
+  { icon: Rocket, title: "Connect", body: "Link the accounts and tools it actually needs to do the work." },
+  { icon: Activity, title: "Run", body: "Approvals, outputs, and progress all stay visible after launch." },
 ];
 
 const promptExamples = [
@@ -942,13 +957,13 @@ export default function GeneratePage() {
               <ExplainList label="Approval points" items={result.explanation.approval_points} />
               <ExplainList label="Failure modes to watch" items={result.explanation.failure_modes} />
               <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-                <div className="text-sm font-medium text-text">Dobly defaults</div>
+                <div className="text-sm font-medium text-text">How it will work</div>
                 <div className="mt-3 space-y-2 text-sm leading-7 text-text-muted">
-                  <p><span className="text-text">Operator:</span> {result.explanation.defaults.operator_type}</p>
-                  <p><span className="text-text">Trigger:</span> {result.explanation.defaults.trigger_strategy}</p>
+                  <p><span className="text-text">Type of work:</span> {describeOperatorType(result.explanation.defaults.operator_type)}</p>
+                  <p><span className="text-text">Starts when:</span> {result.explanation.defaults.trigger_strategy}</p>
                   <p><span className="text-text">Approvals:</span> {result.explanation.defaults.approval_policy}</p>
-                  <p><span className="text-text">Retries:</span> {result.explanation.defaults.retry_policy}</p>
-                  <p><span className="text-text">First connection:</span> {result.explanation.defaults.first_connection}</p>
+                  <p><span className="text-text">If something fails:</span> {result.explanation.defaults.retry_policy}</p>
+                  <p><span className="text-text">Needs first:</span> {result.explanation.defaults.first_connection}</p>
                 </div>
               </div>
             </div>
