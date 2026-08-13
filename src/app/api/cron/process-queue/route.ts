@@ -1,5 +1,12 @@
+import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { runFullSchedulerPass } from "@/lib/runtime/scheduler";
+
+// Safe (non-reversible, first 12 hex chars only) fingerprint - lets us
+// confirm two secrets are the same value without ever exposing either one.
+function fingerprint(value: string) {
+  return createHash("sha256").update(value).digest("hex").slice(0, 12);
+}
 
 /**
  * The one daily heartbeat this deployment has (Vercel Hobby allows a single
@@ -38,9 +45,11 @@ export async function GET(req: NextRequest) {
         diagnostic: {
           vercelSecretConfigured: Boolean(expectedSecret),
           vercelSecretLength: expectedSecret?.length ?? 0,
+          vercelSecretFingerprint: expectedSecret ? fingerprint(expectedSecret) : null,
           headerPresented: Boolean(authHeader),
           headerLooksBearerShaped: Boolean(authHeader?.startsWith("Bearer ")),
           presentedSecretLength: presentedSecret?.length ?? 0,
+          presentedSecretFingerprint: presentedSecret ? fingerprint(presentedSecret) : null,
         },
       },
       { status: 401 },
