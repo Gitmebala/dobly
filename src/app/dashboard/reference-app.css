@@ -10610,10 +10610,43 @@ html[data-theme="dark"] .dashboard-shell {
   font-size: 14.5px;
   box-shadow: none;
 }
+/* Run/system log lines now get a real status treatment instead of a
+   dashed placeholder-looking border - a solid, subtly-tinted card with
+   a status icon, colored by what actually happened (failed/completed/
+   info), same severity language as everywhere else in the app rather
+   than a fourth ad-hoc scheme. */
 .ledger-entry-coworker[data-role="system"] .ledger-entry-body,
 .ledger-entry-coworker[data-role="run"] .ledger-entry-body {
-  background: transparent;
-  border-style: dashed;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--app-paper);
+  border-style: solid;
+  font-size: 13px;
+  color: var(--app-muted);
+}
+.ledger-entry-run-icon {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+}
+.ledger-entry-body[data-run-status="failed"] {
+  background: color-mix(in srgb, #bd4f3a 9%, var(--app-paper));
+  border-color: color-mix(in srgb, #bd4f3a 30%, transparent);
+  color: #a5432f;
+}
+.ledger-entry-body[data-run-status="completed"] {
+  background: color-mix(in srgb, var(--app-green) 9%, var(--app-paper));
+  border-color: color-mix(in srgb, var(--app-green) 30%, transparent);
+  color: var(--app-green);
+}
+.ledger-entry-body[data-run-status="info"] {
+  color: var(--app-muted);
+}
+.ledger-entry-body[data-run-status="failed"] .ledger-entry-run-icon,
+.ledger-entry-body[data-run-status="completed"] .ledger-entry-run-icon {
+  color: inherit;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

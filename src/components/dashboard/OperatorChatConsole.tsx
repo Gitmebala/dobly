@@ -1176,6 +1176,22 @@ function MessageBubble({
     ? "Dobly"
     : message.role;
   const showIntent = message.intent && !["instruction", "message", "reply"].includes(message.intent);
+  // Run/system log lines used to always get a dashed border, regardless
+  // of what actually happened - a dashed border reads as "unstyled
+  // placeholder" in nearly every design system, so "Run failed" and
+  // "Run completed" both looked like the same broken-looking box. Parse
+  // the one real signal already in the body text (there's no separate
+  // status field on these) into a real status so failures actually look
+  // like failures.
+  const runStatus =
+    message.role === "run" || message.role === "system"
+      ? /\bfailed\b|\berror\b/i.test(message.body ?? "")
+        ? "failed"
+        : /\bcompleted\b|\bsucceeded\b|\bdone\b/i.test(message.body ?? "")
+          ? "completed"
+          : "info"
+      : null;
+  const RunIcon = runStatus === "failed" ? AlertTriangle : runStatus === "completed" ? CheckCircle2 : Clock3;
 
   return (
     <article className={`ledger-entry ${isUser ? "ledger-entry-user" : "ledger-entry-coworker"}`} data-role={message.role}>
@@ -1190,7 +1206,10 @@ function MessageBubble({
           {showIntent ? <span>{message.intent.replace(/_/g, " ")}</span> : null}
           <time dateTime={message.created_at}>{formatClock(message.created_at)}</time>
         </header>
-        <div className="ledger-entry-body">{message.body}</div>
+        <div className="ledger-entry-body" data-run-status={runStatus}>
+          {runStatus ? <RunIcon aria-hidden="true" className="ledger-entry-run-icon" /> : null}
+          <span>{message.body}</span>
+        </div>
         <OperatorThinking message={message} />
         <MessageArtifactPreview message={message} />
       </div>
