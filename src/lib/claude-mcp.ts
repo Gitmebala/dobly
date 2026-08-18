@@ -37,7 +37,10 @@ export interface DynamicClaudeMcpExecutionInput {
 }
 
 function getAnthropicModel(preferred?: string | null, fallback?: string | null) {
-  return preferred || fallback || process.env.ANTHROPIC_CLAUDE_MCP_MODEL || "claude-sonnet-4-20250514";
+  // claude-sonnet-4-20250514 (the May 2025 dated snapshot) was retired by
+  // Anthropic on 2026-06-15 and now 404s - confirmed live via search, not
+  // assumed. claude-sonnet-5 is the current model (no date suffix).
+  return preferred || fallback || process.env.ANTHROPIC_CLAUDE_MCP_MODEL || "claude-sonnet-5";
 }
 
 function getAnthropicVersion() {

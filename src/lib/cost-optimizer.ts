@@ -4,13 +4,27 @@
 import { anthropic } from "./anthropic";
 
 export type ModelTier = "budget" | "standard" | "premium";
-export type ModelProvider = "anthropic" | "groq";
+export type ModelProvider = "anthropic" | "groq" | "nvidia";
 export type IntelligenceTier =
   | "classification"
   | "standard_reasoning"
   | "premium_reasoning"
   | "tool_operation"
   | "deterministic";
+
+// Real free-tier testing path, not a toy stub: tool_operation/claude_mcp
+// task types were always hardcoded to PREMIUM_MODEL (paid Anthropic) below,
+// with zero free fallback, regardless of whether GROQ_API_KEY was set - so
+// a founder testing coworker tool-use/execution (the most important thing
+// to actually exercise end to end) had no way to avoid burning real Claude
+// credits, even with a free provider already configured. Set
+// DOBLY_FREE_TIER_ONLY=true to route every task type, including the
+// premium/tool ones, through a free provider instead - see
+// smartModelRoute() and optimizedAICompletion()'s fallback logic below,
+// both respect this.
+export function isFreeTierOnly() {
+  return process.env.DOBLY_FREE_TIER_ONLY === "true";
+}
 
 export interface ModelConfig {
   name: string;
@@ -23,10 +37,28 @@ export interface ModelConfig {
   useCases: string[];
 }
 
-const PREMIUM_MODEL = process.env.DOBLY_PREMIUM_MODEL || "claude-sonnet-4-20250514";
+// claude-sonnet-4-20250514 (May 2025 dated snapshot) was retired 2026-06-15
+// and now 404s - confirmed live. claude-sonnet-5 is current (no date suffix).
+const PREMIUM_MODEL = process.env.DOBLY_PREMIUM_MODEL || "claude-sonnet-5";
 const TOOL_MODEL = process.env.DOBLY_TOOL_MODEL || PREMIUM_MODEL;
-const CLASSIFIER_MODEL = process.env.DOBLY_CLASSIFIER_MODEL || "llama-3.1-8b-instant";
-const STANDARD_MODEL = process.env.DOBLY_STANDARD_MODEL || "llama-3.3-70b-versatile";
+// Groq retired the llama-3.1-8b-instant / llama-3.3-70b-versatile slugs these
+// used to default to (confirmed live against api.groq.com/openai/v1/models on
+// 2026-08-17 - neither appears in the current catalog, and calling either
+// returns HTTP 404 model_not_found). openai/gpt-oss-20b/120b are Groq's
+// current equivalents and were live-verified to work for both plain replies
+// and structured JSON extraction. If DOBLY_CLASSIFIER_MODEL/DOBLY_STANDARD_MODEL
+// are set in the environment to one of the dead slugs, update those too.
+const CLASSIFIER_MODEL = process.env.DOBLY_CLASSIFIER_MODEL || "openai/gpt-oss-20b";
+const STANDARD_MODEL = process.env.DOBLY_STANDARD_MODEL || "openai/gpt-oss-120b";
+// Real free tier: build.nvidia.com's NIM catalog, an OpenAI-compatible
+// endpoint with a genuine no-credit-card free developer tier (confirmed
+// current as of this writing - real signup required, no fabricated
+// credentials). Nemotron specifically because it's tuned for agentic/
+// tool-use tasks, standing in for TOOL_MODEL's role rather than just
+// duplicating STANDARD_MODEL's - the free tier should still have a
+// "stronger model for harder tasks" tier, not force everything through
+// one flat model.
+const FREE_TOOL_MODEL = process.env.DOBLY_FREE_TOOL_MODEL || "nvidia/llama-3.1-nemotron-70b-instruct";
 
 const modelRegistry: Record<string, ModelConfig> = {
   [PREMIUM_MODEL]: {
@@ -82,6 +114,17 @@ if (TOOL_MODEL !== PREMIUM_MODEL) {
     useCases: ["claude_mcp", "tool_operation", "software_operation"],
   };
 }
+
+modelRegistry[FREE_TOOL_MODEL] = {
+  name: "Free Tool Operator (NVIDIA Nemotron)",
+  provider: "nvidia",
+  tier: "budget",
+  intelligenceTier: "tool_operation",
+  costPer1kInput: 0,
+  costPer1kOutput: 0,
+  maxTokens: 32000,
+  useCases: ["claude_mcp", "tool_operation", "software_operation", "workflow_generation", "complex_analysis", "system_compilation"],
+};
 
 export const MODEL_REGISTRY = modelRegistry;
 
@@ -238,6 +281,7 @@ function calculateCost(model: string, inputTokens: number, outputTokens: number)
 export async function smartModelRoute(prompt: string, taskType: string): Promise<string> {
   const promptLength = prompt.length;
   const complexity = promptLength > 2000 ? "high" : promptLength > 500 ? "medium" : "low";
+  const freeTierOnly = isFreeTierOnly();
 
   if (
     taskType === "workflow_generation" ||
@@ -245,11 +289,11 @@ export async function smartModelRoute(prompt: string, taskType: string): Promise
     taskType === "complex_analysis" ||
     taskType === "system_compilation"
   ) {
-    return PREMIUM_MODEL;
+    return freeTierOnly ? FREE_TOOL_MODEL : PREMIUM_MODEL;
   }
 
   if (taskType === "claude_mcp" || taskType === "tool_operation") {
-    return TOOL_MODEL;
+    return freeTierOnly ? FREE_TOOL_MODEL : TOOL_MODEL;
   }
 
   if (taskType === "routing" || taskType === "classification" || taskType === "escalation_detection") {
@@ -267,7 +311,8 @@ export async function smartModelRoute(prompt: string, taskType: string): Promise
     return STANDARD_MODEL;
   }
 
-  return complexity === "high" ? PREMIUM_MODEL : STANDARD_MODEL;
+  if (complexity === "high") return freeTierOnly ? FREE_TOOL_MODEL : PREMIUM_MODEL;
+  return STANDARD_MODEL;
 }
 
 export interface OptimizedCallOptions {
@@ -325,6 +370,57 @@ async function callGroqChat(input: {
   };
 }
 
+// build.nvidia.com's NIM catalog - genuinely OpenAI-compatible (confirmed
+// against NVIDIA's own published examples: same request/response shape as
+// Groq/OpenAI, just a different base URL and model namespace), so this is
+// almost identical to callGroqChat above by design, not coincidence.
+async function callNvidiaChat(input: {
+  model: string;
+  prompt: string;
+  systemPrompt?: string;
+  maxTokens: number;
+}) {
+  const apiKey = process.env.NVIDIA_API_KEY;
+  if (!apiKey) {
+    throw new Error("Missing NVIDIA_API_KEY");
+  }
+
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: input.model,
+      max_tokens: Math.min(input.maxTokens, 4096),
+      temperature: 0.4,
+      messages: [
+        ...(input.systemPrompt ? [{ role: "system", content: input.systemPrompt }] : []),
+        { role: "user", content: input.prompt },
+      ],
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | {
+        choices?: Array<{ message?: { content?: string } }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number };
+        error?: { message?: string };
+      }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(data?.error?.message || `NVIDIA request failed with status ${response.status}.`);
+  }
+
+  return {
+    content: data?.choices?.[0]?.message?.content ?? "",
+    inputTokens: data?.usage?.prompt_tokens,
+    outputTokens: data?.usage?.completion_tokens,
+  };
+}
+
 export async function optimizedAICompletion(
   prompt: string,
   options: OptimizedCallOptions = {}
@@ -351,6 +447,8 @@ export async function optimizedAICompletion(
   try {
     const result = modelConfig?.provider === "groq"
       ? await callGroqChat({ model, prompt, systemPrompt, maxTokens })
+      : modelConfig?.provider === "nvidia"
+      ? await callNvidiaChat({ model, prompt, systemPrompt, maxTokens })
       : await anthropic.messages
           .create({
             model,
@@ -380,6 +478,15 @@ export async function optimizedAICompletion(
 
     return { content, model, cached: false, cost };
   } catch (error) {
+    if (fallback && isFreeTierOnly()) {
+      // Stay inside the free tier on retry: fall back to the other free provider
+      // (NVIDIA -> Groq) instead of silently escalating to paid Anthropic, which
+      // would defeat the entire point of DOBLY_FREE_TIER_ONLY.
+      if (model !== STANDARD_MODEL) {
+        return optimizedAICompletion(prompt, { ...options, model: STANDARD_MODEL, fallback: false });
+      }
+      throw error;
+    }
     if (fallback && model !== PREMIUM_MODEL) {
       return optimizedAICompletion(prompt, { ...options, model: PREMIUM_MODEL, fallback: false });
     }

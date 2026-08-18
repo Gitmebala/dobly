@@ -10,6 +10,66 @@ export const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+/**
+ * When true, Dobly must never spend real Anthropic credits: generation and
+ * conversation calls stay on free providers (NVIDIA NIM, then Groq) and throw
+ * a clear error rather than silently falling back to paid Anthropic. This is
+ * a local copy of the same flag in cost-optimizer.ts (not imported from
+ * there) to avoid a circular import - that module already imports
+ * `anthropic` from this file.
+ */
+export function isFreeTierOnly() {
+  return process.env.DOBLY_FREE_TIER_ONLY === "true";
+}
+
+/**
+ * Whether createGenerationMessage/createConversationReply have at least one
+ * usable provider given the current env + DOBLY_FREE_TIER_ONLY. Callers that
+ * render their own "not configured yet" state (e.g. agents/tool-operation.ts)
+ * should check this instead of hardcoding an ANTHROPIC_API_KEY-only check,
+ * which goes stale the moment a free provider is available.
+ */
+export function hasUsableGenerationProvider(): boolean {
+  if (isFreeTierOnly()) {
+    return Boolean(process.env.NVIDIA_API_KEY || process.env.GROQ_API_KEY);
+  }
+  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.GROQ_API_KEY || process.env.NVIDIA_API_KEY);
+}
+
+/**
+ * Best-effort label of which provider createGenerationMessage /
+ * createConversationReply will actually pick, kept in sync with their
+ * branching below. Used only for the internal capacity ledger (see
+ * billing/economy.ts) so it records which upstream provider really served a
+ * reservation - it does not change the amount reserved.
+ */
+export function resolveGenerationProviderLabel(): string {
+  const preferredProvider = process.env.DOBLY_GENERATION_PROVIDER?.toLowerCase();
+  if (isFreeTierOnly()) {
+    if (preferredProvider === "groq" && process.env.GROQ_API_KEY) return "groq";
+    if (process.env.NVIDIA_API_KEY) return "nvidia";
+    if (process.env.GROQ_API_KEY) return "groq";
+    return "none";
+  }
+  if (preferredProvider === "anthropic") return "anthropic";
+  if (preferredProvider === "nvidia" && process.env.NVIDIA_API_KEY) return "nvidia";
+  if (process.env.GROQ_API_KEY) return "groq";
+  return "anthropic";
+}
+
+/**
+ * Best-effort label of the literal model id resolveGenerationProviderLabel's
+ * provider will call, for observability/metadata only (e.g. billing ledger
+ * entries, run metadata) - never used to make routing decisions itself.
+ */
+export function resolveGenerationModelLabel(): string {
+  const label = resolveGenerationProviderLabel();
+  if (label === "nvidia") return process.env.DOBLY_FREE_TOOL_MODEL || "nvidia/llama-3.1-nemotron-70b-instruct";
+  if (label === "groq") return process.env.DOBLY_GENERATION_MODEL || process.env.DOBLY_STANDARD_MODEL || "openai/gpt-oss-120b";
+  if (label === "anthropic") return process.env.DOBLY_PREMIUM_MODEL || "claude-sonnet-5";
+  return "none";
+}
+
 function extractAnthropicText(message: unknown) {
   const content = (message as { content?: unknown })?.content;
   if (!Array.isArray(content)) {
@@ -52,7 +112,7 @@ async function createAnthropicMessage(input: {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: input.model || process.env.DOBLY_PREMIUM_MODEL || "claude-sonnet-4-20250514",
+      model: input.model || process.env.DOBLY_PREMIUM_MODEL || "claude-sonnet-5",
       max_tokens: input.maxTokens,
       system: input.system,
       messages: [{ role: "user", content: input.userContent }],
@@ -91,7 +151,7 @@ async function createGroqMessage(input: {
       authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: input.model || process.env.DOBLY_GENERATION_MODEL || process.env.DOBLY_STANDARD_MODEL || "llama-3.3-70b-versatile",
+      model: input.model || process.env.DOBLY_GENERATION_MODEL || process.env.DOBLY_STANDARD_MODEL || "openai/gpt-oss-120b",
       max_tokens: input.maxTokens,
       temperature: 0.2,
       messages: [
@@ -123,15 +183,94 @@ async function createGroqMessage(input: {
   };
 }
 
-async function createGenerationMessage(input: {
+async function createNvidiaMessage(input: {
+  model?: string;
+  maxTokens: number;
+  system: string;
+  userContent: string;
+}) {
+  const apiKey = process.env.NVIDIA_API_KEY;
+  if (!apiKey) {
+    throw new Error("NVIDIA_API_KEY is not configured.");
+  }
+
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: input.model || process.env.DOBLY_FREE_TOOL_MODEL || "nvidia/llama-3.1-nemotron-70b-instruct",
+      max_tokens: Math.min(input.maxTokens, 4096),
+      temperature: 0.2,
+      messages: [
+        { role: "system", content: input.system },
+        { role: "user", content: input.userContent },
+      ],
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | {
+        choices?: Array<{ message?: { content?: string } }>;
+        error?: { message?: string };
+        message?: string;
+      }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(data?.error?.message || data?.message || `NVIDIA request failed with status ${response.status}.`);
+  }
+
+  const text = data?.choices?.[0]?.message?.content?.trim();
+  if (!text) {
+    throw new Error("Unexpected NVIDIA response: no text content returned.");
+  }
+
+  return {
+    content: [{ type: "text", text }],
+  };
+}
+
+/**
+ * Single-turn generation call with the same provider routing as
+ * createConversationReply: free-tier-only stays on NVIDIA/Groq and throws
+ * rather than falling back to paid Anthropic; otherwise DOBLY_GENERATION_PROVIDER
+ * can force a specific provider, and Groq is preferred over Anthropic by
+ * default when configured. `model`, if given, is only honored on whichever
+ * provider actually ends up handling the call (each provider ignores a model
+ * id meant for a different one) - pass it only when you need to override a
+ * single provider's default, e.g. a paid-Anthropic-only model preference that
+ * should not leak into a free-tier NVIDIA/Groq call.
+ */
+export async function createGenerationMessage(input: {
+  model?: string;
   maxTokens: number;
   system: string;
   userContent: string;
 }) {
   const preferredProvider = process.env.DOBLY_GENERATION_PROVIDER?.toLowerCase();
 
+  if (isFreeTierOnly()) {
+    if (preferredProvider === "groq" && process.env.GROQ_API_KEY) {
+      return createGroqMessage(input);
+    }
+    if (process.env.NVIDIA_API_KEY) {
+      return createNvidiaMessage(input);
+    }
+    if (process.env.GROQ_API_KEY) {
+      return createGroqMessage(input);
+    }
+    throw new Error("DOBLY_FREE_TIER_ONLY is set but no free provider is configured. Add NVIDIA_API_KEY or GROQ_API_KEY.");
+  }
+
   if (preferredProvider === "anthropic") {
     return createAnthropicMessage(input);
+  }
+
+  if (preferredProvider === "nvidia" && process.env.NVIDIA_API_KEY) {
+    return createNvidiaMessage(input);
   }
 
   if (process.env.GROQ_API_KEY) {
@@ -159,7 +298,7 @@ async function createGroqConversation(input: {
       authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: input.model || process.env.DOBLY_GENERATION_MODEL || process.env.DOBLY_STANDARD_MODEL || "llama-3.3-70b-versatile",
+      model: input.model || process.env.DOBLY_GENERATION_MODEL || process.env.DOBLY_STANDARD_MODEL || "openai/gpt-oss-120b",
       max_tokens: input.maxTokens,
       temperature: 0.4,
       messages: [{ role: "system", content: input.system }, ...input.messages],
@@ -186,6 +325,51 @@ async function createGroqConversation(input: {
   return text;
 }
 
+async function createNvidiaConversation(input: {
+  model?: string;
+  maxTokens: number;
+  system: string;
+  messages: Array<{ role: "user" | "assistant"; content: string }>;
+}) {
+  const apiKey = process.env.NVIDIA_API_KEY;
+  if (!apiKey) {
+    throw new Error("NVIDIA_API_KEY is not configured.");
+  }
+
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: input.model || process.env.DOBLY_FREE_TOOL_MODEL || "nvidia/llama-3.1-nemotron-70b-instruct",
+      max_tokens: Math.min(input.maxTokens, 4096),
+      temperature: 0.4,
+      messages: [{ role: "system", content: input.system }, ...input.messages],
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | {
+        choices?: Array<{ message?: { content?: string } }>;
+        error?: { message?: string };
+        message?: string;
+      }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(data?.error?.message || data?.message || `NVIDIA request failed with status ${response.status}.`);
+  }
+
+  const text = data?.choices?.[0]?.message?.content?.trim();
+  if (!text) {
+    throw new Error("Unexpected NVIDIA response: no text content returned.");
+  }
+
+  return text;
+}
+
 async function createAnthropicConversation(input: {
   model?: string;
   maxTokens: number;
@@ -205,7 +389,7 @@ async function createAnthropicConversation(input: {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: input.model || process.env.DOBLY_STANDARD_MODEL || "claude-sonnet-4-20250514",
+      model: input.model || process.env.DOBLY_STANDARD_MODEL || "claude-sonnet-5",
       max_tokens: input.maxTokens,
       system: input.system,
       messages: input.messages,
@@ -238,6 +422,23 @@ export async function createConversationReply(input: {
   messages: Array<{ role: "user" | "assistant"; content: string }>;
 }): Promise<string> {
   const preferredProvider = process.env.DOBLY_GENERATION_PROVIDER?.toLowerCase();
+
+  if (isFreeTierOnly()) {
+    if (preferredProvider === "groq" && process.env.GROQ_API_KEY) {
+      return createGroqConversation(input);
+    }
+    if (process.env.NVIDIA_API_KEY) {
+      return createNvidiaConversation(input);
+    }
+    if (process.env.GROQ_API_KEY) {
+      return createGroqConversation(input);
+    }
+    throw new Error("DOBLY_FREE_TIER_ONLY is set but no free provider is configured. Add NVIDIA_API_KEY or GROQ_API_KEY.");
+  }
+
+  if (preferredProvider === "nvidia" && process.env.NVIDIA_API_KEY) {
+    return createNvidiaConversation(input);
+  }
 
   if (preferredProvider !== "anthropic" && process.env.GROQ_API_KEY) {
     return createGroqConversation(input);
@@ -411,7 +612,7 @@ export async function generateWorkflowBlueprint(
   const reservation = await reserveOperatingCapacity({
     userId,
     capability: "ai.reasoning",
-    provider: process.env.DOBLY_GENERATION_PROVIDER?.toLowerCase() === "anthropic" ? "anthropic" : process.env.GROQ_API_KEY ? "groq" : "anthropic",
+    provider: resolveGenerationProviderLabel(),
     estimatedMinor,
     idempotencyKey: `workflow-generation:${userId}:${randomUUID()}`,
     metadata: { promptLength: prompt.length },
@@ -531,7 +732,7 @@ export async function generateBusinessProfileDraft(input: {
     userId: input.userId,
     workspaceId: input.workspaceId ?? null,
     capability: "ai.reasoning",
-    provider: process.env.ANTHROPIC_API_KEY ? "anthropic" : "groq",
+    provider: resolveGenerationProviderLabel(),
     estimatedMinor,
     idempotencyKey: `business-profile:${input.userId}:${randomUUID()}`,
     metadata: { websiteUrl: input.websiteUrl },

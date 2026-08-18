@@ -28,6 +28,14 @@ Recommended:
 - `GROQ_API_KEY`
 - `OPENAI_API_KEY`
 - `PERPLEXITY_API_KEY`
+- `NVIDIA_API_KEY` - optional free-tier provider (NVIDIA NIM, OpenAI-compatible). Get a key at [build.nvidia.com](https://build.nvidia.com) - no credit card required. Used for `tool_operation`/`claude_mcp`-class calls (the coworker tool-execution path) when set, either as an automatic fallback or forced via `DOBLY_FREE_TIER_ONLY`.
+
+Free-tier testing (avoid spending real Anthropic credits before paid keys are provisioned):
+- `DOBLY_FREE_TIER_ONLY=true` - when set, `cost-optimizer.ts` and `anthropic.ts` never route to paid Anthropic. Tool-operation/premium-tier calls go to NVIDIA (`NVIDIA_API_KEY`) when configured, otherwise fall back to Groq (`GROQ_API_KEY`, already free-tier friendly). If neither free key is configured, calls fail loudly with a clear error instead of silently billing Anthropic. Groq-backed paths (group conversations, coworker delegation, skill-simulation replies) are already free-by-default even without this flag, since they prefer Groq whenever `GROQ_API_KEY` is set.
+- `DOBLY_FREE_TOOL_MODEL` - overrides the NVIDIA model ID used for the free tool-operation path. Default `nvidia/llama-3.1-nemotron-70b-instruct`.
+- `DOBLY_GENERATION_PROVIDER` - forces a specific provider for workflow-blueprint generation and conversational replies regardless of the flags above: `anthropic`, `groq`, or `nvidia`. Leave unset to let the routing above decide.
+
+None of this changes what Dobly charges its own users for AI usage inside the app (see `billing/economy.ts`) - it only controls which upstream LLM provider the founder's own dev/test environment calls, so testing doesn't spend real Anthropic credits.
 
 ## Background execution
 

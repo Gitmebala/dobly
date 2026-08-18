@@ -195,7 +195,9 @@ export const orchestratorDocumentExecutor: ConnectorExecutor = {
 
     try {
       const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+        // claude-sonnet-4-20250514 was retired 2026-06-15 (confirmed live, 404
+        // model_not_found). claude-sonnet-5 is current.
+        model: "claude-sonnet-5",
         max_tokens: 1600,
         system:
           "You are Dobly Orchestrator. You turn collected workflow outputs into clean human-readable reports.",

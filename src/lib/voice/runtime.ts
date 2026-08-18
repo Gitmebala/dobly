@@ -1,6 +1,6 @@
 import { DeepgramClient, listen } from "@deepgram/sdk";
 import { ElevenLabsSynthesizer } from "./elevenlabs";
-import { anthropic } from "../anthropic";
+import { createGenerationMessage } from "../anthropic";
 
 /**
  * Voice Runtime: Orchestrates the sub-second voice loop
@@ -202,17 +202,20 @@ Keep responses short and conversational (under 50 words typically).
 You are speaking to a customer or business contact.
 Respond naturally as if in a phone conversation.`;
 
-  const response = await anthropic.messages.create({
-    model: "llama-3.3-70b-versatile", // Using Groq model via their API
-    max_tokens: 150,
+  // This used to call the Anthropic SDK client directly with a Groq model
+  // name as `model` ("llama-3.3-70b-versatile") - a mismatched
+  // client/model pair that api.anthropic.com would reject outright, and that
+  // exact Groq slug is also dead now (retired - see cost-optimizer.ts).
+  // createGenerationMessage gives this the same free-tier-aware routing
+  // (Anthropic / Groq / NVIDIA) as the rest of the app, with each provider's
+  // own live model default.
+  const message = await createGenerationMessage({
+    maxTokens: 150,
     system: systemPrompt,
-    messages: [
-      ...(context ? [{ role: "user" as const, content: context }] : []),
-      { role: "user", content: userTranscript },
-    ],
+    userContent: context ? `${context}\nuser: ${userTranscript}` : userTranscript,
   });
 
-  return response.content[0]?.type === "text" ? response.content[0].text : "";
+  return message.content[0]?.type === "text" ? message.content[0].text : "";
 }
 
 /**

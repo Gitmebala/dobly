@@ -1,4 +1,4 @@
-import { anthropic } from "@/lib/anthropic";
+import { createGenerationMessage, hasUsableGenerationProvider, isFreeTierOnly, resolveGenerationModelLabel, resolveGenerationProviderLabel } from "@/lib/anthropic";
 import { estimateCapabilityCost } from "@/lib/billing/cost-catalog";
 import { failedProviderCharge } from "@/lib/billing/economy-core";
 import { reserveOperatingCapacity, settleOperatingCapacity } from "@/lib/billing/economy";
@@ -26,10 +26,12 @@ export async function executeAgentToolOperation(input: AgentToolOperationInput):
   const isMcpTool = input.toolName.startsWith("claude_mcp:") || Boolean(input.mcpServerUrl);
   const mcpToolName = input.toolName.replace(/^claude_mcp:/, "");
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!hasUsableGenerationProvider()) {
     return {
       status: "needs_connection",
-      summary: `${mcpToolName} tool-operation is prepared, but ANTHROPIC_API_KEY is not configured yet.`,
+      summary: isFreeTierOnly()
+        ? `${mcpToolName} tool-operation is prepared, but DOBLY_FREE_TIER_ONLY is set and no free provider (NVIDIA_API_KEY or GROQ_API_KEY) is configured yet.`
+        : `${mcpToolName} tool-operation is prepared, but no AI provider (ANTHROPIC_API_KEY, GROQ_API_KEY, or NVIDIA_API_KEY) is configured yet.`,
       output: {
         mode: "mock_tool_operation",
         toolName: mcpToolName,
@@ -51,7 +53,10 @@ export async function executeAgentToolOperation(input: AgentToolOperationInput):
     };
   }
 
-  const model = process.env.DOBLY_TOOL_MODEL || process.env.DOBLY_PREMIUM_MODEL || "claude-sonnet-4-20250514";
+  // DOBLY_TOOL_MODEL only means something on the Anthropic branch - a
+  // free-tier NVIDIA/Groq call must keep its own correct default model id.
+  const anthropicModelOverride = process.env.DOBLY_TOOL_MODEL || process.env.DOBLY_PREMIUM_MODEL || "claude-sonnet-5";
+  const model = resolveGenerationModelLabel();
   const estimate = estimateCapabilityCost({ capability: "ai.reasoning", preferredProvider: "anthropic" });
   let reservation: { id: string } | null = null;
 
@@ -60,32 +65,27 @@ export async function executeAgentToolOperation(input: AgentToolOperationInput):
       userId: input.userId,
       workspaceId: input.workspaceId ?? null,
       capability: "ai.reasoning",
-      provider: estimate.route.provider,
+      provider: resolveGenerationProviderLabel(),
       estimatedMinor: estimate.estimatedMinor,
       idempotencyKey: `agent-tool:${input.taskId}:${input.toolName}`,
       jobId: input.taskId,
       metadata: { toolName: mcpToolName, model },
     });
-    const message = await anthropic.messages.create({
-      model,
-      max_tokens: 1600,
+    const message = await createGenerationMessage({
+      ...(isFreeTierOnly() ? {} : { model: anthropicModelOverride }),
+      maxTokens: 1600,
       system: [
         "You are a specialist worker inside Dobly's guarded agent runtime.",
         "Complete only the specific assigned step.",
         "If real external operation is not available, return a prepared execution plan and do not pretend it was completed.",
         "Keep money, legal, customer-trust, and irreversible actions approval-gated.",
       ].join("\n"),
-      messages: [
-        {
-          role: "user",
-          content: [
-            `Tool: ${mcpToolName}`,
-            `Task: ${input.task}`,
-            `Context: ${JSON.stringify(input.context ?? {}, null, 2)}`,
-            input.mcpServerUrl ? `Remote MCP server: ${input.mcpServerUrl}` : "No remote MCP server supplied.",
-          ].join("\n\n"),
-        },
-      ],
+      userContent: [
+        `Tool: ${mcpToolName}`,
+        `Task: ${input.task}`,
+        `Context: ${JSON.stringify(input.context ?? {}, null, 2)}`,
+        input.mcpServerUrl ? `Remote MCP server: ${input.mcpServerUrl}` : "No remote MCP server supplied.",
+      ].join("\n\n"),
     });
 
     const text = textFromAnthropicContent(message.content);

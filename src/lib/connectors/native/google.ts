@@ -341,7 +341,10 @@ export const googleSheetsAnalyzeExecutor: ConnectorExecutor = {
 
     // Send to Claude for analysis
     const message = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
+      // claude-3-haiku-20240307 was retired 2026-04-20 (confirmed live -
+      // Anthropic's retired models return errors, no automatic redirect).
+      // claude-haiku-4-5-20251001 is the current Haiku replacement.
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 1000,
       system: "You are an expert data analyst. Analyze the provided spreadsheet data and respond to the user's query.",
       messages: [
