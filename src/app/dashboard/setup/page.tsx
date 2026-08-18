@@ -1,29 +1,16 @@
 import { redirect } from "next/navigation";
-import SetupWizardClient from "@/components/dashboard/SetupWizardClient";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+// SetupWizardClient (deleted) was a pre-pivot "choose a launch engine" wizard
+// with hardcoded first-operator presets (kenya_revenue_engine,
+// client_onboarding, social_posts, ...) - a direct contradiction of the
+// locked-in product decision that Dobly has NO preset coworker templates
+// (see memory: dobly-product-vision, "user explicitly rejected preset
+// roles"). It was still reachable via the command palette search index
+// (id: "setup", keywords included "setup"), sitting right next to the real
+// onboarding entry with overlapping keywords, so a user searching "setup"
+// could easily land on the wrong, contradictory flow. Same fix already
+// applied to /dashboard/create for the same underlying reason - land on the
+// real hiring/onboarding flow instead of a stale template picker.
 export default async function SetupPage() {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/auth/login");
-
-  return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      <section className="card">
-        <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--dobly-text-dim)]">Guided Setup</div>
-        <h1 className="mt-2 max-w-4xl font-display text-4xl tracking-[-0.06em] text-[var(--dobly-text)]">
-          Set up your first Operator.
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--dobly-text-secondary)]">
-          Start with one real job you want Dobly to handle well, shape the standard, skip anything unnecessary for now,
-          and get to a realistic first test without turning setup into a project.
-        </p>
-      </section>
-
-      <SetupWizardClient />
-    </div>
-  );
+  redirect("/dashboard/onboarding");
 }

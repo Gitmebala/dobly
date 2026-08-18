@@ -29,6 +29,13 @@ const processors = [
     notes:
       "Dobly should avoid sending raw provider secrets or unnecessary sensitive content to AI systems.",
   },
+  {
+    name: "Groq",
+    role: "AI reply generation for coworker chat and inbound customer messages",
+    data: "Coworker conversation content, inbound customer message text, and business context needed to draft a reply",
+    notes:
+      "Used alongside Anthropic for AI generation - which provider handles a given request depends on Dobly's model routing configuration.",
+  },
 ];
 
 export default function SubprocessorsPage() {
