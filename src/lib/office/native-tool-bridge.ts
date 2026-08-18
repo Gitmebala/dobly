@@ -78,6 +78,28 @@ const TOOL_TO_EXECUTOR: Record<string, string> = {
   klaviyo: "native.klaviyo.subscribe",
   docusign: "native.docusign.create-envelope",
   zoom: "native.zoom.create-meeting",
+
+  // Browser - the real executor behind the "operate_browser" capability
+  // (runtime/capabilities.ts), which existed as a recognized high-risk
+  // capability tag with zero executor anywhere until this session. Aliases
+  // match that capability's own alias list (portal, website admin,
+  // dashboard, log into) plus the plain tool names a coworker's plan is
+  // likely to use.
+  browser: "native.browser.operate",
+  operate_browser: "native.browser.operate",
+  browse_website: "native.browser.operate",
+  website: "native.browser.operate",
+  portal: "native.browser.operate",
+  web_portal: "native.browser.operate",
+
+  // Coworker - the real executor behind "consult_coworker"
+  // (runtime/capabilities.ts): one coworker's own task asking another for
+  // help mid-execution, not a user-initiated group room (that's
+  // operator-groups.ts's separate, user-facing feature).
+  consult_coworker: "native.coworker.consult",
+  ask_coworker: "native.coworker.consult",
+  delegate_to_coworker: "native.coworker.consult",
+  coworker_consult: "native.coworker.consult",
 };
 
 function normalizeToolName(toolName: string) {

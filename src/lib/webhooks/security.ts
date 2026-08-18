@@ -1,5 +1,8 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest } from "next/server";
+import { computeSlackSignature, isSlackTimestampFresh, safeEqualSlackSignature } from "@/lib/webhooks/slack-signature-core";
+
+export { computeSlackSignature, isSlackTimestampFresh };
 
 export function verifySharedSecret(req: NextRequest, headerName: string, expectedSecret?: string | null) {
   if (!expectedSecret) return false;
@@ -40,6 +43,29 @@ function getPublicRequestUrl(req: NextRequest) {
   const publicBase = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
   if (!publicBase) return req.url;
   return `${publicBase}${req.nextUrl.pathname}${req.nextUrl.search}`;
+}
+
+/**
+ * Slack's own signing scheme (https://api.slack.com/authentication/verifying-requests-from-slack):
+ * HMAC-SHA256 over "v0:{timestamp}:{raw_body}", header format "v0=<hex>",
+ * plus a 5-minute replay window on the timestamp. The actual crypto lives
+ * in slack-signature-core.ts (framework-independent, unit-tested against
+ * Slack's own published example) - this is just the NextRequest-shaped
+ * wrapper around it.
+ */
+export function verifySlackSignature(params: {
+  req: NextRequest;
+  rawBody: string;
+  signingSecret?: string | null;
+}) {
+  if (!params.signingSecret) return false;
+  const signature = params.req.headers.get("x-slack-signature");
+  const timestamp = params.req.headers.get("x-slack-request-timestamp");
+  if (!signature || !timestamp) return false;
+  if (!isSlackTimestampFresh(timestamp)) return false; // possible replay
+
+  const expected = computeSlackSignature(timestamp, params.rawBody, params.signingSecret);
+  return safeEqualSlackSignature(signature, expected);
 }
 
 export function verifyTwilioSignature(params: {

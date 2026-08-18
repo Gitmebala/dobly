@@ -81,8 +81,27 @@ export async function middleware(request: NextRequest) {
     // of the route's own diagnostic fields, proving it never ran.
     "/api/cron",
   ];
-  const isPublicApi = publicApiPrefixes.some((prefix) => pathname.startsWith(prefix));
-  const isProtectedApi = pathname.startsWith("/api") && !isPublicApi;
+  // Loop triggers (api/loops/[id]/trigger/[token], api/loops/[id]/github)
+  // are meant to be POSTed by external services - Zapier, GitHub, Stripe,
+  // anything - that will never carry a Dobly session cookie or bearer
+  // token. Each of those routes has its own real verification (a signed
+  // token or an HMAC signature, checked inside the route), the same shape
+  // as api/cron's own CRON_SECRET check - but without an explicit
+  // exemption here, this middleware 401s the request before it ever
+  // reaches that check, exactly the bug already found and fixed once for
+  // api/cron (see the comment above). NOT a blanket /api/loops exemption:
+  // api/loops/[id] (pause/resume) and api/loops/[id]/regenerate are
+  // genuine user actions from inside Dobly and must stay behind normal
+  // session auth - only these two trigger-firing sub-paths are public.
+  const isLoopTriggerPath = /^\/api\/loops\/[^/]+\/(trigger\/[^/]+|github)\/?$/.test(pathname);
+  const isPublicApi = isLoopTriggerPath || publicApiPrefixes.some((prefix) => pathname.startsWith(prefix));
+  // "/api" (no trailing slash) is a real page (src/app/api/page.tsx), not
+  // an API route - startsWith("/api") without the slash also matched that
+  // bare path, so middleware hard-401'd it before Next.js routing ever
+  // reached the page component, live-verified via the actual dev server.
+  // Every other /api-prefixed check in this file already uses the
+  // trailing-slash form; this was the one inconsistent spot.
+  const isProtectedApi = pathname.startsWith("/api/") && !isPublicApi;
   const isProtectedPage = ["/dashboard", "/admin"].some((prefix) =>
     pathname.startsWith(prefix)
   );
@@ -90,7 +109,7 @@ export async function middleware(request: NextRequest) {
   const localMode = isLocalModeActive();
   const unsafeMethod = !["GET", "HEAD", "OPTIONS"].includes(request.method);
   const csrfExemptPrefixes = ["/api/webhooks", "/api/internal", "/api/triggers/webhook", "/api/chat/widget"];
-  if (pathname.startsWith("/api/") && unsafeMethod && !csrfExemptPrefixes.some((prefix) => pathname.startsWith(prefix))) {
+  if (pathname.startsWith("/api/") && unsafeMethod && !isLoopTriggerPath && !csrfExemptPrefixes.some((prefix) => pathname.startsWith(prefix))) {
     const origin = request.headers.get("origin");
     if (origin) {
       const allowed = new Set([request.nextUrl.origin]);

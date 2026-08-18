@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import { ArrowRight, GitBranch, Plus } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { listDoblyOperators, type OperatorWithLoops } from "@/lib/dobly-operators";
+import { maskToken, type LoopTriggerMetadata } from "@/lib/loop-triggers";
+import { CreateLoopDrawer } from "@/components/dashboard/CreateLoopDrawer";
+import { LoopTriggerPopover } from "@/components/dashboard/LoopTriggerPopover";
+import { LoopRowMenu } from "@/components/dashboard/LoopRowMenu";
 
 export const metadata = { title: "Loops" };
 
@@ -41,6 +45,9 @@ export default async function WorkflowsPage() {
       .map((loop) => ({ loop, operator })),
   );
   const activeCount = loops.filter(({ loop }) => loop.status === "active").length;
+  const hireableCoworkers = operators
+    .filter((operator) => operator.status === "active")
+    .map((operator) => ({ id: operator.id, name: operator.name }));
 
   return (
     <div className="workflows-page mx-auto max-w-5xl space-y-4">
@@ -53,10 +60,13 @@ export default async function WorkflowsPage() {
               {activeCount} running across {operators.length} coworker{operators.length === 1 ? "" : "s"}
             </p>
           </div>
-          <Link href="/dashboard/coworkers?create=true" className="btn-primary">
-            <Plus className="h-4 w-4" />
-            Hire a coworker
-          </Link>
+          <div className="flex items-center gap-2">
+            {hireableCoworkers.length > 0 ? <CreateLoopDrawer coworkers={hireableCoworkers} /> : null}
+            <Link href="/dashboard/coworkers?create=true" className="btn-primary">
+              <Plus className="h-4 w-4" />
+              Hire a coworker
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -75,30 +85,36 @@ export default async function WorkflowsPage() {
         </section>
       ) : (
         <section className="home-list">
-          {loops.map(({ loop, operator }) => (
-            <Link
-              key={loop.id}
-              href={`/dashboard/coworkers?operatorId=${operator.id}`}
-              className="home-list-row"
-            >
-              <span className="home-list-main">
-                <strong>{loop.name}</strong>
-                <small>
-                  {operator.name} · {describeCadence(loop.cadence)}
-                  {loop.trigger ? ` · ${loop.trigger}` : ""}
-                </small>
-              </span>
-              <span className="home-list-meta">
-                <em data-status={loop.status}>{loop.status}</em>
-                <time>
-                  {loop.last_run_at
-                    ? `ran ${new Date(loop.last_run_at).toISOString().slice(0, 10)}`
-                    : "not run yet"}
-                </time>
-                <ArrowRight size={14} />
-              </span>
-            </Link>
-          ))}
+          {loops.map(({ loop, operator }) => {
+            const metadata = (loop.metadata ?? {}) as LoopTriggerMetadata;
+            const isWebhook = metadata.trigger_kind === "webhook" && !!metadata.webhook_token;
+            return (
+              <div key={loop.id} className="home-list-row loop-row">
+                <Link href={`/dashboard/coworkers?operatorId=${operator.id}`} className="home-list-main loop-row-link">
+                  <strong>{loop.name}</strong>
+                  <small>
+                    {operator.name} · {describeCadence(loop.cadence)}
+                    {loop.trigger ? ` · ${loop.trigger}` : ""}
+                  </small>
+                </Link>
+                <span className="home-list-meta">
+                  {isWebhook ? (
+                    <LoopTriggerPopover loopId={loop.id} maskedToken={maskToken(metadata.webhook_token!)} />
+                  ) : null}
+                  <em data-status={loop.status}>{loop.status}</em>
+                  <time>
+                    {loop.last_run_at
+                      ? `ran ${new Date(loop.last_run_at).toISOString().slice(0, 10)}`
+                      : "not run yet"}
+                  </time>
+                  <LoopRowMenu loopId={loop.id} status={loop.status as "active" | "paused" | "archived"} />
+                  <Link href={`/dashboard/coworkers?operatorId=${operator.id}`} aria-label={`Open ${loop.name}`}>
+                    <ArrowRight size={14} />
+                  </Link>
+                </span>
+              </div>
+            );
+          })}
         </section>
       )}
     </div>

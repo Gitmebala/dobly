@@ -27,7 +27,8 @@ export type DoblyCapability =
   | "make_call"
   | "monitor_market"
   | "book_travel"
-  | "operate_software";
+  | "operate_software"
+  | "consult_coworker";
 
 export interface CapabilityDefinition {
   id: DoblyCapability;
@@ -76,6 +77,20 @@ export const DOBLY_CAPABILITIES: CapabilityDefinition[] = [
   { id: "monitor_market", label: "Monitor market", aliases: ["stock", "crypto", "market", "price", "coindesk", "coinbase"], riskLevel: "medium" },
   { id: "book_travel", label: "Book travel", aliases: ["flight", "hotel", "trip", "travel", "itinerary"], riskLevel: "high" },
   { id: "operate_software", label: "Operate software", aliases: ["use app", "operate", "software", "account", "workspace"], riskLevel: "high" },
+  // Real, not fake: closes the "coworkers can talk to each other" gap from
+  // the product vision (dobly_operator_groups already covers user-initiated
+  // rooms; this is the other half - one coworker's OWN task autonomously
+  // asking another for help, mid-execution, without the user setting
+  // anything up first). Low risk deliberately: it's an internal question
+  // between two of the user's own coworkers, never an external action -
+  // same reasoning as why send_message was brought down from high.
+  // Aliases deliberately specific, not bare "ask"/"coworker" - inferCapabilitiesFromText
+  // matches any alias as a plain substring anywhere in the prompt, and a
+  // generic word here would falsely tag unrelated tasks (e.g. "ask the
+  // customer for their address"), the exact over-triggering bug class
+  // already found and fixed once this session for send_message's own risk
+  // tag (see dobly-canvas-table-rebuild memory, moneyOrExternal).
+  { id: "consult_coworker", label: "Consult another coworker", aliases: ["check with my coworker", "ask my coworker", "ask another coworker", "delegate to", "consult my team", "ask a colleague", "ask a teammate"], riskLevel: "low" },
 ];
 
 export function inferCapabilitiesFromText(text: string) {

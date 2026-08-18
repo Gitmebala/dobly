@@ -2,6 +2,8 @@ import type { ConnectorDefinition, ConnectorExecutor } from "@/lib/connectors/sd
 import { emailConnectorExecutor } from "@/lib/connectors/generic/email";
 import { fileConnectorExecutor } from "@/lib/connectors/generic/file";
 import { httpConnectorExecutor } from "@/lib/connectors/generic/http";
+import { browserOperateExecutor } from "@/lib/connectors/native/browser";
+import { consultCoworkerExecutor } from "@/lib/connectors/native/consult-coworker";
 import { googleGmailSendExecutor, googleDocsCreateExecutor, googleSheetsAppendExecutor, googleSheetsReadExecutor, googleSheetsAnalyzeExecutor, googleCalendarCreateEventExecutor, googleCalendarCheckAvailabilityExecutor, googleDriveOrganizeExecutor } from "@/lib/connectors/native/google";
 import { mpesaStkPushExecutor } from "@/lib/connectors/native/mpesa";
 import { orchestratorDocumentExecutor } from "@/lib/connectors/native/orchestrator";
@@ -76,6 +78,20 @@ export const CONNECTOR_DEFINITIONS: ConnectorDefinition[] = [
     provider: "file",
     actions: [{ id: "write", label: "Write file", lane: "generic", executor: "generic.file" }],
   },
+  {
+    id: "browser",
+    label: "Browser",
+    lane: "browser",
+    provider: "browser",
+    actions: [{ id: "operate", label: "Operate a website", lane: "browser", executor: "native.browser.operate" }],
+  },
+  {
+    id: "coworker",
+    label: "Coworker",
+    lane: "local",
+    provider: "coworker",
+    actions: [{ id: "consult", label: "Ask a coworker", lane: "local", executor: "native.coworker.consult" }],
+  },
 ];
 
 const EXECUTORS = new Map<string, ConnectorExecutor>([
@@ -83,6 +99,10 @@ const EXECUTORS = new Map<string, ConnectorExecutor>([
   [httpConnectorExecutor.id, httpConnectorExecutor],
   [emailConnectorExecutor.id, emailConnectorExecutor],
   [fileConnectorExecutor.id, fileConnectorExecutor],
+  // Browser
+  [browserOperateExecutor.id, browserOperateExecutor],
+  // Coworker
+  [consultCoworkerExecutor.id, consultCoworkerExecutor],
   // Google
   [googleGmailSendExecutor.id, googleGmailSendExecutor],
   [googleDocsCreateExecutor.id, googleDocsCreateExecutor],
@@ -163,6 +183,10 @@ const STEP_EXECUTOR_MAP = new Map<string, string>([
   ["generic-email:send", emailConnectorExecutor.id],
   ["file:write_file", fileConnectorExecutor.id],
   ["generic-file:write_file", fileConnectorExecutor.id],
+  // Browser
+  ["browser:operate", browserOperateExecutor.id],
+  // Coworker
+  ["coworker:consult", consultCoworkerExecutor.id],
   // Google
   ["gmail:send_email", googleGmailSendExecutor.id],
   ["google:send_email", googleGmailSendExecutor.id],

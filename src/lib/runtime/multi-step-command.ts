@@ -332,6 +332,23 @@ export async function executeRuntimeCommandPlan(input: {
               severity: result.run.status === "failed" ? "danger" : "success",
               payload: { step, result, path },
             });
+            // Additional, additive event - executeNativeCapabilityPath
+            // already creates a real artifact for every native connector
+            // call, but nothing ever told the chat layer about it, so it
+            // only ever reached operator_chat_events (the activity
+            // timeline), never a visible message bubble. This doesn't
+            // replace the event above; both fire.
+            if (result.artifacts?.length) {
+              await input.onEvent?.({
+                eventType: "artifact_created",
+                title: result.artifacts[0].title ?? "Result ready",
+                summary: result.run.summary ?? undefined,
+                runId: result.run.id,
+                artifactId: result.artifacts[0].id,
+                severity: "success",
+                payload: { step, path },
+              });
+            }
           } else {
             if (path.approvalRequired && !input.approved) {
               const approval = await createRuntimeApproval({

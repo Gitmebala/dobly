@@ -5976,6 +5976,7 @@ html[data-theme="dark"] .ledger-entry-user .ledger-entry-body {
 /* ── Attachments read like citations ──────────────────────────── */
 .ledger-attachment {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 11px;
   max-width: 420px;
@@ -5984,6 +5985,45 @@ html[data-theme="dark"] .ledger-entry-user .ledger-entry-body {
   border: 1px solid var(--app-line);
   border-radius: 10px;
   background: color-mix(in srgb, var(--app-paper-2) 50%, var(--app-paper));
+}
+
+/* Real browser-automation artifacts get a "save as a skill" offer inline -
+   flex-basis: 100% deliberately drops these onto their own row below the
+   icon+title line rather than squeezing into the same row, since they're
+   full interactive controls (a button, or a name input + save button),
+   not another label. */
+.ledger-skill-offer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-basis: 100%;
+  margin-top: 2px;
+  padding: 6px 10px;
+  border: 1px dashed var(--app-line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-rust-dark);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.ledger-skill-offer:hover { border-style: solid; background: color-mix(in srgb, var(--app-rust) 8%, transparent); }
+html[data-theme="dark"] .ledger-skill-offer { color: var(--app-rust); }
+
+.ledger-skill-prompt { display: flex; gap: 8px; flex-basis: 100%; margin-top: 2px; }
+.ledger-skill-prompt .ref-input { min-height: 34px; font-size: 12.5px; }
+.ledger-skill-prompt .ref-button { min-height: 34px; padding: 0 14px; font-size: 12.5px; }
+
+.ledger-skill-saved {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-green);
 }
 
 .ledger-attachment > span {
@@ -6566,6 +6606,16 @@ a.home-list-row:hover {
 html[data-theme="dark"] .dashboard-shell {
   --text-warning: #d9a45c;
   --text-danger: #e08a76;
+  /* Was missing here - --text-accent (used for "names and handles the
+     coworker mentions read in accent", ~line 6935) stayed pinned to the
+     light-mode --app-rust-dark value (#8f3610) in dark mode too, unlike
+     --text-warning/--text-danger right above it which already get a real
+     dark redefinition. Confirmed live: identical computed link color in
+     both themes before this. --app-rust (not --app-rust-dark) matches
+     what every other dark-mode accent use in this file already switches
+     to - a darker shade reads correctly on a light cream base but loses
+     contrast against the near-black dark base. */
+  --text-accent: var(--app-rust);
 }
 
 /* Machine facts read in mono, lowercase, quiet */
@@ -10598,30 +10648,79 @@ html[data-theme="dark"] .dashboard-shell {
   font-size: 12px;
   font-weight: 700;
 }
+/* Every coworker previously got this exact same rust-tinted circle - no
+   way to tell them apart at a glance the way you can with a real team.
+   Hashed per name onto the existing material palette (same tokens Canvas
+   +Table's work-tiles and Groups' room avatars already use), not new
+   colors. */
+.ledger-entry-avatar[data-material="clay"] { background: linear-gradient(160deg, var(--app-clay), var(--app-clay-dark)); color: #fff; }
+.ledger-entry-avatar[data-material="stone"] { background: var(--app-stone); color: var(--app-stone-text); }
+.ledger-entry-avatar[data-material="slate"] { background: var(--app-slate); color: var(--app-slate-text); }
+.ledger-entry-avatar[data-material="wood"] { background: var(--app-wood); color: var(--app-wood-text); }
+.ledger-entry-avatar[data-material="kraft"] { background: var(--app-kraft); color: var(--app-kraft-text); }
+.ledger-entry-avatar[data-material="gold"] { background: var(--app-gold); color: var(--app-slate); }
+
+/* Technical strings (urls, paths, ids) in a coworker's reply previously
+   rendered as plain prose text, indistinguishable from the sentence
+   around them. A monospace tag with a quiet tinted background - the same
+   technique GrokBot's own interface uses for exactly this - makes them
+   scannable at a glance instead of blending in. */
+.ledger-inline-code {
+  font-family: var(--font-mono, ui-monospace, "SF Mono", Menlo, monospace);
+  font-size: 0.9em;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--app-rust) 10%, var(--app-paper-2));
+  color: var(--app-rust-dark);
+}
+html[data-theme="dark"] .ledger-inline-code,
+.dashboard-shell.app-shell[data-theme="dark"] .ledger-inline-code {
+  color: var(--app-rust);
+}
+/* No color/decoration rule needed here - .ledger-entry-coworker
+   .ledger-entry-body a (~line 6876) already styles every real <a> tag
+   inside a coworker message correctly and theme-aware (var(--text-accent),
+   intentionally no underline). This class exists purely as a JS hook for
+   the two new inline-link cases (markdown links, linkified bare URLs) in
+   case they ever need their own treatment later - adding a competing
+   color/text-decoration here would only fight an already-correct,
+   already-established rule at equal specificity, which is exactly what
+   happened on the first pass (confirmed live: the new rule lost to the
+   existing one, and even "won" cases were coincidentally reproducing the
+   same value from a different token, not evidence the override worked).
+   No color:target here on purpose. */
+.ledger-inline-link { font-weight: 500; }
 
 .ledger-entry-coworker::before { display: none; }
 
+/* Plain ink, not a chat bubble - the founder's original ledger design
+   intent (see the ~line 5712 block earlier in this file) got silently
+   overridden here when the run/system status-card fix below was added:
+   this selector was broad enough to catch every coworker message, not
+   just run/system ones, so an ordinary reply picked up a bordered-card
+   look it was never meant to have - the exact generic AI-chat-bubble
+   pattern GrokBot's actual UI deliberately avoids (their agent messages
+   are plain text on the background, only the human's own messages get a
+   bubble). Restored to no background/border/radius; the real status-card
+   look run/system messages DO want now lives explicitly on that variant
+   below instead of leaking from here. */
 .ledger-entry-coworker .ledger-entry-body {
   max-width: min(84%, 640px);
-  padding: 11px 15px 12px;
-  border-radius: 4px 14px 14px 14px;
-  background: var(--app-paper-2);
-  border: 1px solid var(--app-line);
   font-size: 14.5px;
-  box-shadow: none;
 }
-/* Run/system log lines now get a real status treatment instead of a
-   dashed placeholder-looking border - a solid, subtly-tinted card with
-   a status icon, colored by what actually happened (failed/completed/
-   info), same severity language as everywhere else in the app rather
-   than a fourth ad-hoc scheme. */
+/* Run/system log lines get their own real status treatment - a solid,
+   subtly-tinted card with a status icon, colored by what actually
+   happened (failed/completed/info) - explicitly scoped here now rather
+   than inherited from the general coworker-message rule above. */
 .ledger-entry-coworker[data-role="system"] .ledger-entry-body,
 .ledger-entry-coworker[data-role="run"] .ledger-entry-body {
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  padding: 11px 15px 12px;
+  border-radius: 10px;
   background: var(--app-paper);
-  border-style: solid;
+  border: 1px solid var(--app-line);
   font-size: 13px;
   color: var(--app-muted);
 }
@@ -11779,4 +11878,346 @@ html, body {
 }
 .channel-panel-how summary::-webkit-details-marker {
   display: none;
+}
+
+/* ===== LOOPS — event-trigger drawer, not a card grid =====
+   New loop creation uses a right-edge Sheet (components/ui/sheet.tsx) so the
+   existing loop list stays visible behind it, a segmented control to pick
+   scheduled-vs-event-driven, and a real Popover per webhook-triggered row
+   for managing its link. See src/lib/loop-triggers.ts for the backend this
+   wires into. */
+
+.loop-drawer-body { display: grid; gap: 16px; }
+
+.loop-drawer-label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.loop-drawer-select { appearance: auto; }
+
+.loop-drawer-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--app-paper-2);
+  border: 1px solid var(--app-line);
+}
+.loop-drawer-segmented button {
+  border: none;
+  background: transparent;
+  padding: 9px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--app-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.loop-drawer-segmented button[data-active="true"] {
+  background: var(--app-paper);
+  color: var(--app-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.loop-drawer-sources { gap: 8px; }
+.loop-drawer-source {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--app-paper);
+}
+.loop-drawer-source > span { display: grid; gap: 2px; }
+.loop-drawer-source strong { font-size: 13px; color: var(--app-text); font-weight: 600; text-transform: none; letter-spacing: normal; }
+.loop-drawer-source small { font-size: 11.5px; color: var(--app-muted); line-height: 1.4; }
+.loop-drawer-source[data-disabled="true"] { opacity: 0.55; cursor: not-allowed; }
+.loop-drawer-soon {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--app-muted);
+  background: var(--app-paper-2);
+  border-radius: 999px;
+  padding: 2px 8px;
+  align-self: center;
+}
+
+.loop-drawer-error {
+  font-size: 12.5px;
+  color: var(--app-rust-dark);
+  background: color-mix(in srgb, var(--app-rust) 10%, var(--app-paper));
+  border: 1px solid color-mix(in srgb, var(--app-rust) 30%, var(--app-line));
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.loop-drawer-submit { width: 100%; justify-content: center; }
+
+.loop-drawer-reveal { display: grid; gap: 10px; }
+.loop-drawer-reveal-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--app-rust) 14%, var(--app-paper));
+  color: var(--app-rust);
+}
+.loop-drawer-url {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--app-paper-2);
+  border: 1px solid var(--app-line-strong);
+  font-size: 12px;
+  color: var(--app-text);
+  word-break: break-all;
+  line-height: 1.5;
+}
+.loop-drawer-url-sm { padding: 8px 10px; font-size: 11px; }
+.loop-drawer-url-masked { color: var(--app-muted); letter-spacing: 0.04em; }
+.loop-drawer-copy { width: 100%; justify-content: center; }
+.loop-drawer-reveal-note { font-size: 12px; color: var(--app-muted); line-height: 1.5; margin: 0; }
+
+.loop-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+/* .loop-row is a <div>, not an <a> (it holds several independent
+   interactive children - the name link, the trigger popover, the row
+   menu), so the app-wide `a.home-list-row:hover` rule never matches it.
+   Same gradient, reapplied here, so this row doesn't silently lose the
+   hover language every other list row in the app uses. */
+.loop-row:hover {
+  background: linear-gradient(to right, transparent, color-mix(in srgb, var(--app-rust) 4%, transparent), transparent);
+}
+.loop-row-link { min-width: 0; text-decoration: none; }
+.loop-row .home-list-meta { display: flex; align-items: center; gap: 10px; }
+
+.loop-trigger-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--app-line-strong);
+  background: var(--app-paper-2);
+  color: var(--app-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.loop-trigger-chip:hover { color: var(--app-rust); border-color: color-mix(in srgb, var(--app-rust) 40%, var(--app-line)); }
+
+.loop-trigger-popover { display: grid; gap: 8px; }
+.loop-trigger-popover strong { font-size: 12.5px; color: var(--app-text); }
+
+.loop-row-menu-trigger {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+.loop-row-menu-trigger:hover { background: var(--app-paper-2); border-color: var(--app-line); color: var(--app-text); }
+
+.loop-row-menu { width: 200px; padding: 6px; }
+.loop-row-menu-list { display: grid; gap: 2px; }
+.loop-row-menu-list button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-text);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.loop-row-menu-list button:hover { background: var(--app-paper-2); }
+.loop-row-menu-danger-text { color: var(--app-rust-dark) !important; }
+.loop-row-menu-danger-text:hover { background: color-mix(in srgb, var(--app-rust) 10%, transparent) !important; }
+
+.loop-row-menu-confirm { display: grid; gap: 10px; padding: 4px; }
+.loop-row-menu-confirm p { margin: 0; font-size: 12.5px; color: var(--app-text); line-height: 1.45; }
+.loop-row-menu-confirm-actions { display: flex; gap: 8px; }
+.loop-row-menu-danger { background: var(--app-rust); border-color: var(--app-rust); color: #fff; flex: 1; justify-content: center; min-height: 32px; padding: 0 10px; font-size: 12px; }
+.loop-row-menu-cancel { background: transparent; border: 1px solid var(--app-line); border-radius: 8px; padding: 0 12px; font-size: 12px; color: var(--app-muted); cursor: pointer; }
+
+/* ===== GROUPS — coworkers in a shared room, real multi-agent dialogue ===== */
+
+.group-member-picker { display: grid; gap: 6px; max-height: 260px; overflow-y: auto; }
+.group-member-option {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--app-paper);
+}
+.group-member-option[data-checked="true"] { border-color: color-mix(in srgb, var(--app-rust) 45%, var(--app-line)); background: color-mix(in srgb, var(--app-rust) 6%, var(--app-paper)); }
+.group-member-option input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--app-rust); }
+.group-member-avatar { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--app-paper-2); color: var(--app-muted); }
+.group-member-option strong { display: block; font-size: 13px; color: var(--app-text); font-weight: 600; }
+.group-member-option small { display: block; font-size: 11.5px; color: var(--app-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.group-room { display: flex; flex-direction: column; height: calc(100vh - 120px); min-height: 420px; }
+.group-room-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--app-line);
+}
+.group-room-back { font-size: 12px; color: var(--app-muted); text-decoration: none; display: inline-block; margin-bottom: 6px; }
+.group-room-back:hover { color: var(--app-rust); }
+.group-room-purpose { margin: 4px 0 0; font-size: 12.5px; color: var(--app-muted); }
+.group-room-roster { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 320px; justify-content: flex-end; }
+.group-room-roster-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--app-wood-text);
+  background: var(--app-slate);
+}
+.group-room-roster-chip[data-material="clay"] { background: linear-gradient(160deg, var(--app-clay), var(--app-clay-dark)); color: #fff; }
+.group-room-roster-chip[data-material="stone"] { background: var(--app-stone); color: var(--app-stone-text); }
+.group-room-roster-chip[data-material="slate"] { background: var(--app-slate); color: var(--app-slate-text); }
+.group-room-roster-chip[data-material="wood"] { background: var(--app-wood); color: var(--app-wood-text); }
+.group-room-roster-chip[data-material="kraft"] { background: var(--app-kraft); color: var(--app-kraft-text); }
+.group-room-roster-chip[data-material="gold"] { background: var(--app-gold); color: var(--app-slate); }
+.group-room-remove { font-size: 11px; color: var(--app-muted); background: none; border: 1px solid var(--app-line); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+.group-room-remove:hover { color: var(--app-rust-dark); border-color: color-mix(in srgb, var(--app-rust) 40%, var(--app-line)); }
+
+.group-room-thread { flex: 1; overflow-y: auto; padding: 18px 4px; display: flex; flex-direction: column; gap: 14px; }
+.group-room-empty { margin: auto; text-align: center; display: grid; gap: 8px; justify-items: center; color: var(--app-muted); font-size: 13px; max-width: 260px; }
+
+.group-room-message { display: flex; gap: 10px; max-width: 78%; }
+.group-room-message[data-role="user"] { margin-left: auto; flex-direction: row-reverse; }
+.group-room-message-avatar {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--app-wood-text);
+  background: var(--app-slate);
+}
+.group-room-message-avatar[data-material="clay"] { background: linear-gradient(160deg, var(--app-clay), var(--app-clay-dark)); color: #fff; }
+.group-room-message-avatar[data-material="stone"] { background: var(--app-stone); color: var(--app-stone-text); }
+.group-room-message-avatar[data-material="slate"] { background: var(--app-slate); color: var(--app-slate-text); }
+.group-room-message-avatar[data-material="wood"] { background: var(--app-wood); color: var(--app-wood-text); }
+.group-room-message-avatar[data-material="kraft"] { background: var(--app-kraft); color: var(--app-kraft-text); }
+.group-room-message-avatar[data-material="gold"] { background: var(--app-gold); color: var(--app-slate); }
+.group-room-message-body { min-width: 0; }
+.group-room-message-body strong { display: block; font-size: 11px; font-weight: 700; color: var(--app-muted); margin-bottom: 3px; }
+.group-room-message-body p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--app-text); padding: 9px 13px; border-radius: 14px; background: var(--app-paper-2); }
+.group-room-message[data-role="user"] .group-room-message-body p {
+  background: color-mix(in srgb, var(--app-rust) 13%, var(--app-paper));
+  color: var(--app-text);
+}
+.group-room-thinking { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--app-muted); padding: 0 4px; }
+
+.group-room-error { margin-top: 8px; }
+
+.group-room-composer { display: flex; gap: 8px; padding-top: 14px; border-top: 1px solid var(--app-line); }
+.group-room-composer .ref-input { flex: 1; }
+.group-room-composer button { min-width: 44px; justify-content: center; }
+
+/* ===== SKILLS — teach-a-task stepper, real replayable procedures ===== */
+
+.skill-stepper { padding: 24px; }
+.skill-stepper-progress { display: flex; align-items: center; gap: 8px; margin-bottom: 22px; }
+.skill-stepper-step { display: flex; align-items: center; gap: 8px; flex: 1; }
+.skill-stepper-step:not(:last-child)::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--app-line);
+  margin-left: 8px;
+}
+.skill-stepper-dot {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--app-paper-2);
+  color: var(--app-muted);
+  border: 1px solid var(--app-line);
+}
+.skill-stepper-step[data-state="active"] .skill-stepper-dot { background: var(--app-rust); border-color: var(--app-rust); color: #fff; }
+.skill-stepper-step[data-state="done"] .skill-stepper-dot { background: color-mix(in srgb, var(--app-rust) 16%, var(--app-paper)); border-color: color-mix(in srgb, var(--app-rust) 40%, var(--app-line)); color: var(--app-rust-dark); }
+.skill-stepper-step small { font-size: 11px; color: var(--app-muted); white-space: nowrap; }
+.skill-stepper-step[data-state="active"] small { color: var(--app-text); font-weight: 600; }
+
+.skill-action-list { display: grid; gap: 8px; margin-top: 6px; }
+.skill-action-row { display: grid; grid-template-columns: auto 1fr 1fr auto; gap: 8px; align-items: center; }
+.skill-action-index {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--app-paper-2);
+  color: var(--app-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.skill-action-type { min-width: 0; }
+.skill-action-remove { background: none; border: none; color: var(--app-muted); cursor: pointer; padding: 6px; }
+.skill-action-remove:hover { color: var(--app-rust-dark); }
+.skill-action-add { margin-top: 4px; align-self: start; }
+
+.skill-review { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--app-line); border-radius: 12px; background: var(--app-paper-2); }
+.skill-review strong { font-size: 15px; color: var(--app-text); }
+.skill-review p { margin: 4px 0 0; font-size: 12.5px; color: var(--app-muted); line-height: 1.5; }
+.skill-review-kind em { font-style: normal; color: var(--app-text); font-weight: 500; }
+
+.skill-stepper-footer { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--app-line); }
+.skill-stepper-back { background: transparent; color: var(--app-muted); border-color: var(--app-line); }
+
+.skill-replay-result { display: grid; gap: 8px; margin-top: 8px; }
+.skill-replay-screenshot {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--app-line-strong);
+  display: block;
 }

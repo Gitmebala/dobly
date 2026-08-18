@@ -11,6 +11,7 @@ import {
   Bot,
   BrainCircuit,
   CalendarDays,
+  Check,
   CheckCircle2,
   Clock3,
   Download,
@@ -18,6 +19,7 @@ import {
   Eye,
   FileJson,
   FileText,
+  GraduationCap,
   Image as ImageIcon,
   Link2,
   Loader2,
@@ -164,6 +166,68 @@ function heldFor(value?: string | null) {
 function formatClock(value?: string | null) {
   if (!value) return "";
   return new Intl.DateTimeFormat(DISPLAY_LOCALE, { hour: "2-digit", minute: "2-digit", timeZone: DISPLAY_TIME_ZONE }).format(new Date(value));
+}
+
+// Every coworker got the exact same rust-tinted circle+initial avatar
+// regardless of who they were - no per-coworker visual identity at all,
+// unlike a real team where you recognize people by more than a shared
+// uniform. Same material-token hash technique already proven in
+// GroupRoom.tsx's room view (clay/stone/slate/wood/kraft/gold, the
+// existing Canvas+Table tactile palette - not new colors), just applied
+// here for the first time. Hashed by name rather than operator id since
+// this component only receives the name as a prop.
+const AVATAR_MATERIALS = ["clay", "stone", "slate", "wood", "kraft", "gold"] as const;
+function avatarMaterialFor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_MATERIALS[hash % AVATAR_MATERIALS.length];
+}
+
+// message.body rendered as completely raw text before this - an LLM reply
+// containing **bold**, `inline code`, a [markdown link](url), or a bare
+// URL showed the literal asterisks/backticks/brackets to the user instead
+// of formatting them. Deliberately not pulling in a markdown library (none
+// is installed; this covers the actual common cases an LLM chat reply
+// uses without a new dependency) - builds real React nodes directly, so
+// this is exactly as safe from injection as the plain-text version it
+// replaces, never dangerouslySetInnerHTML.
+const INLINE_FORMAT_PATTERN = /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(\[[^\]\n]+\]\([^)\n]+\))|(https?:\/\/[^\s<>()]+)/g;
+function renderFormattedMessageBody(text: string): React.ReactNode {
+  if (!text) return text;
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+  INLINE_FORMAT_PATTERN.lastIndex = 0;
+  while ((match = INLINE_FORMAT_PATTERN.exec(text)) !== null) {
+    if (match.index > lastIndex) nodes.push(text.slice(lastIndex, match.index));
+    const [full, code, bold, mdLink, bareUrl] = match;
+    if (code) {
+      nodes.push(<code key={key++} className="ledger-inline-code">{code.slice(1, -1)}</code>);
+    } else if (bold) {
+      nodes.push(<strong key={key++}>{bold.slice(2, -2)}</strong>);
+    } else if (mdLink) {
+      const parsed = mdLink.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      if (parsed) {
+        nodes.push(<a key={key++} href={parsed[2]} target="_blank" rel="noopener noreferrer" className="ledger-inline-link">{parsed[1]}</a>);
+      } else {
+        nodes.push(mdLink);
+      }
+    } else if (bareUrl) {
+      // A bare URL followed immediately by sentence punctuation ("...4821,
+      // and the reference...") greedily swallowed the trailing comma/period
+      // into the href and visible text - trim trailing punctuation off the
+      // match and put it back as plain text after the link, standard
+      // linkify behavior.
+      const trimmed = bareUrl.replace(/[.,;:!?)\]]+$/, "");
+      const trailingPunctuation = bareUrl.slice(trimmed.length);
+      nodes.push(<a key={key++} href={trimmed} target="_blank" rel="noopener noreferrer" className="ledger-inline-link">{trimmed}</a>);
+      if (trailingPunctuation) nodes.push(trailingPunctuation);
+    }
+    lastIndex = match.index + full.length;
+  }
+  if (lastIndex < text.length) nodes.push(text.slice(lastIndex));
+  return nodes;
 }
 
 function dayKey(iso: string) {
@@ -745,6 +809,7 @@ export default function OperatorChatConsole(props: OperatorChatConsoleProps) {
                         key={entry.message.id}
                         message={entry.message}
                         coworkerName={operatorName}
+                        operatorId={props.operator.id}
                         approvals={approvals}
                         decisionLoading={decisionLoading}
                         onDecision={decideApproval}
@@ -1146,12 +1211,14 @@ function ActivityRow({ event }: { event: JsonRecord }) {
 function MessageBubble({
   message,
   coworkerName,
+  operatorId,
   approvals,
   decisionLoading,
   onDecision,
 }: {
   message: ChatMessage;
   coworkerName: string;
+  operatorId: string;
   approvals?: JsonRecord[];
   decisionLoading?: string | null;
   onDecision?: (approvalId: string, decision: "approved" | "rejected") => void;
@@ -1196,7 +1263,7 @@ function MessageBubble({
   return (
     <article className={`ledger-entry ${isUser ? "ledger-entry-user" : "ledger-entry-coworker"}`} data-role={message.role}>
       {!isUser ? (
-        <span className="ledger-entry-avatar" aria-hidden="true">
+        <span className="ledger-entry-avatar" data-material={avatarMaterialFor(coworkerName)} aria-hidden="true">
           {coworkerName.slice(0, 1).toUpperCase()}
         </span>
       ) : null}
@@ -1208,10 +1275,10 @@ function MessageBubble({
         </header>
         <div className="ledger-entry-body" data-run-status={runStatus}>
           {runStatus ? <RunIcon aria-hidden="true" className="ledger-entry-run-icon" /> : null}
-          <span>{message.body}</span>
+          <span>{renderFormattedMessageBody(message.body)}</span>
         </div>
         <OperatorThinking message={message} />
-        <MessageArtifactPreview message={message} />
+        <MessageArtifactPreview message={message} operatorId={operatorId} />
       </div>
     </article>
   );
@@ -1394,10 +1461,23 @@ function OperatorThinking({ message }: { message: ChatMessage }) {
   );
 }
 
-function MessageArtifactPreview({ message }: { message: ChatMessage }) {
+function MessageArtifactPreview({ message, operatorId }: { message: ChatMessage; operatorId: string }) {
   const artifact = message.metadata?.artifact;
   if (!artifact) return null;
   const Icon = artifactIcon(artifact);
+
+  // A live browser action's artifact carries the exact {url, actions} it
+  // ran (universal-mcp-execution.ts's createDurableArtifact call embeds
+  // toolPayload alongside the result, unchanged for this specific detection -
+  // no execution-engine change needed for this feature, the data was
+  // already flowing through from the earlier live-artifact fix this
+  // session). This is genuinely the same shape learned-skills.ts's
+  // "browser" procedure kind expects, so offering to save it is a real,
+  // literal replay, not a description of one.
+  const toolPayload = artifact.content?.toolPayload as { url?: unknown; actions?: unknown } | undefined;
+  const browserUrl = typeof toolPayload?.url === "string" ? toolPayload.url : null;
+  const browserActions = Array.isArray(toolPayload?.actions) ? toolPayload.actions : null;
+
   return (
     <div className="ledger-attachment">
       <span aria-hidden="true"><Icon /></span>
@@ -1405,6 +1485,77 @@ function MessageArtifactPreview({ message }: { message: ChatMessage }) {
         <strong>{artifact.title}</strong>
         <small>{artifact.kind} · version {artifact.version}</small>
       </div>
+      {browserUrl && browserActions ? (
+        <SaveBrowserResultAsSkill operatorId={operatorId} url={browserUrl} actions={browserActions} defaultName={String(artifact.title ?? "")} />
+      ) : null}
+    </div>
+  );
+}
+
+function SaveBrowserResultAsSkill({
+  operatorId,
+  url,
+  actions,
+  defaultName,
+}: {
+  operatorId: string;
+  url: string;
+  actions: unknown[];
+  defaultName: string;
+}) {
+  const [state, setState] = useState<"offer" | "prompting" | "saving" | "saved" | "error">("offer");
+  const [name, setName] = useState(defaultName);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    if (!name.trim()) { setError("Give this skill a name."); return; }
+    setState("saving");
+    setError(null);
+    try {
+      const res = await fetch("/api/skills", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), operatorId, procedureKind: "browser", url, actions }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Could not save this skill.");
+      setState("saved");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setState("error");
+    }
+  }
+
+  if (state === "saved") {
+    return (
+      <p className="ledger-skill-saved">
+        <Check className="h-3.5 w-3.5" /> Saved as a skill — {name}
+      </p>
+    );
+  }
+
+  if (state === "offer") {
+    return (
+      <button type="button" className="ledger-skill-offer" onClick={() => setState("prompting")}>
+        <GraduationCap className="h-3.5 w-3.5" /> Save as a skill
+      </button>
+    );
+  }
+
+  return (
+    <div className="ledger-skill-prompt">
+      <input
+        className="ref-input"
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        placeholder="Name this skill"
+        maxLength={120}
+        autoFocus
+      />
+      <button type="button" className="ref-button" onClick={save} disabled={state === "saving"}>
+        {state === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
+      </button>
+      {error ? <p className="loop-drawer-error">{error}</p> : null}
     </div>
   );
 }

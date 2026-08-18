@@ -46,6 +46,25 @@ function buildOperatorChatEventForwarder(input: {
     }).catch(() => undefined);
 
     if (["approval_requested", "artifact_created", "run_completed", "run_failed"].includes(event.eventType)) {
+      // MessageArtifactPreview (OperatorChatConsole.tsx) reads
+      // message.metadata?.artifact - the FULL row, not just an id - the
+      // same shape operator-chat.ts's file-attachment flow already embeds.
+      // This forwarder previously only ever passed artifactId (the FK
+      // column), so an artifact_created event never actually rendered a
+      // preview even on the rare occasions this eventType fired. Fetching
+      // it here is a real DB read but a small, scoped, read-only one.
+      let embeddedArtifact: Record<string, unknown> | null = null;
+      if (event.eventType === "artifact_created" && event.artifactId) {
+        const admin = createAdminSupabaseClient();
+        const { data } = await admin
+          .from("software_execution_artifacts")
+          .select("id, run_id, kind, title, version, external_url, storage_path, content, metadata, created_at")
+          .eq("id", event.artifactId)
+          .eq("user_id", input.userId)
+          .maybeSingle();
+        embeddedArtifact = data ?? null;
+      }
+
       await appendOperatorChatMessage({
         conversationId: input.conversationId,
         userId: input.userId,
@@ -61,6 +80,7 @@ function buildOperatorChatEventForwarder(input: {
           source: "runtime_worker",
           eventType: event.eventType,
           payload: event.payload ?? {},
+          ...(embeddedArtifact ? { artifact: embeddedArtifact } : {}),
         },
       }).catch(() => undefined);
     }

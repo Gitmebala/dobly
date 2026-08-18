@@ -10,7 +10,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import type { McpConnectionRecord } from "@/lib/runtime/universal-mcp";
 import { assertSafeOutboundUrl } from "@/lib/security/safe-fetch";
 import { assertEmergencyStopInactive } from "@/lib/feature-flags";
-import { anthropic } from "@/lib/anthropic";
+import { createGenerationMessage, isFreeTierOnly, resolveGenerationProviderLabel } from "@/lib/anthropic";
 import { executeNativeConnectorTool, findNativeExecutorId } from "@/lib/office/native-tool-bridge";
 import { findLiveConnectionForProvider } from "@/lib/provider-aliases";
 
@@ -178,25 +178,25 @@ async function extractNativeToolArguments(input: {
   context?: JsonRecord;
 }): Promise<JsonRecord> {
   const schema = NATIVE_TOOL_ARG_SCHEMAS[input.toolName];
-  if (!schema || !process.env.ANTHROPIC_API_KEY) return {};
+  if (!schema) return {};
 
   try {
-    const message = await anthropic.messages.create({
-      model: process.env.DOBLY_TOOL_MODEL || process.env.DOBLY_PREMIUM_MODEL || "claude-sonnet-4-20250514",
-      max_tokens: 500,
+    const message = await createGenerationMessage({
+      // DOBLY_TOOL_MODEL only means something to the Anthropic branch - a
+      // free-tier NVIDIA/Groq call must keep using its own correct default
+      // model id, not an Anthropic model name it can't serve.
+      ...(isFreeTierOnly()
+        ? {}
+        : { model: process.env.DOBLY_TOOL_MODEL || process.env.DOBLY_PREMIUM_MODEL || "claude-sonnet-5" }),
+      maxTokens: 500,
       system:
         "Extract structured arguments for a software action from the user's request. Reply with ONLY a single JSON object matching the given shape - no prose, no markdown fences. Fields described as required must always be filled - resolve relative dates/times (\"tomorrow\", \"next Monday\", \"2pm\") against the current time given below; if the user didn't state a timezone, use the current time's own UTC offset rather than leaving the field out. Only omit fields explicitly marked optional/omittable, and only when truly nothing in the request or prior context suggests a value.",
-      messages: [
-        {
-          role: "user",
-          content: [
-            `Current time: ${new Date().toISOString()}`,
-            `Target shape (fields not marked optional/omittable are required): ${schema}`,
-            `User request: ${input.prompt}`,
-            `Prior step results (may contain ids to reuse, e.g. a fileId from a just-created document): ${JSON.stringify(input.context ?? {}).slice(0, 4000)}`,
-          ].join("\n\n"),
-        },
-      ],
+      userContent: [
+        `Current time: ${new Date().toISOString()}`,
+        `Target shape (fields not marked optional/omittable are required): ${schema}`,
+        `User request: ${input.prompt}`,
+        `Prior step results (may contain ids to reuse, e.g. a fileId from a just-created document): ${JSON.stringify(input.context ?? {}).slice(0, 4000)}`,
+      ].join("\n\n"),
     });
     const text = message.content
       .map((block) => (block.type === "text" ? block.text : ""))
@@ -260,7 +260,7 @@ export async function executeNativeCapabilityPath(input: {
     userId: input.userId,
     workspaceId: input.workspaceId,
     capability: "ai.reasoning",
-    provider: "anthropic",
+    provider: resolveGenerationProviderLabel(),
     estimatedMinor,
     idempotencyKey: `native:${run.id}:${toolName}`,
     runId: run.id,
@@ -274,6 +274,19 @@ export async function executeNativeCapabilityPath(input: {
       context: input.context,
     });
 
+    // consult_coworker needs to know WHICH coworker is asking. Not left for
+    // the LLM's own tool-call arguments to self-report (extractNativeToolArguments
+    // is itself an LLM call reading free text - unreliable for something
+    // that has to be exactly right, and there is a real value already
+    // flowing through this function that IS exactly right). context.operatorId
+    // is threaded all the way down from job-processor.ts's queue payload,
+    // so this is a real identity, not a guess.
+    if (toolName === "consult_coworker") {
+      const callingOperatorId = typeof input.context?.operatorId === "string" ? input.context.operatorId : null;
+      if (callingOperatorId) toolPayload.fromOperatorId = callingOperatorId;
+      if (input.workspaceId) toolPayload.workspaceId = input.workspaceId;
+    }
+
     const result = await executeNativeConnectorTool({
       userId: input.userId,
       taskId: run.id,
@@ -283,14 +296,35 @@ export async function executeNativeCapabilityPath(input: {
 
     if (!result.ok) throw new Error(result.error);
 
+    // native.browser.operate's result carries a real base64 screenshot
+    // (connectors/native/browser.ts) - every native connector call already
+    // reaches this exact line and gets a real artifact either way, this
+    // just tags the browser case correctly so the existing frontend image
+    // preview (OperatorChatConsole.tsx's artifactPreviewType/
+    // ArtifactPreviewModal, which already handle content.contentType:
+    // "image/*" for the file-attachment flow) recognizes it as an image
+    // instead of falling through to the generic raw-JSON view. A data:
+    // URL is a valid <img src> on its own, so this needs no separate
+    // storage upload - purely additive, every other tool's artifact is
+    // completely unaffected.
+    const screenshotDataUrl =
+      typeof (result.output as JsonRecord | undefined)?.screenshotDataUrl === "string"
+        ? String((result.output as JsonRecord).screenshotDataUrl)
+        : null;
+
     const artifact = await createDurableArtifact({
       runId: run.id,
       userId: input.userId,
       workspaceId: input.workspaceId ?? null,
       kind: "json",
       title: `${path.label} result`,
-      content: { toolPayload, output: result.output },
+      content: {
+        toolPayload,
+        output: result.output,
+        ...(screenshotDataUrl ? { contentType: "image/jpeg" } : {}),
+      },
       metadata: { capability: path.capability, toolName },
+      externalUrl: screenshotDataUrl,
       intent: input.intent ?? null,
     });
 

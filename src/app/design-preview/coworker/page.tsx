@@ -1,6 +1,11 @@
+"use client";
+
 // No-auth preview of the real OperatorChatConsole with mock data — same
 // purpose as ../page.tsx, for the Assistants/coworker chat surface. Dev
-// only, never linked from product navigation.
+// only, never linked from product navigation. Now stubs fetch for
+// /api/skills specifically to verify the new "save a live browser result
+// as a skill" flow end to end against the real, unmodified component.
+import { useEffect, useState } from "react";
 import DashboardWorkspace from "@/components/dashboard/DashboardWorkspace";
 import OperatorChatConsole from "@/components/dashboard/OperatorChatConsole";
 import "@/app/dashboard/reference-app.css";
@@ -9,6 +14,25 @@ const now = Date.now();
 const iso = (minutesAgo: number) => new Date(now - minutesAgo * 60000).toISOString();
 
 export default function CoworkerDesignPreviewPage() {
+  const [ready, setReady] = useState(false);
+  const [log, setLog] = useState<string | null>(null);
+
+  useEffect(() => {
+    const realFetch = window.fetch.bind(window);
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/api/skills") && (init?.method ?? "GET") === "POST") {
+        setLog(String(init?.body ?? ""));
+        return new Response(JSON.stringify({ skill: { id: "skill-new" } }), { status: 201 });
+      }
+      return realFetch(input, init);
+    };
+    setReady(true);
+    return () => { window.fetch = realFetch; };
+  }, []);
+
+  if (!ready) return null;
+
   return (
     <DashboardWorkspace
       profile={{ full_name: "Michael", email: "michael@dobly.io" }}
@@ -36,6 +60,32 @@ export default function CoworkerDesignPreviewPage() {
         messages={[
           { id: "m1", role: "user", body: "What are the most common customer questions today?", intent: "instruction", created_at: iso(20) },
           { id: "m2", role: "operator", body: "Here are the top questions I've received today:\n\n- How do I track my order?\n- What is your return policy?\n- Do you offer same-day delivery?", intent: "message", created_at: iso(19) },
+          { id: "m3", role: "user", body: "Can you check the tracking page for order 4821?", intent: "instruction", created_at: iso(10) },
+          { id: "m4", role: "operator", body: "Checked it. **Order 4821 shipped this morning** via the carrier's standard route — tracking link is https://track.example.com/4821, and the reference code is `ORD-4821-KE`. Should arrive in 2-3 days.", intent: "message", created_at: iso(9) },
+          {
+            id: "m5",
+            role: "artifact",
+            body: "Connected software completed: Operate browser ran for real via browser.",
+            intent: "artifact",
+            created_at: iso(5),
+            metadata: {
+              source: "runtime_worker",
+              eventType: "artifact_created",
+              artifact: {
+                id: "artifact-1",
+                title: "Operate browser result",
+                kind: "json",
+                version: 1,
+                content: {
+                  toolPayload: {
+                    url: "https://competitor.example.com/pricing",
+                    actions: [{ type: "extract_text" }, { type: "screenshot" }],
+                  },
+                  output: { pageTitle: "Pricing", finalUrl: "https://competitor.example.com/pricing" },
+                },
+              },
+            },
+          },
         ] as any}
         events={[]}
         feedback={[]}
@@ -56,6 +106,12 @@ export default function CoworkerDesignPreviewPage() {
           { id: "k2", kind: "faq", scope: "global", title: "Product Catalog FAQ", updated_at: iso(1440) },
         ]}
       />
+      {log ? (
+        <div style={{ position: "fixed", bottom: 12, right: 12, maxWidth: 420, padding: 12, background: "var(--app-paper)", border: "1px solid var(--app-line)", borderRadius: 10, fontSize: 11, zIndex: 999 }}>
+          <strong style={{ display: "block", marginBottom: 4 }}>Intercepted POST /api/skills</strong>
+          <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{log}</pre>
+        </div>
+      ) : null}
     </DashboardWorkspace>
   );
 }

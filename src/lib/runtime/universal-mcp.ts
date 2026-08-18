@@ -308,6 +308,7 @@ const CAPABILITY_NATIVE_TOOLS: Partial<Record<DoblyCapability, NativeToolCandida
 // without duplicating this capability->tool-name table a second time.
 export function getCapabilityNativeToolCandidates(capability: DoblyCapability): NativeToolCandidate[] {
   if (capability === "make_call") return [{ provider: "make_call", toolName: "make_call" }];
+  if (capability === "consult_coworker") return [{ provider: "coworker", toolName: "consult_coworker" }];
   return CAPABILITY_NATIVE_TOOLS[capability] ?? [];
 }
 
@@ -330,6 +331,32 @@ async function resolveNativeCapabilityPath(
       riskLevel: definition?.riskLevel ?? "high",
       approvalRequired: false,
       reason: "Dobly's connected phone line can place this call through a live conversational agent.",
+    };
+  }
+
+  // Consulting a coworker is internal to Dobly - no third-party connection
+  // to check, same shape as make_call above. Gated instead on the user
+  // actually having a second coworker to consult, so this path is never
+  // offered to a solo-coworker account where it could only ever fail.
+  if (capability === "consult_coworker") {
+    if (!findNativeExecutorId("consult_coworker")) return null;
+    const admin = createAdminSupabaseClient();
+    const { count } = await admin
+      .from("dobly_operators")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "active");
+    if (!count || count < 2) return null;
+
+    const definition = getCapabilityDefinition(capability);
+    return {
+      kind: "native",
+      capability,
+      label: definition?.label ?? "Consult another coworker",
+      score: 55,
+      riskLevel: definition?.riskLevel ?? "low",
+      approvalRequired: false,
+      reason: "Another one of the user's coworkers may already know the answer.",
     };
   }
 
