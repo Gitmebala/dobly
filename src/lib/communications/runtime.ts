@@ -1,4 +1,5 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
+import { createGenerationMessage } from "@/lib/anthropic";
 import { ingestAndDispatchOfficeEvent } from "@/lib/office/runtime";
 import { recordOfficeEvent } from "@/lib/office/events";
 import { checkUsageEntitlement, recordUsageEvent } from "@/lib/billing/entitlements";
@@ -71,15 +72,23 @@ function summarizeMessage(input: InboundCommunicationInput, intent: Communicatio
   return `${customer} sent a ${input.channel.replace("_", " ")} message classified as ${intent}: ${input.body.slice(0, 220)}`;
 }
 
-function buildSuggestedReply(params: {
+/**
+ * Deterministic, zero-latency, zero-cost fallback reply. This used to be the
+ * ONLY reply mechanism for every inbound channel (voice, SMS, WhatsApp,
+ * website chat, generic inbound API) - a fixed template keyed only on a
+ * coarse intent label, completely ignoring what the customer actually said.
+ * Now it's exactly two things: (1) the deliberate, always-on behavior for
+ * high-risk messages (legal/fraud/emergency-flagged - never let a model
+ * freelance a reply there, always hand to a human), and (2) the safety net
+ * when generateSuggestedReply's AI call fails for any reason, so a customer
+ * message never goes unanswered just because a provider had an outage.
+ */
+function buildFallbackReply(params: {
   input: InboundCommunicationInput;
   intent: CommunicationIntent;
   memories: BusinessMemoryItem[];
   riskLevel: OfficeRiskLevel;
 }) {
-  const businessTone =
-    params.memories.find((item) => item.kind === "tone")?.body ??
-    "Friendly, concise, helpful, and clear.";
   const usefulMemory = params.memories
     .filter((item) => ["faq", "service", "product", "policy", "sales_rule", "support_rule", "finance_rule"].includes(item.kind))
     .slice(0, 3)
@@ -109,6 +118,56 @@ function buildSuggestedReply(params: {
   return usefulMemory
     ? `Thanks for your message. Based on our current information: ${usefulMemory.split("\n")[0]}. How can we help you further?`
     : `Thanks for your message. We’ll help you with this shortly.`;
+}
+
+/**
+ * Real, AI-generated reply using what the customer actually wrote, not just
+ * its intent label. Routed through createGenerationMessage, so it inherits
+ * the same free-tier-aware provider routing (Anthropic / Groq / NVIDIA,
+ * DOBLY_FREE_TIER_ONLY) as the rest of the app - no separate wiring needed
+ * here. High-risk messages still always escalate to a human untouched by a
+ * model. Any generation failure (rate limit, provider outage, missing key)
+ * falls back to buildFallbackReply rather than throwing, so a real customer
+ * message is never left completely unanswered.
+ */
+async function generateSuggestedReply(params: {
+  input: InboundCommunicationInput;
+  intent: CommunicationIntent;
+  memories: BusinessMemoryItem[];
+  riskLevel: OfficeRiskLevel;
+}): Promise<string> {
+  if (params.riskLevel === "high") {
+    return buildFallbackReply(params);
+  }
+
+  const businessTone =
+    params.memories.find((item) => item.kind === "tone")?.body ??
+    "Friendly, concise, helpful, and clear.";
+  const usefulMemory = params.memories
+    .filter((item) => ["faq", "service", "product", "policy", "sales_rule", "support_rule", "finance_rule"].includes(item.kind))
+    .slice(0, 5)
+    .map((item) => `- ${item.title}: ${item.body}`)
+    .join("\n");
+
+  try {
+    const message = await createGenerationMessage({
+      maxTokens: 200,
+      system: [
+        `You are replying on behalf of a business, via ${params.input.channel.replace("_", " ")}.`,
+        `Tone: ${businessTone}`,
+        "Write ONE short, natural reply to the customer's message - 1 to 3 sentences, no greeting header, no signature, ready to send exactly as written.",
+        "Use the business information below only if it actually answers what they asked. Never invent policies, prices, order status, availability, or any other fact you were not given.",
+        "If you don't have enough information to fully resolve it, say so plainly and ask for exactly what's needed next, instead of a vague 'we'll get back to you.'",
+        usefulMemory ? `Relevant business information:\n${usefulMemory}` : "No specific business information is available for this topic - do not guess at any.",
+      ].join("\n\n"),
+      userContent: `Customer (${params.input.customerName || params.input.from}) sent this ${params.input.channel.replace("_", " ")} message, classified as "${params.intent}":\n\n${params.input.body}`,
+    });
+    const text = message.content?.[0]?.type === "text" ? String(message.content[0].text).trim() : "";
+    return text || buildFallbackReply(params);
+  } catch (error) {
+    console.error(`[communications] AI reply generation failed for channel "${params.input.channel}", falling back to template:`, error);
+    return buildFallbackReply(params);
+  }
 }
 
 async function loadRelevantMemory(params: {
@@ -145,7 +204,7 @@ export async function buildCommunicationDraft(input: InboundCommunicationInput):
   });
 
   const requiresApproval = riskLevel !== "low" || input.channel === "email";
-  const suggestedReply = buildSuggestedReply({
+  const suggestedReply = await generateSuggestedReply({
     input,
     intent,
     memories,
