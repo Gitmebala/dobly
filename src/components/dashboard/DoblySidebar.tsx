@@ -8,6 +8,7 @@ import {
   Activity,
   BarChart3,
   BookOpenText,
+  Brain,
   Building2,
   CheckCircle2,
   ChevronLeft,
@@ -177,28 +178,70 @@ export default function DoblySidebar({
   return (
     <>
       <header className="dobly-mobile-header">
-        <Link href="/dashboard" className="dobly-brand">
+        <Link href="/dashboard" className="dobly-brand" aria-label="Dobly">
           <span className="dobly-mark" aria-hidden="true">D</span>
-          <span>Dobly</span>
         </Link>
         <button type="button" onClick={() => setMobileOpen((open) => !open)} aria-label={mobileOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileOpen}>
           {mobileOpen ? <X /> : <Menu />}
         </button>
       </header>
       <button type="button" className="dobly-mobile-scrim" data-open={mobileOpen} onClick={() => setMobileOpen(false)} aria-label="Close navigation" />
-      <aside className="dobly-sidebar" data-mobile-open={mobileOpen} data-collapsed={collapsed}>
+      {/* Rendered as a sibling of <aside>, not a child of it - founder,
+          directly: "why is it not seen, have it at the very top left...
+          side bar slides away and disappears completely, and when you
+          want it again, you hit the button and it comes back." A toggle
+          living inside the sidebar can't bring the sidebar back once
+          that sidebar is the thing sliding fully out of view - it would
+          slide away with it. This cluster is fixed at the actual page
+          corner, independent of sidebar state, so it's always reachable
+          whichever way collapsed currently reads.
+          Founder, directly, on what used to be one lone circular button
+          here: "make button at the top just a button... not a whole top
+          bar that then goes on to compete for space... just buttons...
+          like how claude is" (reference: a plain row of icon-only
+          buttons, no per-button card/border/shadow). Brain view and
+          light/dark mode - previously buried in the account dropdown -
+          join the sidebar toggle in this same plain row instead of each
+          getting their own separate treatment. */}
+      <div className="dobly-top-controls">
         <button
           type="button"
-          className="dobly-sidebar-collapse-toggle"
+          className="dobly-top-control-btn"
+          data-collapsed={collapsed}
           onClick={onToggle}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          <ChevronLeft aria-hidden="true" />
+          <ChevronLeft aria-hidden="true" className="dobly-top-control-chevron" />
         </button>
-        <Link href="/dashboard" className="dobly-brand">
+        <Link
+          href="/dashboard/brain"
+          className={`dobly-top-control-btn ${pathname.startsWith("/dashboard/brain") ? "is-active" : ""}`}
+          aria-label="Brain view — see everything connected"
+          title="Brain view — see everything connected"
+        >
+          <Brain aria-hidden="true" />
+        </Link>
+        <button
+          type="button"
+          className="dobly-top-control-btn"
+          onClick={() => setTheme(dark ? "light" : "dark")}
+          aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+          title={dark ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {dark ? <SunMedium aria-hidden="true" /> : <MoonStar aria-hidden="true" />}
+        </button>
+      </div>
+      <aside className="dobly-sidebar" data-mobile-open={mobileOpen} data-collapsed={collapsed}>
+        {/* Icon only, no wordmark - founder, directly: "why do you have
+            the icon nd words there." Note this is a deliberate reversal
+            of an earlier explicit request in the other direction ("you
+            chaged our logo, thhere isnt even a logo anymorre its just
+            the word Dobly") - asked before touching it a third time,
+            this is the confirmed answer. aria-label carries the
+            accessible name now that there's no visible text. */}
+        <Link href="/dashboard" className="dobly-brand" aria-label="Dobly">
           <span className="dobly-mark" aria-hidden="true">D</span>
-          <span className="dobly-brand-name">Dobly</span>
         </Link>
 
         {/* Five places in Dobly — Canvas, Table, Assistants, Knowledge,
@@ -293,15 +336,9 @@ export default function DoblySidebar({
                     <small>{profile?.email || ""}</small>
                   </span>
                 </div>
-                <DropdownMenu.Separator className="dobly-profile-separator" />
-                <DropdownMenu.Item
-                  onSelect={(event) => {
-                    event.preventDefault();
-                    setTheme(dark ? "light" : "dark");
-                  }}
-                >
-                  {dark ? <SunMedium /> : <MoonStar />} {dark ? "Light mode" : "Dark mode"}
-                </DropdownMenu.Item>
+                {/* Light/dark moved to the top control row (see above) -
+                    founder, directly: "light/dark mode... should also be
+                    at the top." Not duplicated here anymore. */}
                 {workspaces.length > 1 ? (
                   <>
                     <DropdownMenu.Separator className="dobly-profile-separator" />

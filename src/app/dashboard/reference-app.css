@@ -8917,13 +8917,29 @@ html[data-theme="dark"] .dashboard-shell {
    proactive suggestion bar, and a "today's focus" sticky note.
    ═══════════════════════════════════════════════════════════════════ */
 
+/* Fit-to-viewport pass, founder direct: "this whole page needs to be
+   fitted to screen...and that doesnt mean you crop it." Two real,
+   additive sources of slack found and removed rather than hand-waved:
+   (1) .dashboard-page-shell (the shared wrapper every dashboard page
+   uses) already carries 34px/56px top/bottom padding - .canvas-page was
+   adding its OWN 56px bottom padding on top of that, so the bottom of
+   this one page carried ~112px of stacked padding nothing else in the
+   app has. (2) work-table's 96px bottom padding and each work-tile's
+   208px min-height were sized generously with no viewport budget in
+   mind. Values below are vh-relative clamps, not fixed shrinks, so this
+   scales to whatever the real viewport height is instead of being tuned
+   for one guessed screen size and still overflowing a shorter one. */
+.dashboard-page-shell:has(> .canvas-page) {
+  padding-top: clamp(14px, 2vh, 24px);
+  padding-bottom: clamp(10px, 1.4vh, 18px);
+}
 .canvas-page {
   max-width: 1180px;
   margin: 0 auto;
-  padding: 0 4px 56px;
+  padding: 0 4px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: clamp(8px, 1.1vh, 16px);
 }
 
 .canvas-topbar {
@@ -8957,7 +8973,7 @@ html[data-theme="dark"] .dashboard-shell {
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 32px;
   align-items: start;
-  padding-top: clamp(8px, 3vh, 28px);
+  padding-top: clamp(4px, 1vh, 12px);
 }
 
 .canvas-hero-main {
@@ -8966,13 +8982,13 @@ html[data-theme="dark"] .dashboard-shell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 22px;
+  gap: clamp(6px, 1vh, 12px);
 }
 
 .canvas-annotation {
   position: relative;
   font-family: var(--font-hand), cursive;
-  font-size: 22px;
+  font-size: clamp(17px, 1.9vh, 22px);
   line-height: 1.25;
   color: var(--app-rust-dark);
   transform: rotate(-1.5deg);
@@ -8981,8 +8997,8 @@ html[data-theme="dark"] .dashboard-shell {
 .canvas-annotation-arrow {
   display: block;
   margin: 2px auto 0;
-  width: 52px;
-  height: 34px;
+  width: 40px;
+  height: 26px;
   color: var(--app-rust-dark);
   opacity: .75;
 }
@@ -8995,7 +9011,7 @@ html[data-theme="dark"] .dashboard-shell {
   margin: 0;
   font-family: var(--font-display), Georgia, serif;
   font-weight: 600;
-  font-size: clamp(38px, 5.4vw, 60px);
+  font-size: clamp(28px, 4.4vh, 44px);
   line-height: 1.06;
   letter-spacing: -0.01em !important;
   color: var(--app-text);
@@ -9095,7 +9111,7 @@ html[data-theme="dark"] .dashboard-shell {
 .canvas-chip:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--app-rust) 35%, var(--app-line)); color: var(--app-rust-dark); }
 
 .canvas-assist-card {
-  padding: 18px 18px 16px;
+  padding: 14px 16px 13px;
   border-radius: 20px;
   border: 1px solid var(--app-line);
   background: var(--app-paper);
@@ -9125,7 +9141,11 @@ html[data-theme="dark"] .dashboard-shell {
    grain running through the wood. */
 .work-table {
   position: relative;
-  padding: 26px 26px 96px;
+  /* Bottom padding's floor stays >= the space .dobly-suggest-bar actually
+     needs (min-height 44px + its own 16px bottom offset = 60px) - it's
+     absolutely positioned inside this padding, so shrinking the floor
+     below that would overlap it with the tile row above. */
+  padding: 16px 22px clamp(60px, 6vh, 76px);
   border-radius: 64px 40px 48px 88px / 48px 56px 88px 40px;
   background:
     radial-gradient(120% 140% at 12% -10%, color-mix(in srgb, var(--app-rust) 10%, transparent), transparent 55%),
@@ -9140,7 +9160,7 @@ html[data-theme="dark"] .dashboard-shell {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 22px;
+  margin-bottom: clamp(10px, 1.6vh, 18px);
 }
 .work-table-label {
   font-family: var(--font-hand), cursive;
@@ -9162,12 +9182,12 @@ html[data-theme="dark"] .dashboard-shell {
   position: relative;
   flex: 0 0 auto;
   width: 176px;
-  min-height: 208px;
+  min-height: clamp(128px, 14vh, 172px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 14px;
-  padding: 18px;
+  gap: 10px;
+  padding: 14px 16px;
   border-radius: 22px;
   box-shadow: 0 14px 26px rgba(0,0,0,.22);
   transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s ease;
@@ -9297,7 +9317,7 @@ html[data-theme="dark"] .dashboard-shell {
 .work-tile-add {
   flex: 0 0 auto;
   width: 176px;
-  min-height: 208px;
+  min-height: clamp(128px, 14vh, 172px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -9327,12 +9347,12 @@ html[data-theme="dark"] .dashboard-shell {
   position: absolute;
   left: 26px;
   right: 26px;
-  bottom: 24px;
+  bottom: 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 54px;
-  padding: 10px 12px 10px 16px;
+  min-height: 44px;
+  padding: 8px 12px 8px 16px;
   border-radius: 999px;
   background: rgba(20,14,9,.88);
   border: 1px solid rgba(241,230,214,.1);
@@ -9378,14 +9398,14 @@ html[data-theme="dark"] .dashboard-shell {
 .canvas-footrow {
   display: flex;
   align-items: flex-start;
-  gap: 22px;
+  gap: clamp(14px, 1.8vh, 22px);
 }
 
 .sticky-note {
   position: relative;
   flex: 0 0 auto;
   width: 216px;
-  padding: 20px 18px 18px;
+  padding: 16px 16px 14px;
   border-radius: 3px;
   background: var(--app-kraft);
   color: var(--app-kraft-text);
@@ -10601,6 +10621,46 @@ html[data-theme="dark"] .dashboard-shell {
   border: 1px solid var(--app-line-strong);
   background: var(--app-paper);
   box-shadow: 0 2px 8px rgba(53, 37, 26, .18);
+}
+
+/* ── Real slide-away, not shrink-to-icon-rail. Founder, directly a
+   second time on this same button: "why is it not seen, have it at
+   the very top left...then the side bar slides away and disappears
+   completely, and when you want it again, you hit the button and it
+   comes back, sliding back in." The earlier contrast fix above made it
+   findable but never moved it - it still sat pinned to the sidebar's
+   own edge, and collapsing only ever narrowed the sidebar to a 72px
+   icon rail, never hid it. The toggle now renders as a sibling of
+   <aside> (DoblySidebar.tsx), so it stays fixed at the real page
+   corner and reachable no matter what state the sidebar itself is in.
+   Appended last so it wins over every earlier collapsed-width/position
+   rule above (152px→72px icon rail, the toggle's old absolute
+   position, and the several older collapsed main-stage margins). */
+.dashboard-shell .dobly-sidebar-collapse-toggle {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  right: auto;
+  z-index: 60;
+  width: 30px;
+  height: 30px;
+}
+.dashboard-shell .dobly-sidebar-collapse-toggle[data-collapsed="true"] svg { transform: rotate(180deg); }
+
+.dashboard-shell .dobly-sidebar {
+  transition: transform .32s cubic-bezier(.22,1,.36,1), background .25s ease;
+}
+.dashboard-shell[data-sidebar-collapsed="true"] .dobly-sidebar,
+.dobly-sidebar[data-collapsed="true"] {
+  width: 152px;
+  transform: translateX(calc(-100% - 32px));
+  pointer-events: none;
+}
+.dashboard-shell[data-sidebar-collapsed="true"] .main-stage {
+  /* Sized for the 3-button .dobly-top-controls row now (was 56px, sized
+     for the single circular toggle it replaced) - content would sit
+     partly under the fixed button cluster at the old, narrower value. */
+  margin-left: 148px;
 }
 
 /* ── Coworker chat bubbles - real visual language change, not a
@@ -12221,3 +12281,207 @@ html, body {
   border: 1px solid var(--app-line-strong);
   display: block;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   TOP CONTROLS — replaces the old lone circular collapse-toggle
+   (.dobly-sidebar-collapse-toggle above, now dead/unused - the
+   component no longer renders that class). Founder, directly: "make
+   button at the top just a button... not a whole top bar that then
+   goes on to compete for space... just buttons... like how claude is."
+   No per-button card, border, or shadow - a plain row of icon glyphs,
+   fixed at the real page corner independent of sidebar state (same
+   reasoning as the toggle it replaces: has to stay reachable even
+   while the sidebar itself is off-screen). Appended last so it's the
+   only rule set for this new class - nothing to win against.
+   ═══════════════════════════════════════════════════════════════════ */
+.dobly-top-controls {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  transition: background .16s ease;
+}
+.dobly-top-controls:hover,
+.dobly-top-controls:focus-within {
+  background: color-mix(in srgb, var(--app-paper) 88%, transparent);
+  backdrop-filter: blur(10px);
+}
+.dobly-top-control-btn {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+  transition: background .14s ease, color .14s ease;
+}
+.dobly-top-control-btn svg,
+.dobly-top-control-btn > * {
+  width: 17px;
+  height: 17px;
+}
+.dobly-top-control-btn:hover {
+  background: color-mix(in srgb, var(--app-rust) 10%, transparent);
+  color: var(--app-rust);
+}
+.dobly-top-control-btn.is-active {
+  color: var(--app-rust);
+  background: color-mix(in srgb, var(--app-rust) 14%, transparent);
+}
+.dobly-top-control-chevron {
+  transition: transform .28s cubic-bezier(.22,1,.36,1);
+}
+.dobly-top-control-btn[data-collapsed="true"] .dobly-top-control-chevron {
+  transform: rotate(180deg);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BRAIN VIEW — "makes you see everything like obsidian": a real,
+   dependency-free node-graph of coworkers/loops/groups, not a foreign
+   dark-terminal aesthetic bolted on. Uses the same --app-* tokens as
+   every other page so it reads as part of Dobly, not an imported widget.
+   ═══════════════════════════════════════════════════════════════════ */
+.brain-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 48px);
+  max-height: calc(100dvh - 48px);
+}
+.brain-view-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+}
+.brain-view-kicker {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: var(--app-muted);
+}
+.brain-view-header h1 {
+  margin: 6px 0 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: -0.01em;
+  color: var(--app-text);
+}
+.brain-view-zoom {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  background: var(--app-paper);
+}
+.brain-view-zoom button {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--app-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .14s ease, color .14s ease;
+}
+.brain-view-zoom button:hover { background: color-mix(in srgb, var(--app-rust) 10%, transparent); color: var(--app-rust); }
+.brain-view-zoom svg { width: 14px; height: 14px; }
+
+.brain-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: 24px;
+  border: 1px solid var(--app-line);
+  background:
+    radial-gradient(1px 1px at 20px 20px, var(--app-line) 1px, transparent 0),
+    radial-gradient(1px 1px at 60px 60px, var(--app-line) 1px, transparent 0),
+    var(--app-paper);
+  background-size: 80px 80px, 80px 80px, auto;
+  overflow: hidden;
+  touch-action: none;
+  /* Not "grab" - that cursor promises background-drag panning, which
+     isn't implemented (v1 scope is node drag + wheel zoom only). A
+     grab cursor over empty canvas that does nothing on drag would be a
+     real, if small, honesty gap between what the UI implies and what
+     it does. */
+  cursor: default;
+}
+.brain-canvas svg { display: block; }
+
+.brain-edge {
+  stroke: var(--app-line-strong);
+  stroke-width: 1.4;
+  transition: opacity .16s ease;
+}
+.brain-edge[data-dim="true"] { opacity: .18; }
+
+/* grab/grabbing, not pointer - founder feedback on the toggle button
+   elsewhere in this file established the pattern of matching cursor to
+   what actually happens on drag; a node here can be dragged, so it
+   gets the same treatment rather than the plain click cursor. */
+.brain-node { cursor: grab; transition: opacity .16s ease; }
+.brain-node:active { cursor: grabbing; }
+.brain-node[data-dim="true"] { opacity: .35; }
+.brain-node-circle {
+  fill: var(--app-paper);
+  stroke: var(--app-line-strong);
+  stroke-width: 1.5;
+  transition: stroke .16s ease, filter .16s ease;
+}
+.brain-node[data-kind="operator"] .brain-node-circle {
+  fill: color-mix(in srgb, var(--app-rust) 16%, var(--app-paper));
+  stroke: var(--app-rust);
+  stroke-width: 2;
+}
+.brain-node[data-kind="group"] .brain-node-circle {
+  fill: color-mix(in srgb, var(--app-text) 8%, var(--app-paper));
+  stroke: var(--app-line-strong);
+}
+.brain-node[data-kind="loop"] .brain-node-circle {
+  fill: var(--app-paper);
+  stroke: var(--app-muted);
+}
+.brain-node:hover .brain-node-circle { stroke: var(--app-rust); filter: drop-shadow(0 2px 6px rgba(53,37,26,.18)); }
+.brain-node-icon { color: var(--app-rust-dark); pointer-events: none; }
+.brain-node[data-kind="loop"] .brain-node-icon { color: var(--app-muted); }
+.brain-node-label {
+  fill: var(--app-text);
+  font-family: var(--font-body), Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 560;
+  pointer-events: none;
+  user-select: none;
+}
+
+.brain-hover-card {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  max-width: 280px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--app-line);
+  background: var(--app-paper);
+  box-shadow: var(--app-shadow);
+  pointer-events: none;
+}
+.brain-hover-card strong { display: block; font-size: 13px; color: var(--app-text); }
+.brain-hover-card span { display: block; margin-top: 3px; font-size: 11.5px; color: var(--app-muted); line-height: 1.4; }
