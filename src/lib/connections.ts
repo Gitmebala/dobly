@@ -168,3 +168,34 @@ export async function getConnectionExecutionAuth(params: {
   const secrets = await getDecryptedConnectionSecrets(connection.id);
   return { connection, secrets };
 }
+
+/**
+ * Mark a connection as no longer usable so the UI can prompt a reconnect.
+ *
+ * Google (and most OAuth providers) revoke the refresh token itself in some
+ * situations - most commonly when the OAuth consent screen is still in
+ * "Testing", where refresh tokens are invalidated after 7 days. Once that
+ * happens no amount of retrying will recover it, so scheduled loops must stop
+ * hammering the provider and surface a reconnect prompt instead.
+ */
+export async function markConnectionExpired(params: { connectionId: string; reason: string }) {
+  const admin = createAdminSupabaseClient();
+  // connections has no last_error column, so the reason rides in metadata.
+  // Read-modify-write to avoid clobbering whatever else is stored there.
+  const { data: existing } = await admin
+    .from("connections")
+    .select("metadata")
+    .eq("id", params.connectionId)
+    .maybeSingle();
+
+  const metadata = {
+    ...((existing?.metadata as Record<string, unknown> | null) ?? {}),
+    expired_reason: params.reason,
+    expired_at: new Date().toISOString(),
+  };
+
+  await admin
+    .from("connections")
+    .update({ status: "expired", metadata, updated_at: new Date().toISOString() })
+    .eq("id", params.connectionId);
+}

@@ -64,7 +64,9 @@ export default function CommandPalette() {
     setActive(0);
     requestAnimationFrame(() => inputRef.current?.focus());
     if (!fetchedRef.current) {
-      fetchedRef.current = true;
+      // Only mark as fetched once it actually succeeds. Setting the flag up
+      // front meant a single failed load permanently emptied the palette of
+      // coworkers for the rest of the session, with no way to retry.
       fetch("/api/operators")
         .then((response) => (response.ok ? response.json() : { operators: [] }))
         .then((data) => {
@@ -78,6 +80,10 @@ export default function CommandPalette() {
               icon: Bot,
             })),
           );
+          // Marked only after a successful load, so a failed one can retry the
+          // next time the palette opens instead of leaving it permanently
+          // without coworkers.
+          fetchedRef.current = true;
         })
         .catch(() => undefined);
     }

@@ -1,28 +1,45 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { DEPARTMENT_BUNDLES } from "@/lib/department-bundles";
+import { resolveActiveWorkspace } from "@/lib/active-workspace";
+import { listDepartments } from "@/lib/departments";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Connection } from "@/types";
+import DepartmentCanvas, { type CanvasDepartment } from "./DepartmentCanvas";
 
 export const metadata = { title: "Departments" };
 
 export default async function DepartmentsPage() {
   const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const [{ data: workerRows }, { data: connectionRows }] = await Promise.all([
-    supabase.from("office_workers").select("department_id").eq("user_id", user.id),
-    supabase.from("connections").select("*").eq("user_id", user.id).eq("status", "active"),
-  ]);
+  const { activeWorkspace } = await resolveActiveWorkspace(user.id);
+  if (!activeWorkspace) redirect("/dashboard/onboarding");
 
-  const workerCounts: Record<string, number> = {};
-  for (const row of workerRows ?? []) {
-    const key = String((row as { department_id?: string }).department_id ?? "");
-    workerCounts[key] = (workerCounts[key] ?? 0) + 1;
-  }
+  const departments = await listDepartments({ workspaceId: activeWorkspace.id });
 
-  const connections = (connectionRows ?? []) as Connection[];
+  const canvasDepartments: CanvasDepartment[] = departments.map((department) => ({
+    id: department.id,
+    slug: department.slug,
+    name: department.name,
+    outcome: department.outcome,
+    status: department.status,
+    trust_level: department.trust_level,
+    accent_color: department.accent_color,
+    canvas_x: department.canvas_x,
+    canvas_y: department.canvas_y,
+    operators: department.operators.map((operator) => ({
+      id: operator.id,
+      name: operator.name,
+      status: operator.status,
+      mission: operator.mission,
+      approval_mode: operator.approval_mode,
+      last_run_at: operator.last_run_at,
+      source: operator.source,
+    })),
+  }));
+
+  const coworkerCount = departments.reduce((total, department) => total + department.operators.length, 0);
 
   return (
     <div className="dept-page">
@@ -30,31 +47,14 @@ export default async function DepartmentsPage() {
         <div>
           <span className="dept-page-kicker">Homebase</span>
           <h1>Departments</h1>
-          <p>Each department is a real crew of office workers Dobly can hire and run under a guarded autonomy boundary.</p>
+          <p>
+            {departments.length} department{departments.length === 1 ? "" : "s"} · {coworkerCount} coworker
+            {coworkerCount === 1 ? "" : "s"}. Drag to arrange, scroll to zoom, click a department to look inside.
+          </p>
         </div>
       </header>
 
-      <div className="dept-grid">
-        {DEPARTMENT_BUNDLES.map((bundle) => {
-          const hired = workerCounts[bundle.id] ?? 0;
-          return (
-            <Link key={bundle.id} href={`/dashboard/departments/${bundle.id}`} className="dept-card">
-              <div className="dept-card-top">
-                <h2>{bundle.name}</h2>
-                <span className="dept-card-trust" data-trust={bundle.trustLevel}>{bundle.trustLevel.replaceAll("_", " ")}</span>
-              </div>
-              <p className="dept-card-outcome">{bundle.outcome}</p>
-              <div className="dept-card-footer">
-                <span>{hired > 0 ? `${hired} worker${hired === 1 ? "" : "s"} hired` : "Not launched"}</span>
-                <span>{bundle.workerTemplateKeys.length} role{bundle.workerTemplateKeys.length === 1 ? "" : "s"} available</span>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-      {connections.length === 0 ? (
-        <p className="dept-page-note">No connections are active yet — departments can still draft and prepare work, but live external actions need at least one connection.</p>
-      ) : null}
+      <DepartmentCanvas departments={canvasDepartments} canEdit />
     </div>
   );
 }

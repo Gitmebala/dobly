@@ -3,6 +3,7 @@ import { decideApproval } from "@/lib/approvals";
 import { decideRuntimeApproval } from "@/lib/runtime/approvals";
 import { verifyWhatsappOtp } from "@/lib/verifications";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
+import { secureSecretMatches } from "@/lib/security/secrets";
 
 function normalizeIncomingMessage(body: any) {
   const message = body?.messages?.[0];
@@ -30,7 +31,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "WhatsApp webhook is not configured." }, { status: 503 });
   }
 
-  if (providedSecret !== expectedSecret) {
+  // Constant-time: a plain !== leaks how much of the secret matched via
+  // response timing, and this codebase already has the safe comparison.
+  if (!secureSecretMatches(expectedSecret, providedSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

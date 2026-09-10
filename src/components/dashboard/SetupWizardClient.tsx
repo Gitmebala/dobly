@@ -8,6 +8,7 @@ import { DEPARTMENT_BUNDLES, type LaunchDepartmentId } from "@/lib/department-bu
 import { DOBLY_TRUST_LEVELS, DOBLY_WORK_TYPES, type DoblyTrustLevelId, type DoblyWorkTypeId } from "@/lib/dobly-product-model";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { apiSend } from "@/lib/api-client";
 
 const steps = [
   "Choose launch engine",
@@ -185,28 +186,27 @@ export default function SetupWizardClient() {
     setMessage(null);
     setRuntimeReady(false);
     startTransition(async () => {
-      const response = await fetch("/api/departments/launch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ departmentId }),
-      });
-      const data = await response.json().catch(() => ({}));
-      setMessage(response.ok ? `${data.department?.name ?? "Department"} launched.` : data.error ?? "Could not launch department.");
-      if (response.ok) setActiveStep(2);
+      // Every step of this wizard used a raw fetch, so a dropped request threw
+      // inside the transition: no message, no step change, and the button
+      // simply appeared to do nothing during first-run setup.
+      const outcome = await apiSend<{ department?: { name?: string } }>(
+        "/api/departments/launch",
+        { departmentId },
+      );
+      setMessage(outcome.ok ? `${outcome.data.department?.name ?? "Department"} launched.` : outcome.error);
+      if (outcome.ok) setActiveStep(2);
     });
   }
 
   function connectChannel() {
     setMessage(null);
     startTransition(async () => {
-      const response = await fetch("/api/business-channels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelId, externalIdentifier: identifier || null }),
+      const outcome = await apiSend<{ channel?: { title?: string } }>("/api/business-channels", {
+        channelId,
+        externalIdentifier: identifier || null,
       });
-      const data = await response.json().catch(() => ({}));
-      setMessage(response.ok ? `${data.channel?.title ?? "Channel"} setup started.` : data.error ?? "Could not start channel setup.");
-      if (response.ok) setActiveStep(3);
+      setMessage(outcome.ok ? `${outcome.data.channel?.title ?? "Channel"} setup started.` : outcome.error);
+      if (outcome.ok) setActiveStep(3);
     });
   }
 
@@ -226,10 +226,7 @@ export default function SetupWizardClient() {
         : selectedOperator?.title ?? currentDepartment?.name ?? "First operator";
 
     startTransition(async () => {
-      const response = await fetch("/api/business-memory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const outcome = await apiSend("/api/business-memory", {
           kind: "tone",
           scope: "global",
           title: `${operatorLabel} operating standard`,
@@ -243,11 +240,9 @@ export default function SetupWizardClient() {
             `Starter memory: ${starterMemoryNote || "Helpful, clear, premium, and calm. Escalate uncertainty instead of guessing."}`,
           ].join(" "),
           tags: ["starter", currentDepartment?.id ?? "reception", trustLevel, ...selectedWorkTypes],
-        }),
       });
-      const data = await response.json().catch(() => ({}));
-      setMessage(response.ok ? "Starter memory saved." : data.error ?? "Could not save memory.");
-      if (response.ok) setActiveStep(4);
+      setMessage(outcome.ok ? "Starter memory saved." : outcome.error);
+      if (outcome.ok) setActiveStep(4);
     });
   }
 
@@ -259,18 +254,14 @@ export default function SetupWizardClient() {
   function testRuntime() {
     setMessage(null);
     startTransition(async () => {
-      const response = await fetch("/api/communications/inbound", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          channel: "website_chat",
-          from: "setup_test_visitor",
-          body: testMessage,
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
-      setMessage(response.ok ? `Dobly drafted: ${data.draft?.suggestedReply ?? "a response."}` : data.error ?? "Test failed.");
-      if (response.ok) setRuntimeReady(true);
+      const outcome = await apiSend<{ draft?: { suggestedReply?: string } }>(
+        "/api/communications/inbound",
+        { channel: "website_chat", from: "setup_test_visitor", body: testMessage },
+      );
+      setMessage(
+        outcome.ok ? `Dobly drafted: ${outcome.data.draft?.suggestedReply ?? "a response."}` : outcome.error,
+      );
+      if (outcome.ok) setRuntimeReady(true);
     });
   }
 

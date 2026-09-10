@@ -4,6 +4,15 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getDoblyOperator, runDoblyOperator } from "@/lib/dobly-operators";
 import { appendOperatorChatMessage, ensureOperatorConversation, recordOperatorChatEvent } from "@/lib/operator-chat";
 
+// Vercel's default function timeout is 10s on Hobby / 15s on Pro. This route
+// runs the operator brain: model calls plus real multi-step tool execution,
+// which routinely takes longer than that. With no maxDuration declared the
+// platform killed the function mid-run, so the coworker appeared to stall or
+// fail for no visible reason and any work already done was left half-finished.
+// 60s is the Hobby ceiling and is accepted on Pro too.
+export const maxDuration = 60;
+
+
 const runSchema = z.object({
   prompt: z.string().trim().min(5).max(6000),
   workspaceId: z.string().uuid().nullable().optional(),

@@ -21,6 +21,7 @@ import type {
   BusinessChannelId,
   BusinessChannelStatus,
 } from "@/lib/business-channels";
+import { apiSend } from "@/lib/api-client";
 
 const CHANNEL_ICONS: Record<BusinessChannelId, typeof Phone> = {
   business_phone: Phone,
@@ -151,28 +152,31 @@ export default function BusinessChannelsClient({
     const channel = panelChannel;
     setMessage(null);
     startTransition(async () => {
-      const response = await fetch("/api/business-channels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          channelId: channel.id,
-          displayName: channel.title,
-          externalIdentifier: identifier.trim() || null,
-          operatorId: routesToOperator ? operatorId || null : null,
-        }),
+      // A dropped request used to reject inside this transition, leaving the
+      // panel with no message at all - the user pressed "connect" and the
+      // screen simply did nothing.
+      const outcome = await apiSend<{
+        connection?: BusinessChannelConnectionRecord;
+        nextStep?: string;
+      }>("/api/business-channels", {
+        channelId: channel.id,
+        displayName: channel.title,
+        externalIdentifier: identifier.trim() || null,
+        operatorId: routesToOperator ? operatorId || null : null,
       });
 
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setMessage(result?.setupWarning ?? result?.error ?? "Dobly could not start this setup yet.");
+      if (!outcome.ok) {
+        setMessage(outcome.error);
         return;
       }
 
+      const result = outcome.data;
       setMessage(`${channel.title} setup started. Next: ${result.nextStep ?? "verify and test this channel."}`);
       if (result.connection) {
+        const connection = result.connection;
         setConnections((current) => {
-          const rest = current.filter((row) => row.id !== result.connection.id);
-          return [result.connection, ...rest];
+          const rest = current.filter((row) => row.id !== connection.id);
+          return [connection, ...rest];
         });
       }
     });

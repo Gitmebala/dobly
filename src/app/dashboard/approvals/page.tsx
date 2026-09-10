@@ -6,6 +6,7 @@ import BulkApprovalActions from "@/components/dashboard/BulkApprovalActions";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { buildHomebaseDashboardData } from "@/lib/office/homebase";
 import { listRuntimeApprovals, type RuntimeApprovalRecord } from "@/lib/runtime/approvals";
+import { DASHBOARD_LOAD_TIMEOUT_MS, withTimeout } from "@/lib/async/with-timeout";
 
 export const metadata = { title: "Approvals" };
 
@@ -19,13 +20,22 @@ export default async function ApprovalsPage() {
   if (!user) redirect("/auth/login");
   const userId = user.id;
 
-  const office = (await buildHomebaseDashboardData({ userId }).catch(() => null)) ?? ({
-    departments: [],
-    tasks: [],
-  } as unknown as Awaited<ReturnType<typeof buildHomebaseDashboardData>>);
+  // Both loads are bounded. .catch() alone only covers rejection - it does
+  // nothing for a query that never settles, which left this route showing its
+  // loading skeleton indefinitely with no error and nothing to click.
+  const emptyOffice = { departments: [], tasks: [] } as unknown as Awaited<
+    ReturnType<typeof buildHomebaseDashboardData>
+  >;
+  const office = await withTimeout(
+    buildHomebaseDashboardData({ userId }).catch(() => emptyOffice),
+    DASHBOARD_LOAD_TIMEOUT_MS,
+    emptyOffice,
+  );
   const decisions = office.tasks.filter((task) => task.status === "waiting_approval");
-  const runtimeApprovals: RuntimeApprovalRecord[] = await listRuntimeApprovals({ userId, status: "pending" }).catch(
-    () => [] as RuntimeApprovalRecord[],
+  const runtimeApprovals: RuntimeApprovalRecord[] = await withTimeout(
+    listRuntimeApprovals({ userId, status: "pending" }).catch(() => [] as RuntimeApprovalRecord[]),
+    DASHBOARD_LOAD_TIMEOUT_MS,
+    [] as RuntimeApprovalRecord[],
   );
   const waitingCount = decisions.length + runtimeApprovals.length;
 

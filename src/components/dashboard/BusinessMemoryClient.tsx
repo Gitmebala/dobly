@@ -11,6 +11,7 @@ import {
   BUSINESS_MEMORY_KINDS,
   BUSINESS_MEMORY_SCOPES,
 } from "@/lib/business-memory";
+import { apiRequest, apiSend } from "@/lib/api-client";
 
 const STARTER_MEMORY: Array<{
   kind: BusinessMemoryKind;
@@ -152,16 +153,16 @@ export default function BusinessMemoryClient() {
 
     setMessage(null);
     startTransition(async () => {
-      const response = await fetch("/api/business-memory", {
+      // apiSend never throws: a dropped connection used to reject inside this
+      // transition, which set no message and left the composer spinning.
+      const outcome = await apiSend<{ item: BusinessMemoryItem }>("/api/business-memory", payload, {
         method: payload.id ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
       });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setMessage(result?.setupWarning ?? result?.error ?? "Memory could not be saved.");
+      if (!outcome.ok) {
+        setMessage(outcome.error);
         return;
       }
+      const result = outcome.data;
 
       setItems((current) => {
         const existingIndex = current.findIndex((item) => item.id === result.item.id);
@@ -183,15 +184,16 @@ export default function BusinessMemoryClient() {
       if (search) params.set("q", search);
       params.set("limit", "60");
 
-      const response = await fetch(`/api/business-memory?${params.toString()}`);
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setMessage(result?.setupWarning ?? result?.error ?? "Memory could not be loaded.");
+      const outcome = await apiRequest<{ items: BusinessMemoryItem[] }>(
+        `/api/business-memory?${params.toString()}`,
+      );
+      if (!outcome.ok) {
+        setMessage(outcome.error);
         setLoaded(true);
         return;
       }
 
-      setItems(result.items ?? []);
+      setItems(outcome.data.items ?? []);
       setLoaded(true);
     });
   }

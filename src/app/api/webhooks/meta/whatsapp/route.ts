@@ -1,9 +1,11 @@
+import { sendWhatsAppMessage } from "@/lib/connectors/native/whatsapp";
 import { NextRequest, NextResponse } from "next/server";
 import { normalizePhoneIdentifier, resolveUserByChannelIdentifier } from "@/lib/communications/channel-resolver";
 import { markCommunicationMessagesByProvider } from "@/lib/communications/ledger";
 import { ingestInboundCommunication } from "@/lib/communications/runtime";
 import { appendOperatorChatMessage, ensureOperatorConversation, recordOperatorChatEvent } from "@/lib/operator-chat";
 import { isWebhookSecurityDisabledForDev, verifyHmacSignature } from "@/lib/webhooks/security";
+import { secureSecretMatches } from "@/lib/security/secrets";
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -11,7 +13,7 @@ export async function GET(req: NextRequest) {
   const token = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
 
-  if (mode === "subscribe" && token && token === process.env.META_WHATSAPP_VERIFY_TOKEN) {
+  if (mode === "subscribe" && secureSecretMatches(process.env.META_WHATSAPP_VERIFY_TOKEN, token)) {
     return new NextResponse(challenge ?? "", { status: 200 });
   }
 
@@ -107,7 +109,7 @@ export async function POST(req: NextRequest) {
 
         if (!owner) continue;
 
-        await ingestInboundCommunication({
+        const inbound = await ingestInboundCommunication({
           userId: owner.userId,
           workspaceId: owner.workspaceId,
           channel: "whatsapp",
@@ -122,6 +124,33 @@ export async function POST(req: NextRequest) {
             messageType: message.type,
           },
         });
+
+        // Actually answer the customer. WhatsApp is asynchronous: unlike SMS
+        // (TwiML) or voice, nothing in this HTTP response reaches the sender,
+        // so a reply has to be an outbound Graph API call. This route used to
+        // ingest the message, draft an answer and file it in the coworker's
+        // chat while the customer sat in silence - the coworker looked live
+        // and connected but never once replied on the channel that matters
+        // most here. A draft flagged for approval still waits for a human.
+        const draftedReply = inbound?.draft?.requiresApproval
+          ? null
+          : inbound?.draft?.suggestedReply?.trim();
+
+        if (draftedReply) {
+          try {
+            await sendWhatsAppMessage({
+              userId: owner.userId,
+              connectionId: owner.connectionId ?? null,
+              phoneNumberId,
+              to: from,
+              text: draftedReply,
+            });
+          } catch (sendError) {
+            // Never fail the webhook over a send: Meta retries on non-200 and
+            // would re-ingest the same message, duplicating the conversation.
+            console.error("[meta whatsapp] failed to send reply", sendError);
+          }
+        }
 
         if (owner.operatorId) {
           try {

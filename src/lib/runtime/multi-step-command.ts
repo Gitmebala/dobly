@@ -8,8 +8,9 @@ import { createSoftwareExecutionRun } from "@/lib/software-execution-runs";
 import { planDoblyCommand } from "@/lib/runtime/plain-english-command";
 import { createRuntimeApproval } from "@/lib/runtime/approvals";
 import { logRuntimeAuditEvent } from "@/lib/runtime/audit";
-import { resolveUniversalExecutionPaths } from "@/lib/runtime/universal-mcp";
+import { getCapabilityNativeToolCandidates, resolveUniversalExecutionPaths } from "@/lib/runtime/universal-mcp";
 import type { UniversalExecutionPath } from "@/lib/runtime/universal-mcp";
+import { getCapabilityDefinition } from "@/lib/runtime/capabilities";
 import type { DoblyCapability } from "@/lib/runtime/capabilities";
 import { executeUniversalMcpPath, executeNativeCapabilityPath } from "@/lib/runtime/universal-mcp-execution";
 import { resolveCustomApiExecutionPaths, executeCustomApiAction } from "@/lib/runtime/custom-api";
@@ -50,6 +51,57 @@ export interface RuntimeCommandEvent {
 
 function hasAny(text: string, patterns: string[]) {
   return patterns.some((pattern) => text.includes(pattern));
+}
+
+/**
+ * Turn a missing-path failure into something the owner can act on: what the
+ * coworker was trying to do, and which account would let it.
+ */
+function describeMissingPath(capability: DoblyCapability) {
+  const label = getCapabilityDefinition(capability)?.label ?? capability.replace(/_/g, " ");
+  const providers = getCapabilityNativeToolCandidates(capability)
+    .map((candidate) => candidate.provider.replace(/_/g, " "))
+    .filter((name, index, all) => all.indexOf(name) === index);
+
+  if (!providers.length) {
+    return `Dobly could not "${label}" - no connected app can do that yet. Connect one in Connections.`;
+  }
+
+  const list =
+    providers.length === 1
+      ? providers[0]
+      : `${providers.slice(0, -1).join(", ")} or ${providers[providers.length - 1]}`;
+  return `Dobly could not "${label}" because no account for it is connected. Connect ${list} in Connections, then run this again.`;
+}
+
+/**
+ * Human-readable outcome for a finished run. Failures name the step and the
+ * underlying error, because that error (an expired token, a missing connector)
+ * is the only thing that tells the owner what to actually go and fix.
+ */
+function summarizeRunOutcome(terminalStatus: string, stepResults: Array<Record<string, unknown>>) {
+  const statusOf = (item: Record<string, unknown>) => String(item.status ?? "");
+
+  if (terminalStatus === "failed") {
+    const failures = stepResults.filter((item) => statusOf(item) === "failed");
+    const reasons = [
+      ...new Set(
+        failures
+          .map((item) => (typeof item.error === "string" ? item.error.trim() : ""))
+          .filter((reason) => reason.length > 0),
+      ),
+    ];
+    const counted = `${failures.length} of ${stepResults.length} step(s) failed.`;
+    if (!reasons.length) return counted;
+    // One clear reason reads better than a list; several need enumerating.
+    return reasons.length === 1 ? `${counted} ${reasons[0]}` : `${counted} ${reasons.join(" ")}`;
+  }
+
+  if (stepResults.some((item) => statusOf(item) === "needs_approval")) {
+    return "Dobly completed the safe preparation steps and is waiting for approval before external action.";
+  }
+
+  return `Dobly completed ${stepResults.length} command step(s).`;
 }
 
 function summarizeCommandTitle(prompt: string) {
@@ -293,7 +345,7 @@ export async function executeRuntimeCommandPlan(input: {
 
       if (step.type === "software_execution" && step.toolId) {
         if (step.toolId.startsWith("universal:")) {
-          const capability = step.toolId.slice("universal:".length);
+          const capability = step.toolId.slice("universal:".length) as DoblyCapability;
           const path =
             mcpPaths.find((candidate) => candidate.capability === capability) ??
             nativePaths.find((candidate) => candidate.capability === capability);
@@ -305,11 +357,15 @@ export async function executeRuntimeCommandPlan(input: {
             // etc). This used to be passed straight into executeUniversalMcpPath
             // unguarded and crash the whole run with "Cannot read properties
             // of undefined" - fail just this step instead.
-            stepResults.push({ step, status: "failed", error: `No connected execution path is available for ${capability}.` });
+            // Name what to connect. "No connected execution path is available
+            // for publish_content" tells the owner nothing actionable; the
+            // capability's own native candidates are exactly the accounts that
+            // would make this step work.
+            stepResults.push({ step, status: "failed", error: describeMissingPath(capability) });
             await input.onEvent?.({
               eventType: "tool_call_completed",
               title: "Connected software unavailable",
-              summary: `No connected execution path is available for ${capability}.`,
+              summary: describeMissingPath(capability),
               runId: parentRun.id,
               severity: "danger",
               payload: { step },
@@ -598,9 +654,12 @@ export async function executeRuntimeCommandPlan(input: {
       runId: parentRun.id,
       userId: input.userId,
       status: terminalStatus,
-      summary: stepResults.some((item) => item.status === "needs_approval")
-        ? "Dobly completed the safe preparation steps and is waiting for approval before external action."
-        : `Dobly completed ${stepResults.length} command step(s).`,
+      // A failed run must say what failed. This used to fall through to the
+      // "Dobly completed N command step(s)" line even when terminalStatus was
+      // "failed", so the chat read "Run failed: Dobly completed 1 command
+      // step(s)." - a success sentence under a failure heading, with the actual
+      // error (expired token, missing connector) never shown anywhere.
+      summary: summarizeRunOutcome(terminalStatus, stepResults),
       result: { steps, stepResults, artifactId: artifact.id },
     });
 

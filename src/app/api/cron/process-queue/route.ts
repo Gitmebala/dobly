@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runFullSchedulerPass } from "@/lib/runtime/scheduler";
+import { secureSecretMatches } from "@/lib/security/secrets";
+
+// Vercel's default function timeout is 10s on Hobby / 15s on Pro. This route
+// runs the operator brain: model calls plus real multi-step tool execution,
+// which routinely takes longer than that. With no maxDuration declared the
+// platform killed the function mid-run, so the coworker appeared to stall or
+// fail for no visible reason and any work already done was left half-finished.
+// 60s is the Hobby ceiling and is accepted on Pro too.
+export const maxDuration = 60;
+
 
 /**
  * The one daily heartbeat this deployment has (Vercel Hobby allows a single
@@ -31,7 +41,9 @@ export async function GET(req: NextRequest) {
   // Trimmed on both sides: a trailing newline is the single most common way
   // a copy-pasted secret silently differs between two dashboards.
   const presentedSecret = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
-  if (!expectedSecret || !presentedSecret || presentedSecret !== expectedSecret) {
+  // Constant-time comparison; secureSecretMatches also handles the
+  // null/empty cases the previous guard checked by hand.
+  if (!secureSecretMatches(expectedSecret, presentedSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

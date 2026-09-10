@@ -2,6 +2,15 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { createAdminSupabaseClient, createServerSupabaseClient } from "@/lib/supabase/server";
 import { dispatchTaskToOperator } from "@/lib/workspace-tasks";
 
+// Vercel's default function timeout is 10s on Hobby / 15s on Pro. This route
+// runs the operator brain: model calls plus real multi-step tool execution,
+// which routinely takes longer than that. With no maxDuration declared the
+// platform killed the function mid-run, so the coworker appeared to stall or
+// fail for no visible reason and any work already done was left half-finished.
+// 60s is the Hobby ceiling and is accepted on Pro too.
+export const maxDuration = 60;
+
+
 // Vercel serverless functions can freeze/terminate right after the response
 // is sent - a bare `.catch()` with no await here got cut off mid-flight on
 // every dispatch (confirmed live: the task-assignment chat message landed,

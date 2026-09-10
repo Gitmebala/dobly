@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, Loader2, ShieldCheck, Smartphone, Sparkles, WalletCards } from "lucide-react";
+import { apiRequest, apiSend } from "@/lib/api-client";
 
 type Plan = {
   id: string;
@@ -48,15 +49,17 @@ export default function WorkspaceBillingClient({ plans, currentPlanId, usage, ec
   async function checkout(planId: string) {
     setLoading(planId);
     setMessage("");
-    const response = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan_id: planId }),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (response.ok && result.url) window.location.assign(result.url);
-    else setMessage(result.error || "Billing is not configured for this environment yet.");
+    // These are payment flows, and none of them had a rejection path: a
+    // dropped request never reached setLoading(""), so the button stayed
+    // spinning indefinitely with no message on a checkout screen.
+    const outcome = await apiSend<{ url?: string }>("/api/checkout", { plan_id: planId });
     setLoading("");
+    if (!outcome.ok) {
+      setMessage(outcome.error);
+      return;
+    }
+    if (outcome.data.url) window.location.assign(outcome.data.url);
+    else setMessage("Billing is not configured for this environment yet.");
   }
 
   async function payWithMpesa(planId: string) {
@@ -66,24 +69,40 @@ export default function WorkspaceBillingClient({ plans, currentPlanId, usage, ec
     }
     setLoading(`mpesa:${planId}`);
     setMessage("");
-    const response = await fetch("/api/billing/mpesa/renew", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planId, phoneNumber }),
+    const outcome = await apiSend<{ customerMessage?: string }>("/api/billing/mpesa/renew", {
+      planId,
+      phoneNumber,
     });
-    const result = await response.json().catch(() => ({}));
-    setMessage(response.ok ? result.customerMessage || "Check your phone to complete payment." : result.error || "M-Pesa payment could not start.");
     setLoading("");
+    setMessage(
+      outcome.ok
+        ? outcome.data.customerMessage || "Check your phone to complete payment."
+        : outcome.error,
+    );
   }
 
   async function saveControls() {
     setLoading("controls");
     setMessage("");
-    const response = await fetch("/api/billing/economy", {
+    // Number("") is 0 and Number("abc") is NaN, which JSON.stringify writes as
+    // null - so a typo in the cap silently saved "no cap at all" on a spend
+    // limit. Reject it instead of guessing.
+    let monthlyCapKes: number | null = null;
+    if (monthlyCap.trim()) {
+      const parsed = Number(monthlyCap.replace(/[,\s]/g, ""));
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        setMessage("Enter the monthly cap as a plain number, for example 20000.");
+        setLoading("");
+        return;
+      }
+      monthlyCapKes = parsed;
+    }
+
+    const outcome = await apiRequest("/api/billing/economy", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        monthlyCapKes: monthlyCap ? Number(monthlyCap) : null,
+        monthlyCapKes,
         confirmationKes: (economy?.policy?.per_action_confirmation_minor ?? 50_000) / 100,
         autoTopUpEnabled: autoTopUp,
         autoTopUpAmountKes: (economy?.policy?.auto_top_up_amount_minor ?? 0) / 100,
@@ -91,22 +110,28 @@ export default function WorkspaceBillingClient({ plans, currentPlanId, usage, ec
         hardStop: true,
       }),
     });
-    const result = await response.json().catch(() => ({}));
-    setMessage(response.ok ? "Spending controls saved." : result.error || "Spending controls could not be saved.");
     setLoading("");
+    setMessage(outcome.ok ? "Spending controls saved." : outcome.error);
   }
 
   async function buyTopUp() {
     setLoading("topup");
     setMessage("");
-    const response = await fetch("/api/billing/top-up", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amountKes: Number(topUpAmount) }),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (response.ok && result.url) window.location.assign(result.url);
-    else setMessage(result.error || "Activity budget checkout could not start.");
+    const amountKes = Number(String(topUpAmount).replace(/[,\s]/g, ""));
+    if (!Number.isFinite(amountKes) || amountKes <= 0) {
+      setMessage("Enter the top-up amount as a plain number, for example 1000.");
+      setLoading("");
+      return;
+    }
+
+    const outcome = await apiSend<{ url?: string }>("/api/billing/top-up", { amountKes });
+    if (!outcome.ok) {
+      setMessage(outcome.error);
+      setLoading("");
+      return;
+    }
+    if (outcome.data.url) window.location.assign(outcome.data.url);
+    else setMessage("Activity budget checkout could not start.");
     setLoading("");
   }
 

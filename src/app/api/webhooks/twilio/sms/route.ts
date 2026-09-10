@@ -86,5 +86,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return twiml("Thanks. We received your message and will follow up shortly.");
+  // Reply with what the coworker actually drafted. This route used to compute
+  // `result` and then discard it, answering every inbound SMS with a fixed
+  // "we received your message" line - so an SMS coworker looked connected and
+  // even logged the conversation, but never once answered a customer. The
+  // widget and voice routes have always used this same draft; only SMS
+  // dropped it. requiresApproval is honoured so a risky reply still waits for
+  // a human instead of going out automatically.
+  const reply = result.draft.requiresApproval
+    ? "Thanks. I have sent this to the team so they can respond carefully."
+    : result.draft.suggestedReply;
+
+  return twiml(reply || "Thanks. We received your message and will follow up shortly.");
 }

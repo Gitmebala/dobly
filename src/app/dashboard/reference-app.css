@@ -3,17 +3,29 @@
    var(--app-*) silently resolves to nothing for anything portaled
    (dropdowns, popovers, dialogs, toasts), falling back to transparent. */
 :root {
-  --app-bg: #efdfcb;
-  --app-paper: #faf5ec;
+  /* Surface scale.
+     This used to be a dark, heavily saturated page (#efdfcb - hsl 33 53% 87%)
+     with lighter beige cards on top. With the page itself that dark, every
+     panel had to be another beige rectangle just to be visible, so the whole
+     product read as tiles-on-tiles with no hierarchy and nowhere for the eye
+     to rest. The page now sits just off white and keeps the warmth in the
+     tint rather than the value; panels separate by hairline border and
+     shadow, not by being a different colour. The old tan is still here as
+     --app-sand for accents and small fills, where saturation that strong
+     actually earns its place. */
+  --app-bg: #fdfaf6;
+  --app-paper: #ffffff;
+  --app-sunken: #f6f0e7;
+  --app-sand: #efdfcb;
   --app-paper-2: #e1be98;
-  --app-text: #35251a;
-  --app-muted: #8d8066;
-  --app-line: rgba(53, 37, 26, .12);
-  --app-line-strong: rgba(53, 37, 26, .2);
+  --app-text: #241a13;
+  --app-muted: #7d6f5b;
+  --app-line: rgba(53, 37, 26, .1);
+  --app-line-strong: rgba(53, 37, 26, .18);
   --app-rust: #b74513;
   --app-rust-dark: #8f3610;
   --app-green: #2f8f5f;
-  --app-shadow: 0 12px 34px rgba(53, 37, 26, .08);
+  --app-shadow: 0 1px 2px rgba(53, 37, 26, .04), 0 8px 24px rgba(53, 37, 26, .06);
   /* Material palette — physical work-table objects (Canvas + Table design) */
   --app-clay: #c1502e;
   --app-clay-dark: #9c3e21;
@@ -60,6 +72,15 @@
    blending into similarly-saturated browns. */
 html.dark:root,
 html[data-theme="dark"]:root {
+  --app-color-scheme: dark;
+  /* Status colours need the brighter end of the ramp on a dark page; the
+     light-mode values (rust-dark, the deeper gold) drop under 4:1 there.
+     These sit on the dark :root so they beat the .dashboard-shell.app-shell
+     definitions on specificity. */
+  --ui-danger: #ef8a63;
+  --ui-success: #5fbf8a;
+  --ui-warning: #e5aa52;
+  --ui-info: #7ea6ee;
   --app-bg: #17110c;
   --app-paper: #241a12;
   --app-paper-2: #33251a;
@@ -96,45 +117,29 @@ html[data-theme="dark"]:root {
 }
 
 .dashboard-shell.app-shell {
-  --app-bg: #efdfcb;
-  --app-paper: #faf5ec;
-  --app-paper-2: #e1be98;
-  --app-text: #35251a;
-  --app-muted: #8d8066;
-  --app-line: rgba(53, 37, 26, .12);
-  --app-line-strong: rgba(53, 37, 26, .2);
-  --app-rust: #b74513;
-  --app-rust-dark: #8f3610;
-  --app-green: #2f8f5f;
-  --app-shadow: 0 12px 34px rgba(53, 37, 26, .08);
-  --app-clay: #c1502e;
-  --app-clay-dark: #9c3e21;
-  --app-stone: #ece3d3;
-  --app-stone-text: #6b5e4a;
-  --app-slate: #2c2926;
-  --app-slate-text: #efdfcb;
-  --app-wood: #4a3524;
-  --app-wood-2: #33231a;
-  --app-wood-text: #f1e6d6;
-  --app-gold: #c9862f;
-  --app-kraft: #e4d3b0;
-  --app-kraft-text: #4a3a22;
-  --shadcn-primary: #b74513;
-  --shadcn-primary-foreground: #faf5ec;
-  --shadcn-secondary: #e1be98;
-  --shadcn-secondary-foreground: #35251a;
-  --shadcn-muted: #efdfcb;
-  --shadcn-muted-foreground: #8d8066;
-  --shadcn-destructive: #b3261e;
-  --shadcn-ring: #b74513;
-  --shadcn-popover: #faf5ec;
-  --shadcn-popover-foreground: #35251a;
+  /* Palette intentionally NOT redeclared here. It used to duplicate the whole
+     light :root palette, which meant every token had two sources of truth and
+     the dashboard silently ignored :root edits. Light values come from :root,
+     dark from html[data-theme="dark"]:root, which still wins on specificity. */
   min-height: 100vh;
   color: var(--app-text);
   background: var(--app-bg);
   font-family: var(--font-body), Arial, sans-serif;
-  color-scheme: light;
+  /* Follows the active theme; was hardcoded to light, which forced light
+     scrollbars and form controls even in dark mode. */
+  color-scheme: var(--app-color-scheme, light);
 }
+
+/* Display typography defaults.
+   Headings were left at browser-default (0) tracking, which leaves large
+   Playfair looking loose and unset - the single clearest tell against display
+   type that is deliberately tightened as it scales up. Declared here, early
+   and at low specificity, so any component rule later in this file still wins
+   by source order. */
+.app-shell h1 { letter-spacing: -0.03em; }
+.app-shell h2 { letter-spacing: -0.022em; }
+.app-shell h3 { letter-spacing: -0.015em; }
+.app-shell h4 { letter-spacing: -0.01em; }
 
 /* Bounded approval workspace: decisions stay visible while evidence stays optional. */
 .dashboard-page-shell:has(.approvals-workspace) {
@@ -3422,29 +3427,52 @@ html.theme-transitioning * {
 }
 
 /* Product completion pass: one warm, quiet workspace language across every route. */
-/* This block adds the semantic status tokens (success / warning /
-   info). It used to also restate the whole palette in a cool
-   green-grey, and because it lands after the definition at the top of
-   this file it silently won: the app rendered cool while the landing
-   and auth rendered warm cream. The palette below is now the same
-   warm one defined at the top; only the status tokens are new. */
+/* Semantic status tokens (success / warning / info) only.
+   This block twice restated the entire surface palette, and because it lands
+   near EOF it silently won the cascade over the definitions at the top - the
+   reason edits made there appeared to do nothing. Surface, text and line
+   tokens now live in exactly one place (:root) and must not be repeated here;
+   add only tokens that genuinely do not exist above. */
 .dashboard-shell.app-shell {
-  --app-bg: #efdfcb;
-  --app-paper: #faf5ec;
-  --app-paper-2: #e1be98;
-  --app-text: #35251a;
-  --app-muted: #8d8066;
-  --app-line: rgba(53, 37, 26, .12);
-  --app-line-strong: rgba(53, 37, 26, .2);
-  --app-rust: #b74513;
-  --app-rust-dark: #8f3610;
-  --app-green: #2f8f5f;
   --app-blue: #3d6fd8;
   --app-gold: #b8842f;
-  --app-shadow: 0 12px 34px rgba(53, 37, 26, .08);
-  --ui-success: var(--app-green);
-  --ui-warning: var(--app-gold);
-  --ui-info: var(--app-blue);
+  /* Status text is body-sized, so it needs 4.5:1 on the light page. The
+     surface tokens these used to point at were tuned as fills, not as text:
+     --app-green measured 3.87:1 and --app-gold 3.16:1 against #fdfaf6, both
+     failing AA. These are the same hues darkened just far enough to pass, so
+     the palette is unchanged to the eye but the text is actually readable.
+     Fills and borders should keep using --app-green / --app-gold directly. */
+  --ui-success: #2a8055;
+  --ui-warning: #936a26;
+  --ui-info: #3b6dd8;
+  --ui-danger: var(--app-rust-dark);
+}
+
+/* Tailwind's 200-400 tints are calibrated to sit on a dark surface. They are
+   scattered through the dashboard (46 occurrences) from when this UI was dark,
+   and on the light page they are far too pale to read - text-red-300 (#fca5a5)
+   on the page background lands near 1.9:1, well under the 4.5:1 that body text
+   needs. Error text that cannot be read is worse than no error text: the user
+   clicks, something fails, and the explanation is invisible.
+
+   Remapped to the semantic tokens rather than edited at all 46 call sites,
+   which also makes them follow the theme instead of being frozen light or
+   dark. `.dashboard-shell :is(...)` is (0,2,0) so it wins over the utility's
+   own (0,1,0) without !important. */
+.dashboard-shell :is(.text-red-200, .text-red-300, .text-red-400, .text-rose-200, .text-rose-300, .text-rose-400) {
+  color: var(--ui-danger);
+}
+
+.dashboard-shell :is(.text-green-200, .text-green-300, .text-green-400, .text-emerald-200, .text-emerald-300, .text-emerald-400) {
+  color: var(--ui-success);
+}
+
+.dashboard-shell :is(.text-amber-200, .text-amber-300, .text-amber-400, .text-yellow-200, .text-yellow-300, .text-yellow-400, .text-orange-300, .text-orange-400) {
+  color: var(--ui-warning);
+}
+
+.dashboard-shell :is(.text-blue-200, .text-blue-300, .text-blue-400) {
+  color: var(--ui-info);
 }
 
 /* Same correction for dark: warm charcoal, not green-black.
@@ -3471,11 +3499,17 @@ html.dark .dashboard-shell.app-shell {
   --app-shadow: 0 16px 44px rgba(0, 0, 0, .5);
 }
 
-.dashboard-shell *,
-.dashboard-shell *::before,
-.dashboard-shell *::after {
-  letter-spacing: 0 !important;
-}
+/* A blanket `letter-spacing: 0 !important` used to live here, applied to every
+   element and pseudo-element in the dashboard. It silently destroyed every
+   piece of tracking in the product at once: the negative tracking display
+   headings need to look deliberate at large sizes, and - worse - the positive
+   tracking on the small uppercase labels (kickers like ATTENTION CENTER,
+   status chips, table headers), which uppercase text genuinely needs to stay
+   legible. Roughly forty authored letter-spacing values across this file were
+   dead on arrival because of it, and the one heading that had to look right
+   escalated to its own !important to escape. Removed so component-level
+   typography applies normally; the defaults near the top of this file cover
+   anything that declares nothing. */
 
 .dashboard-shell .main-stage-body {
   background: var(--app-bg);
@@ -3940,11 +3974,13 @@ html.dark .dashboard-shell.app-shell {
 .dashboard-shell :is(h1, .page-title) {
   font-size: 29px;
   line-height: 1.2;
-  letter-spacing: 0;
+  /* Display type tightens as it scales. These were 0 only because the blanket
+     reset above made any other value pointless. */
+  letter-spacing: -0.028em;
 }
 
 .dashboard-shell h2 {
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
 }
 
 .dashboard-shell :where(.text-xs) {
@@ -8947,7 +8983,9 @@ html[data-theme="dark"] .dashboard-shell {
   font-weight: 600;
   font-size: clamp(38px, 5.4vw, 60px);
   line-height: 1.06;
-  letter-spacing: -0.01em !important;
+  /* !important dropped along with the blanket reset it existed to escape.
+     Tightened further because this is the largest type in the product. */
+  letter-spacing: -0.032em;
   color: var(--app-text);
 }
 .canvas-heading .accent {
@@ -11779,4 +11817,337 @@ html, body {
 }
 .channel-panel-how summary::-webkit-details-marker {
   display: none;
+}
+
+/* ─── Departments canvas ──────────────────────────────────────── */
+
+.deptcanvas {
+  position: relative;
+  margin-top: 1.5rem;
+}
+
+.deptcanvas-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.deptcanvas-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.deptcanvas-toolbar button {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--app-line);
+  background: var(--app-paper);
+  color: var(--app-text);
+  cursor: pointer;
+  transition: border-color 160ms var(--ease-premium, ease);
+}
+
+.deptcanvas-toolbar button:hover { border-color: var(--app-line-strong); }
+
+.deptcanvas-zoom,
+.deptcanvas-save {
+  font-size: 0.72rem;
+  color: var(--app-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.deptcanvas-save.is-ok { color: var(--app-green); }
+.deptcanvas-save.is-error { color: var(--app-rust-dark, crimson); }
+
+.deptcanvas-cta {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--app-line-strong);
+  background: var(--app-text);
+  color: var(--app-paper);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* The surface clips the world; the world is what pans and zooms. */
+.deptcanvas-surface {
+  position: relative;
+  height: clamp(460px, 68vh, 820px);
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--app-line);
+  background:
+    radial-gradient(circle at 1px 1px, var(--app-line) 1px, transparent 0) 0 0 / 32px 32px,
+    var(--app-paper);
+  cursor: grab;
+  touch-action: none;
+}
+
+.deptcanvas-surface[data-dragging="true"] { cursor: grabbing; }
+
+.deptcanvas-world {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* Nodes are positioned by their centre, hence the -50% shift. */
+.deptcanvas-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.deptcanvas-orbit {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px dashed color-mix(in oklab, var(--accent) 40%, transparent);
+  pointer-events: none;
+}
+
+.deptcanvas-operator {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--app-paper);
+  border: 1.5px solid color-mix(in oklab, var(--accent) 70%, transparent);
+  pointer-events: auto;
+}
+
+.deptcanvas-operator em {
+  font-style: normal;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--app-text);
+}
+
+.deptcanvas-operator[data-status="paused"] { opacity: 0.45; }
+.deptcanvas-operator[data-status="draft"] { border-style: dashed; opacity: 0.6; }
+
+.deptcanvas-core {
+  position: relative;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 0.2rem;
+  padding: 0.5rem;
+  background: var(--app-paper);
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--accent) 12%, transparent), var(--app-shadow);
+  transition: transform 180ms var(--ease-premium, ease), box-shadow 180ms var(--ease-premium, ease);
+}
+
+/* The core is a fixed-size circle, but its label was unconstrained, so longer
+   department names ("Client Delivery", "Marketing/Growth") pushed the node to
+   180px inside a 128px circle and spilled the text past the ring. Clamp the
+   name to two lines and keep everything inside the circle. */
+.deptcanvas-core > strong {
+  max-width: 100%;
+  min-width: 0;
+  font-size: 0.82rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.deptcanvas-core > span {
+  max-width: 100%;
+  min-width: 0;
+  font-size: 0.66rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deptcanvas-node:hover .deptcanvas-core { transform: scale(1.04); }
+
+.deptcanvas-node[data-selected="true"] .deptcanvas-core {
+  box-shadow: 0 0 0 10px color-mix(in oklab, var(--accent) 22%, transparent), var(--app-shadow);
+}
+
+.deptcanvas-node[data-status="paused"] .deptcanvas-core { opacity: 0.55; }
+
+.deptcanvas-core strong {
+  font-size: 0.85rem;
+  line-height: 1.15;
+  color: var(--app-text);
+}
+
+.deptcanvas-core span {
+  font-size: 0.65rem;
+  color: var(--app-muted);
+}
+
+/* Inspector */
+.deptcanvas-panel {
+  position: absolute;
+  top: 3.25rem;
+  right: 0.75rem;
+  width: min(340px, calc(100% - 1.5rem));
+  max-height: calc(100% - 4.5rem);
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  border: 1px solid var(--app-line-strong);
+  background: var(--app-paper);
+  box-shadow: var(--app-shadow);
+  overflow: hidden;
+}
+
+.deptcanvas-panel header {
+  padding: 1rem 1.1rem 0.85rem;
+  border-bottom: 1px solid var(--app-line);
+}
+
+.deptcanvas-panel header h2 { font-size: 1.05rem; margin: 0.3rem 0 0.25rem; }
+.deptcanvas-panel header p { font-size: 0.8rem; color: var(--app-muted); margin: 0; }
+
+.deptcanvas-panel-trust {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--app-muted);
+  border: 1px solid var(--app-line);
+  border-radius: 9999px;
+  padding: 0.12rem 0.5rem;
+}
+
+.deptcanvas-panel-body {
+  padding: 0.85rem 1.1rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.deptcanvas-panel-body h3 {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--app-muted);
+  margin: 0 0 0.6rem;
+}
+
+.deptcanvas-panel-body ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+
+.deptcanvas-panel-body li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--app-line);
+}
+
+.deptcanvas-panel-body li:last-child { border-bottom: none; padding-bottom: 0; }
+
+.deptcanvas-panel-body li a { text-decoration: none; color: inherit; display: grid; gap: 0.1rem; }
+.deptcanvas-panel-body li a strong { font-size: 0.83rem; }
+.deptcanvas-panel-body li a span {
+  font-size: 0.72rem;
+  color: var(--app-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.deptcanvas-panel-body li em {
+  font-style: normal;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-muted);
+  white-space: nowrap;
+}
+
+.deptcanvas-panel-body li em[data-status="active"] { color: var(--app-green); }
+
+.deptcanvas-panel-empty { font-size: 0.78rem; color: var(--app-muted); margin: 0; }
+
+.deptcanvas-panel footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.1rem;
+  border-top: 1px solid var(--app-line);
+}
+
+.deptcanvas-panel footer button {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--app-line);
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+
+.deptcanvas-empty {
+  margin-top: 1.5rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  border-radius: 16px;
+  border: 1px dashed var(--app-line-strong);
+  background: var(--app-paper);
+}
+
+.deptcanvas-empty h2 { font-size: 1.1rem; margin: 0 0 0.4rem; }
+.deptcanvas-empty p { color: var(--app-muted); font-size: 0.85rem; margin: 0 0 1.1rem; }
+
+@media (max-width: 720px) {
+  .deptcanvas-panel {
+    position: static;
+    width: 100%;
+    max-height: none;
+    margin-top: 0.75rem;
+  }
+}
+
+.deptcanvas-empty-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.deptcanvas-empty-actions button.deptcanvas-cta {
+  font: inherit;
+  cursor: pointer;
+}
+
+.deptcanvas-empty-actions button.deptcanvas-cta:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.deptcanvas-empty-actions a {
+  font-size: 0.8rem;
+  color: var(--app-muted);
+}
+
+.deptcanvas-empty-error {
+  margin: 0.9rem 0 0;
+  font-size: 0.78rem;
+  color: var(--app-rust-dark, crimson);
 }

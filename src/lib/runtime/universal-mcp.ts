@@ -300,7 +300,32 @@ const CAPABILITY_NATIVE_TOOLS: Partial<Record<DoblyCapability, NativeToolCandida
   // connection sitting right there - the finance department could never act.
   collect_payment: [{ provider: "mpesa", toolName: "mpesa" }, { provider: "paystack", toolName: "paystack" }],
   create_invoice: [{ provider: "mpesa", toolName: "mpesa" }, { provider: "paystack", toolName: "paystack" }],
-  update_crm: [{ provider: "hubspot", toolName: "hubspot" }],
+  update_crm: [
+    { provider: "hubspot", toolName: "hubspot" },
+    { provider: "salesforce", toolName: "salesforce" },
+  ],
+
+  // Only 9 of the 26 capabilities had a native candidate, so several kinds of
+  // coworker could never act even with exactly the right account connected:
+  // the executors existed and were registered, but nothing mapped the
+  // capability the planner chose onto them. publish_content was the clearest
+  // case - a social coworker with a live Meta connection still resolved to a
+  // fallback path and never posted anything.
+  publish_content: [
+    { provider: "meta", toolName: "meta" },
+    { provider: "linkedin", toolName: "linkedin" },
+  ],
+  manage_project_tasks: [
+    { provider: "asana", toolName: "asana" },
+    { provider: "trello", toolName: "trello" },
+    { provider: "notion", toolName: "notion" },
+  ],
+  manage_commerce: [{ provider: "shopify", toolName: "shopify" }],
+  // Stripe only: Xero has an executor but no provider entry to connect an
+  // account against, so mapping it here would resolve to a connection that can
+  // never exist. Add it alongside a real xero provider, not before.
+  reconcile_finance: [{ provider: "stripe", toolName: "stripe" }],
+  summarize_knowledge: [{ provider: "notion", toolName: "notion" }],
 };
 
 // Exposed so a resolved `kind: "native"` path can be dispatched by its actual

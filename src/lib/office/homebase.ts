@@ -1,3 +1,4 @@
+import { DASHBOARD_LOAD_TIMEOUT_MS, withTimeout } from "@/lib/async/with-timeout";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import type { ActionCandidateRecord, OperatingStateRecord } from "@/types";
 import { OFFICE_DEPARTMENTS, OFFICE_WORKER_TEMPLATES } from "@/lib/office/departments";
@@ -191,9 +192,16 @@ async function safeRows(
   callback: () => Promise<{ data: Record<string, unknown>[] | null; error: { message: string } | null }>,
 ) {
   try {
-    const { data, error } = await callback();
-    if (error) return [];
-    return data ?? [];
+    // Bounded: a Supabase query has no timeout of its own, and this data is
+    // awaited by server components before they render anything. An unbounded
+    // hang here leaves the route skeleton on screen permanently rather than
+    // showing an error - see lib/async/with-timeout.
+    const result = await withTimeout(callback(), DASHBOARD_LOAD_TIMEOUT_MS, {
+      data: null,
+      error: { message: "timed out" },
+    });
+    if (result.error) return [];
+    return result.data ?? [];
   } catch {
     return [];
   }

@@ -7,6 +7,8 @@ import {
   type LaunchDepartmentId,
 } from "@/lib/department-bundles";
 import { checkDepartmentEntitlement, checkUsageEntitlement } from "@/lib/billing/entitlements";
+import { resolveActiveWorkspace } from "@/lib/active-workspace";
+import { ensureDepartmentFromBundle } from "@/lib/departments";
 import { hireOfficeWorkerFromTemplate } from "@/lib/office/runtime";
 import { recordOfficeEvent } from "@/lib/office/events";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -89,6 +91,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json<ApiError>({ error: "Unknown department." }, { status: 400 });
   }
 
+  // Callers may omit workspaceId (the setup wizard does), so fall back to the
+  // active workspace. A department row is workspace-scoped and cannot be
+  // created without one.
+  const { activeWorkspace } = await resolveActiveWorkspace(user.id);
+  const workspaceId = validation.data.workspaceId ?? activeWorkspace?.id ?? null;
+
   const departmentAllowed = await checkDepartmentEntitlement({
     userId: user.id,
     departmentId,
@@ -102,7 +110,7 @@ export async function POST(req: NextRequest) {
 
   const workerAllowed = await checkUsageEntitlement({
     userId: user.id,
-    workspaceId: validation.data.workspaceId ?? null,
+    workspaceId,
     metric: "workers",
     quantity: bundle.workerTemplateKeys.length,
   });
@@ -113,9 +121,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let department: Awaited<ReturnType<typeof ensureDepartmentFromBundle>> | null = null;
+  if (workspaceId) {
+    department = await ensureDepartmentFromBundle({
+      workspaceId,
+      userId: user.id,
+      departmentId,
+    });
+  }
+
   const connectedChannelIds = await getConnectedChannelIds({
     userId: user.id,
-    workspaceId: validation.data.workspaceId ?? null,
+    workspaceId,
   });
   const missingChannels = bundle.recommendedChannels.filter(
     (channelId) => !connectedChannelIds.includes(channelId),
@@ -125,14 +142,14 @@ export async function POST(req: NextRequest) {
   for (const templateKey of bundle.workerTemplateKeys) {
     const worker = await hireOfficeWorkerFromTemplate({
       userId: user.id,
-      workspaceId: validation.data.workspaceId ?? null,
+      workspaceId,
       templateKey,
     });
     workers.push(worker);
   }
 
   await recordOfficeEvent({
-    workspaceId: validation.data.workspaceId ?? null,
+    workspaceId,
     userId: user.id,
     departmentId: asOfficeDepartmentId(departmentId),
     workerKind: "system",
@@ -156,7 +173,7 @@ export async function POST(req: NextRequest) {
     properties: {
       department_id: departmentId,
       department_name: bundle.name,
-      workspace_id: validation.data.workspaceId ?? null,
+      workspace_id: workspaceId,
       workers_created: workers.length,
       missing_channels: missingChannels,
       recommended_channels: bundle.recommendedChannels,
@@ -164,7 +181,10 @@ export async function POST(req: NextRequest) {
   }).catch(() => null);
 
   return NextResponse.json({
+    // `department` stays the bundle for backwards compatibility with existing
+    // callers; `departmentRecord` is the persisted row (null if no workspace).
     department: bundle,
+    departmentRecord: department,
     workers,
     missingChannels,
     status:

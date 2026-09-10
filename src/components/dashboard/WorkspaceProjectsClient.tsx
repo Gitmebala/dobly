@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Folder, Plus, Sparkles, X } from "lucide-react";
+import { ArrowRight, Folder, Loader2, Plus, Sparkles, X } from "lucide-react";
+import { apiSend } from "@/lib/api-client";
 
 type Project = {
   id: string;
@@ -19,24 +20,41 @@ export default function WorkspaceProjectsClient({ initialProjects }: { initialPr
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [budget, setBudget] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   async function createProject() {
-    if (!name.trim()) return;
-    const response = await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: name.trim(),
-        budgetMinor: budget ? Math.round(parseFloat(budget) * 100) : null,
-      }),
-    });
-    const result = await response.json();
-    if (response.ok) {
-      setProjects((current) => [result.project, ...current]);
-      setName("");
-      setBudget("");
-      setCreating(false);
+    if (!name.trim() || saving) return;
+    setError(null);
+
+    // parseFloat returns NaN for anything non-numeric ("1,000", "ksh 500"),
+    // and JSON.stringify turns NaN into null - so a mistyped budget was
+    // silently saved as no budget at all rather than being questioned.
+    let budgetMinor: number | null = null;
+    if (budget.trim()) {
+      const parsed = Number(budget.replace(/[,\s]/g, ""));
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        setError("Enter the budget as a plain number, for example 15000.");
+        return;
+      }
+      budgetMinor = Math.round(parsed * 100);
     }
+
+    setSaving(true);
+    // Failure used to be entirely silent: `if (response.ok)` with no else.
+    const outcome = await apiSend<{ project: Project }>("/api/projects", {
+      name: name.trim(),
+      budgetMinor,
+    });
+    setSaving(false);
+    if (!outcome.ok) {
+      setError(outcome.error);
+      return;
+    }
+    setProjects((current) => [outcome.data.project, ...current]);
+    setName("");
+    setBudget("");
+    setCreating(false);
   }
 
   return (
@@ -57,7 +75,8 @@ export default function WorkspaceProjectsClient({ initialProjects }: { initialPr
             <div className="ref-row" style={{ marginTop: 14, gap: 10 }}>
               <input className="ref-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Project name" autoFocus />
               <input className="ref-input" style={{ maxWidth: 160 }} value={budget} onChange={(event) => setBudget(event.target.value)} placeholder="Budget (KES)" inputMode="decimal" />
-              <button className="ref-button primary" onClick={createProject}>Create</button>
+              <button className="ref-button primary" onClick={createProject} disabled={saving}>{saving ? <Loader2 size={16} className="animate-spin" /> : null} {saving ? "Creating..." : "Create"}</button>
+              {error ? <p role="alert" style={{ marginTop: 10, fontSize: 13, color: "var(--ui-danger)" }}>{error}</p> : null}
             </div>
           </section>
         ) : null}

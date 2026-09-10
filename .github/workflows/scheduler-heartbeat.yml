@@ -31,7 +31,18 @@ jobs:
           DOBLY_CRON_SECRET: ${{ secrets.DOBLY_CRON_SECRET }}
         run: |
           if [ -z "$DOBLY_CRON_SECRET" ]; then
-            echo "DOBLY_CRON_SECRET is not set - add it as a repo secret to activate this heartbeat. Skipping."
+            # Exit 0 so forks and PRs are not marked broken, but make the
+            # no-op impossible to mistake for a working heartbeat. This step
+            # used to exit silently green, so a repo whose secret was never
+            # added showed hundreds of "successful" runs while no scheduled
+            # loop had ever actually fired.
+            echo "::warning title=Heartbeat inactive::DOBLY_CRON_SECRET is not set, so no scheduler pass ran. Add it in Settings > Secrets and variables > Actions."
+            {
+              echo "### Scheduler heartbeat: INACTIVE"
+              echo ""
+              echo "\`DOBLY_CRON_SECRET\` is not set, so this run did **not** trigger a scheduler pass."
+              echo "Scheduled loops and watchers are not running on their configured cadence."
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           status=$(curl -s -o /tmp/response.json -w "%{http_code}" \
@@ -40,6 +51,8 @@ jobs:
           echo "Response status: $status"
           cat /tmp/response.json
           if [ "$status" -ge 400 ]; then
-            echo "Scheduler pass request failed."
+            echo "::error title=Scheduler pass failed::/api/cron/process-queue returned $status"
+            echo "### Scheduler heartbeat: FAILED ($status)" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+          echo "### Scheduler heartbeat: ok ($status)" >> "$GITHUB_STEP_SUMMARY"

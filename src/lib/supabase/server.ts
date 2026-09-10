@@ -29,10 +29,18 @@ function withPersistentCookieOptions(name: string, options?: Record<string, unkn
   return { ...options, maxAge: AUTH_COOKIE_MIN_MAX_AGE };
 }
 
+// Every Supabase request must be bounded. Without a timeout a slow or
+// unreachable database does not surface an error - the awaiting server
+// component simply never renders, so the route's loading.tsx skeleton stays on
+// screen forever with nothing to click and nothing logged. An AbortSignal
+// turns that silent hang into a normal rejection the existing .catch()
+// handlers already deal with.
+const SUPABASE_REQUEST_TIMEOUT_MS = 5000;
+
 function timedFetch(input: RequestInfo | URL, init?: RequestInit) {
   return fetch(input, {
     ...init,
-    signal: init?.signal ?? AbortSignal.timeout(5000),
+    signal: init?.signal ?? AbortSignal.timeout(SUPABASE_REQUEST_TIMEOUT_MS),
   });
 }
 
@@ -110,6 +118,11 @@ export function createAdminSupabaseClient() {
     supabaseUrl,
     serviceRoleKey,
     {
+      // The admin client had no bounded fetch while the cookie client did, so
+      // every service-role query was unbounded. Most dashboard data loads run
+      // through here (lib/office/homebase.ts among them), which is why routes
+      // could hang on their skeleton indefinitely.
+      global: { fetch: timedFetch },
       auth: {
         autoRefreshToken: false,
         persistSession: false,

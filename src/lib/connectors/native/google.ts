@@ -2,6 +2,7 @@ import {
   getActiveConnectionForProvider,
   getConnectionById,
   getDecryptedConnectionSecrets,
+  markConnectionExpired,
   storeConnectionSecrets,
 } from "@/lib/connections";
 import { anthropic } from "@/lib/anthropic";
@@ -45,6 +46,19 @@ async function refreshGoogleAccessToken(connectionId: string, refreshToken: stri
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data.access_token) {
+    // invalid_grant means the refresh token itself is dead, not that this
+    // attempt failed - retrying can never recover it. The usual cause is an
+    // OAuth consent screen still in "Testing", where Google expires every
+    // refresh token after 7 days. Park the connection so scheduled loops stop
+    // retrying every cycle and the owner gets one clear reconnect prompt
+    // instead of a wall of identical JSON errors.
+    if (data?.error === "invalid_grant") {
+      await markConnectionExpired({
+        connectionId,
+        reason: "Google sign-in expired. Reconnect Google to resume this coworker.",
+      });
+      throw new Error("Google access has expired. Reconnect Google in Connections to resume this coworker.");
+    }
     throw new Error(`Google token refresh failed: ${JSON.stringify(data)}`);
   }
   const expiresAt = data.expires_in ? new Date(Date.now() + data.expires_in * 1000).toISOString() : null;

@@ -6,6 +6,15 @@ import { requireWorkspacePermission } from "@/lib/workspaces";
 import { executeDoblyCommand, planDoblyCommand } from "@/lib/runtime/plain-english-command";
 import { enqueueRuntimeCommand } from "@/lib/runtime/job-queue";
 
+// Vercel's default function timeout is 10s on Hobby / 15s on Pro. This route
+// runs the operator brain: model calls plus real multi-step tool execution,
+// which routinely takes longer than that. With no maxDuration declared the
+// platform killed the function mid-run, so the coworker appeared to stall or
+// fail for no visible reason and any work already done was left half-finished.
+// 60s is the Hobby ceiling and is accepted on Pro too.
+export const maxDuration = 60;
+
+
 const commandSchema = z.object({
   workspaceId: z.string().uuid().nullable().optional(),
   prompt: z.string().trim().min(5).max(6000),

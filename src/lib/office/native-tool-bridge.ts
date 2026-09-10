@@ -78,6 +78,86 @@ const TOOL_TO_EXECUTOR: Record<string, string> = {
   klaviyo: "native.klaviyo.subscribe",
   docusign: "native.docusign.create-envelope",
   zoom: "native.zoom.create-meeting",
+
+  // --- Verbs beyond "create" -------------------------------------------------
+  // This table only ever mapped the create/first action of each app, so a whole
+  // class of coworker silently could not finish its job: a support coworker
+  // could open a Zendesk ticket but never update it, a marketing coworker could
+  // add a Mailchimp subscriber but never send the campaign, and a social
+  // coworker could not post anywhere at all. 25 registered executors were
+  // unreachable from the coworker path while working fine from workflows.
+
+  // Publishing / social
+  meta: "native.meta.post",
+  facebook: "native.meta.post",
+  instagram: "native.meta.post",
+  social_post: "native.meta.post",
+  post_to_social: "native.meta.post",
+  linkedin: "native.linkedin.share-post",
+  linkedin_post: "native.linkedin.share-post",
+  share_post: "native.linkedin.share-post",
+
+  // Campaign sending (distinct from adding a subscriber)
+  mailchimp_send_campaign: "native.mailchimp.send-campaign",
+  send_campaign: "native.mailchimp.send-campaign",
+  klaviyo_send_campaign: "native.klaviyo.send-campaign",
+  klaviyo_track_event: "native.klaviyo.track-event",
+  track_event: "native.klaviyo.track-event",
+
+  // Updates on existing records
+  zendesk_update_ticket: "native.zendesk.update-ticket",
+  update_ticket: "native.zendesk.update-ticket",
+  hubspot_update_deal: "native.hubspot.update-deal",
+  update_deal: "native.hubspot.update-deal",
+  hubspot_create_note: "native.hubspot.create-note",
+  log_note: "native.hubspot.create-note",
+  airtable_update_record: "native.airtable.update-record",
+  update_record: "native.airtable.update-record",
+  notion_append: "native.notion.append-database",
+  append_database: "native.notion.append-database",
+  pipedrive_create_deal: "native.pipedrive.create-deal",
+  create_deal: "native.pipedrive.create-deal",
+  salesforce_create_opportunity: "native.salesforce.create-opportunity",
+  create_opportunity: "native.salesforce.create-opportunity",
+  zoho: "native.zoho-crm.create-lead",
+  zoho_crm: "native.zoho-crm.create-lead",
+  shopify_tag_customer: "native.shopify.tag-customer",
+  tag_customer: "native.shopify.tag-customer",
+
+  // Money
+  stripe_create_customer: "native.stripe.create-customer",
+  stripe_refund: "native.stripe.refund-charge",
+  refund_charge: "native.stripe.refund-charge",
+  issue_refund: "native.stripe.refund-charge",
+  xero: "native.xero.create-invoice",
+  xero_create_invoice: "native.xero.create-invoice",
+  square: "native.square.create-customer",
+
+  // Reading data back - a coworker that can only write is half a coworker.
+  typeform: "native.typeform.get-responses",
+  get_responses: "native.typeform.get-responses",
+  form_responses: "native.typeform.get-responses",
+  calendly: "native.calendly.get-events",
+  get_events: "native.calendly.get-events",
+  docusign_status: "native.docusign.get-envelope-status",
+  envelope_status: "native.docusign.get-envelope-status",
+
+  // Report assembly
+  orchestrator: "native.dobly.orchestrator.document",
+  assemble_report: "native.dobly.orchestrator.document",
+  build_document: "native.dobly.orchestrator.document",
+
+  // Generic escape hatches. Without these a coworker had no way to call an
+  // arbitrary API, write a file, or send plain email outside Gmail.
+  http: "generic.http",
+  http_request: "generic.http",
+  api_call: "generic.http",
+  webhook: "generic.http",
+  call_api: "generic.http",
+  write_file: "generic.file",
+  save_file: "generic.file",
+  smtp: "generic.email",
+  send_plain_email: "generic.email",
 };
 
 function normalizeToolName(toolName: string) {

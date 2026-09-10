@@ -77,3 +77,4 @@ mobile/okhttp3.internal.connection.RealCall$AsyncCall
 skills-lock.json
 
 .env*
+.dobly-workspace/

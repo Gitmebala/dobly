@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Bot, CalendarDays, Check, Circle, Clock3, LayoutGrid, List, Plus, Sparkles, User, X } from "lucide-react";
+import { apiSend } from "@/lib/api-client";
 
 type Task = {
   id: string;
@@ -88,22 +89,17 @@ export default function WorkspaceTasksClient({
     if (!title.trim()) return;
     setError("");
     const [assignKind, assignId] = assignee.split(":");
-    const response = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: title.trim(),
-        description: description.trim(),
-        priority,
-        dueAt: dueAt ? new Date(dueAt).toISOString() : null,
-        projectId: projectId || null,
-        assigneeUserId: assignKind === "user" ? assignId : null,
-        assigneeOperatorId: assignKind === "operator" ? assignId : null,
-      }),
+    const outcome = await apiSend<{ task: Task }>("/api/tasks", {
+      title: title.trim(),
+      description: description.trim(),
+      priority,
+      dueAt: dueAt ? new Date(dueAt).toISOString() : null,
+      projectId: projectId || null,
+      assigneeUserId: assignKind === "user" ? assignId : null,
+      assigneeOperatorId: assignKind === "operator" ? assignId : null,
     });
-    const result = await response.json();
-    if (!response.ok) return setError(result.error || "Could not create task.");
-    setTasks((current) => [result.task, ...current]);
+    if (!outcome.ok) return setError(outcome.error);
+    setTasks((current) => [outcome.data.task, ...current]);
     setTitle("");
     setDescription("");
     setPriority("medium");
@@ -113,13 +109,21 @@ export default function WorkspaceTasksClient({
   }
 
   async function updateTaskStatus(task: Task, status: Task["status"]) {
-    const response = await fetch("/api/tasks", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: task.id, status }),
-    });
-    const result = await response.json();
-    if (response.ok) setTasks((current) => current.map((item) => item.id === task.id ? result.task : item));
+    setError("");
+    // Optimistic, then reconciled. Previously a failed PATCH did nothing at
+    // all - no else branch, no message - so ticking a task complete just
+    // silently didn't stick, and the row quietly reverted on next load with
+    // no explanation.
+    const previous = task.status;
+    setTasks((current) => current.map((item) => (item.id === task.id ? { ...item, status } : item)));
+
+    const outcome = await apiSend<{ task: Task }>("/api/tasks", { id: task.id, status }, { method: "PATCH" });
+    if (!outcome.ok) {
+      setTasks((current) => current.map((item) => (item.id === task.id ? { ...item, status: previous } : item)));
+      setError(outcome.error);
+      return;
+    }
+    setTasks((current) => current.map((item) => (item.id === task.id ? outcome.data.task : item)));
   }
 
   return (

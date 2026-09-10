@@ -122,8 +122,10 @@ export async function executeOfficeTool(input: OfficeToolExecutionInput): Promis
     });
   }
 
+  const nativeExecutorId = findNativeExecutorId(normalizedTool);
+
   const connection = await findConnectionForTool(input.userId, normalizedTool);
-  if (!connection) {
+  if (!connection && !executorRunsWithoutConnection(nativeExecutorId)) {
     const result: OfficeToolExecutionResult = {
       status: "needs_connection",
       summary: `${input.toolName} is not connected yet, so Dobly prepared the action but did not send it externally.`,
@@ -136,7 +138,7 @@ export async function executeOfficeTool(input: OfficeToolExecutionInput): Promis
   // over the webhook/base_url fallback. Without this, a genuinely connected
   // OAuth account still fell through to "prepared_not_sent" because an OAuth
   // connection has neither a webhook_url nor a base_url in its metadata.
-  if (findNativeExecutorId(normalizedTool)) {
+  if (nativeExecutorId) {
     const native = await executeNativeConnectorTool({
       userId: input.userId,
       taskId: input.taskId,
@@ -152,10 +154,20 @@ export async function executeOfficeTool(input: OfficeToolExecutionInput): Promis
       });
     }
 
-    return logToolExecution(input, String(connection.provider ?? normalizedTool), {
+    return logToolExecution(input, String(connection?.provider ?? normalizedTool), {
       status: "failed",
       summary: `${input.toolName} could not complete: ${native.error}`,
       output: { toolName: input.toolName, error: native.error, payload: input.toolPayload },
+    });
+  }
+
+  // Unreachable without a connection: the guard above only lets connection-less
+  // executors past, and those are all handled by the native branch.
+  if (!connection) {
+    return logToolExecution(input, input.toolName, {
+      status: "needs_connection",
+      summary: `${input.toolName} is not connected yet, so Dobly prepared the action but did not send it externally.`,
+      output: { toolName: input.toolName, preparedPayload: input.toolPayload },
     });
   }
 
@@ -223,6 +235,27 @@ async function executeCommunicationReplyTool(input: OfficeToolExecutionInput): P
 
 async function executeInternalTool(input: OfficeToolExecutionInput, toolName: string): Promise<OfficeToolExecutionResult> {
   return executeRealInternalTool(input, toolName);
+}
+
+/**
+ * Executors that do their work without any per-user account.
+ *
+ * Everything used to be gated on findConnectionForTool, which only matches
+ * rows in `connections`. These three never have one - an arbitrary HTTP call,
+ * a file write, and Dobly's own document assembly - so they were reported as
+ * "not connected yet" and prepared-but-never-sent no matter what. That also
+ * silently removed the coworker's only general-purpose escape hatch: with
+ * generic.http unreachable, any capability without a dedicated connector was
+ * simply impossible rather than merely inconvenient.
+ */
+const CONNECTIONLESS_EXECUTORS = new Set([
+  "generic.http",
+  "generic.file",
+  "native.dobly.orchestrator.document",
+]);
+
+function executorRunsWithoutConnection(executorId: string | null) {
+  return Boolean(executorId && CONNECTIONLESS_EXECUTORS.has(executorId));
 }
 
 async function findConnectionForTool(userId: string, toolName: string) {

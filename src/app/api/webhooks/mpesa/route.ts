@@ -30,16 +30,21 @@ function extractMetadataItems(callback: Record<string, unknown> | null) {
 
 async function findMatchingRunEvent(checkoutRequestId: string) {
   const admin = createAdminSupabaseClient();
+  // Filter on the JSON field in the database rather than pulling the 200 most
+  // recent push events and scanning them in memory. The old approach silently
+  // stopped finding matches once more than 200 STK pushes had happened since
+  // the one being confirmed - so on a busy day payments quietly stopped being
+  // linked to the run that requested them, and the failure looked like nothing
+  // at all.
   const { data } = await admin
     .from("workflow_run_events")
     .select("*")
     .eq("event_type", "mpesa.stk_push_requested")
+    .eq("event_data->>checkoutRequestId", checkoutRequestId)
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(1);
 
-  return ((data ?? []) as WorkflowRunEvent[]).find(
-    (event) => event.event_data?.checkoutRequestId === checkoutRequestId
-  );
+  return ((data ?? []) as WorkflowRunEvent[])[0];
 }
 
 export async function GET() {
@@ -102,10 +107,26 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ResultCode: 1, ResultDesc: "Verification unavailable" }, { status: 503 });
       }
     } else if (billingCheckout && resultCode !== 0) {
-      await admin
-        .from("billing_checkout_sessions")
-        .update({ status: "failed", metadata: { ...(billingCheckout.metadata ?? {}), resultCode, resultDesc } })
-        .eq("id", billingCheckout.id);
+      // Confirm the failure with Safaricom before writing it down. This
+      // callback is unauthenticated (Daraja posts plain JSON and offers no
+      // signature), so trusting a non-zero ResultCode on its own let anyone
+      // who learned a CheckoutRequestID kill a real customer's pending
+      // payment by posting a forged failure. The success path was already
+      // verified this way; the failure path was not.
+      let confirmedFailed = false;
+      try {
+        const verified = await verifyManagedMpesaPayment(checkoutRequestId);
+        confirmedFailed = !verified.successful;
+      } catch (error) {
+        console.error("M-Pesa failure verification unavailable:", error);
+      }
+
+      if (confirmedFailed) {
+        await admin
+          .from("billing_checkout_sessions")
+          .update({ status: "failed", metadata: { ...(billingCheckout.metadata ?? {}), resultCode, resultDesc } })
+          .eq("id", billingCheckout.id);
+      }
     }
 
     const matchingEvent = await findMatchingRunEvent(checkoutRequestId);

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import DoblySidebar from "@/components/dashboard/DoblySidebar";
+import { apiRequest } from "@/lib/api-client";
 
 const WorkspaceSearchPalette = dynamic(
   () => import("@/components/dashboard/WorkspaceSearchPalette").then((module) => module.WorkspaceSearchPalette),
@@ -54,12 +55,14 @@ export default function DashboardWorkspace({
   async function switchWorkspace(workspaceId: string) {
     if (!workspaceId || workspaceId === activeWorkspaceId || switchingWorkspace) return;
     setSwitchingWorkspace(true);
-    const response = await fetch("/api/workspaces/active", {
+    // A rejected request used to skip setSwitchingWorkspace(false) entirely,
+    // leaving the workspace switcher disabled for good until a manual reload.
+    const outcome = await apiRequest("/api/workspaces/active", {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ workspaceId }),
     });
-    if (response.ok) window.location.reload();
+    if (outcome.ok) window.location.reload();
     else setSwitchingWorkspace(false);
   }
 

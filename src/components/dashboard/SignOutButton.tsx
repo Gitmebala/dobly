@@ -13,7 +13,16 @@ export default function SignOutButton({
   const router = useRouter();
 
   async function signOut() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    // Always leave, even if the request fails. An unguarded await meant a
+    // rejected fetch (offline, dropped connection) threw before the redirect,
+    // so the Sign out button simply did nothing at all - the one action where
+    // appearing to be ignored is least acceptable.
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Ignored on purpose: the redirect below still runs, and middleware
+      // sends the user back here if the session somehow survived.
+    }
     router.replace("/auth/login");
     router.refresh();
   }

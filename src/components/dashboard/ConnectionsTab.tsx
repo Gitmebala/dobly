@@ -8,6 +8,7 @@ import { CONNECTION_GROUPS, CONNECTION_PROVIDERS } from "@/lib/connection-catalo
 import { getConnectionReadiness } from "@/lib/connection-readiness";
 import ConnectProviderModal from "@/components/dashboard/ConnectProviderModal";
 import type { Connection, PlanId } from "@/types";
+import { apiRequest } from "@/lib/api-client";
 
 export default function ConnectionsTab({
   planId: initialPlanId = "free",
@@ -45,6 +46,7 @@ export default function ConnectionsTab({
   const [fetchedLaunchReadyIds, setFetchedLaunchReadyIds] = useState<string[]>([]);
   const [fetchedOptionalIds, setFetchedOptionalIds] = useState<string[]>([]);
   const [modalProviderId, setModalProviderId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const launchReadyProviders = useMemo(() => {
     const idSet = new Set(launchReadyProviderIds ?? fetchedLaunchReadyIds);
@@ -55,16 +57,30 @@ export default function ConnectionsTab({
     return CONNECTION_PROVIDERS.filter((provider) => idSet.has(provider.id));
   }, [optionalLaunchProviderIds, fetchedOptionalIds]);
 
-  const loadConnections = useCallback(() => {
+  const loadConnections = useCallback(async () => {
     setLoading(true);
-    return fetch("/api/connections", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((connectionsData) => {
-        setConnections(connectionsData.connections ?? []);
-        if (!launchReadyProviderIds) setFetchedLaunchReadyIds(connectionsData.launchReadyProviderIds ?? []);
-        if (!optionalLaunchProviderIds) setFetchedOptionalIds(connectionsData.optionalLaunchProviderIds ?? []);
-      })
-      .finally(() => setLoading(false));
+    setLoadError(null);
+    // This had no rejection path at all: response.json() throws on any
+    // non-JSON error page and a dropped request rejects outright, and either
+    // way `connections` was simply left empty. A failed load therefore looked
+    // exactly like "you have no connections yet" - which is the worst possible
+    // confusion on this screen, since the honest reaction to it is to go and
+    // reconnect accounts that were never actually disconnected.
+    const outcome = await apiRequest<{
+      connections?: Connection[];
+      launchReadyProviderIds?: string[];
+      optionalLaunchProviderIds?: string[];
+    }>("/api/connections", { cache: "no-store" });
+    setLoading(false);
+
+    if (!outcome.ok) {
+      setLoadError(outcome.error);
+      return;
+    }
+
+    setConnections(outcome.data.connections ?? []);
+    if (!launchReadyProviderIds) setFetchedLaunchReadyIds(outcome.data.launchReadyProviderIds ?? []);
+    if (!optionalLaunchProviderIds) setFetchedOptionalIds(outcome.data.optionalLaunchProviderIds ?? []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -120,6 +136,14 @@ export default function ConnectionsTab({
           <span><span className="font-display text-sm font-semibold text-text">{readyCount}</span> ready</span>
           <span><span className="font-display text-sm font-semibold text-text">{connectedCount}</span> connected</span>
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" /> : null}
+          {loadError ? (
+            <span role="alert" className="inline-flex items-center gap-2 text-xs" style={{ color: "var(--ui-danger)" }}>
+              {loadError}
+              <button type="button" onClick={() => loadConnections()} className="underline">
+                Retry
+              </button>
+            </span>
+          ) : null}
         </div>
       </div>
 

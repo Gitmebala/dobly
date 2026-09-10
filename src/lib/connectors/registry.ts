@@ -177,6 +177,17 @@ const STEP_EXECUTOR_MAP = new Map<string, string>([
   ["google-sheets:analyze_data", googleSheetsAnalyzeExecutor.id],
   ["google_calendar:create_event", googleCalendarCreateEventExecutor.id],
   ["google-calendar:create_event", googleCalendarCreateEventExecutor.id],
+  // These two executors were registered but had no step mapping, so workflow
+  // steps asking for them fell through to "no execution path available".
+  ["google_calendar:check_availability", googleCalendarCheckAvailabilityExecutor.id],
+  ["google-calendar:check_availability", googleCalendarCheckAvailabilityExecutor.id],
+  ["google_drive:organize", googleDriveOrganizeExecutor.id],
+  ["google-drive:organize", googleDriveOrganizeExecutor.id],
+  ["google_drive:organize_files", googleDriveOrganizeExecutor.id],
+  // Voice
+  ["voice:outbound_call", voiceOutboundCallExecutor.id],
+  ["voice:make_call", voiceOutboundCallExecutor.id],
+  ["phone:outbound_call", voiceOutboundCallExecutor.id],
   // M-PESA
   ["mpesa:stk_push", mpesaStkPushExecutor.id],
   ["m-pesa:stk_push", mpesaStkPushExecutor.id],
